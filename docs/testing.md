@@ -1,0 +1,51 @@
+# Testes
+
+Nenhum teste é marcado como aprovado sem ser executado. Falhas não são contornadas removendo testes.
+
+## Bateria completa
+
+```bash
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+corepack pnpm --filter @nexus/desktop check        # tsc + eslint + prettier + vitest
+corepack pnpm --filter @nexus/desktop e2e:build    # executável com o frontend embutido
+corepack pnpm --filter @nexus/desktop e2e          # Playwright contra o app real (Windows)
+```
+
+## O que cada camada cobre (Fase 1)
+
+| Camada                | Onde                                  | Cobertura                                                                                                                                                                                                                                                      |
+| --------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitários Rust        | `crates/*/src/**` (`#[cfg(test)]`)    | envelope de erros, resolução do data dir, validação de configurações, formatação                                                                                                                                                                               |
+| Integração do storage | `crates/nexus-core/tests/storage.rs`  | migração inicial, idempotência, migration adulterada, recusa de schema futuro, rollback de migration com falha, backup restaurável, retenção de backups, pragmas, leitores somente leitura, FTS5 _contentless_delete_                                          |
+| Integração do core    | `crates/nexus-core/tests/core.rs`     | abertura, configurações persistentes, erros com `op_id`, valores fora do histórico, filtros/limites de operações, recuperação de operações interrompidas, não interromper operações ativas de outro processo, retenção, diagnóstico, **detecção de corrupção** |
+| Contratos             | `crates/nexus-core/tests/bindings.rs` | tipos TypeScript gerados idênticos aos versionados                                                                                                                                                                                                             |
+| CLI                   | `crates/nexus-cli/tests/cli.rs`       | binário real: `init`, `diagnostics --check --json`, códigos de saída 2 e 4, erro JSON                                                                                                                                                                          |
+| Desktop (Rust)        | `apps/desktop/src-tauri`              | estado sem core, propagação de `op_id`, rejeição de chaves; **paridade** comandos ⇔ capabilities ⇔ handler; CSP sem origens remotas                                                                                                                            |
+| Componentes           | `apps/desktop/src/**/*.test.ts(x)`    | navegação e histórico, seções futuras desabilitadas, paleta, Diagnóstico, integridade, erros com `opId`, tema, tela de schema incompatível, formatação pt-BR, **contraste AA dos tokens** nos dois temas                                                       |
+| E2E                   | `apps/desktop/e2e`                    | executável real via CDP: abertura e migração, seções desabilitadas, Diagnóstico com dados reais, paleta, **persistência após fechar e reabrir**                                                                                                                |
+
+## Como o E2E funciona
+
+`e2e/app.ts` inicia o executável com:
+
+- `NEXUS_DATA_DIR` apontando para uma pasta temporária (os dados do usuário nunca são tocados);
+- `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=<porta livre>`.
+
+O Playwright conecta via `chromium.connectOverCDP` ao WebView2 real (sem navegador próprio). O fechamento envia `WM_CLOSE` (como clicar no X), então reabre o app sobre a mesma pasta. Para testar um app instalado: `NEXUS_E2E_APP=<caminho>\nexus-desktop.exe pnpm e2e`.
+
+Limitação: o E2E depende do WebView2 e roda apenas no Windows; no Linux os testes são ignorados.
+
+## Resultados registrados
+
+Execução local em 2026-10-10 (Windows 11, Rust 1.99.0, Node 24.19):
+
+| Suíte                                          | Resultado           |
+| ---------------------------------------------- | ------------------- |
+| `cargo test --workspace`                       | 44 testes, 0 falhas |
+| Vitest                                         | 54 testes, 0 falhas |
+| Playwright E2E (executável de desenvolvimento) | 5/5                 |
+| Playwright E2E (app instalado pelo NSIS)       | 5/5                 |
+
+O CI (`.github/workflows/ci.yml`) ainda não foi executado no GitHub: o repositório não tem remoto configurado.

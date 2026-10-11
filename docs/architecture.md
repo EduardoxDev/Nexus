@@ -1,10 +1,10 @@
 # Arquitetura do NEXUS
 
-> Estado: **Fase 1 (fundação)**. Seções marcadas com *(planejado)* descrevem o desenho aprovado para fases futuras e ainda não existem no código.
+> Estado: **Fase 1 (fundação)**. Seções marcadas com _(planejado)_ descrevem o desenho aprovado para fases futuras e ainda não existem no código.
 
 ## 1. Visão
 
-O NEXUS é a camada de contexto local para engenharia de software assistida por IA. Ele indexa repositórios que o usuário autoriza explicitamente, permite buscar código e documentação com evidências verificáveis, compila *Context Packs* para tarefas, mantém memória técnica por projeto, detecta contexto desatualizado e expõe tudo por uma CLI (`nexus`) e por um servidor MCP local.
+O NEXUS é a camada de contexto local para engenharia de software assistida por IA. Ele indexa repositórios que o usuário autoriza explicitamente, permite buscar código e documentação com evidências verificáveis, compila _Context Packs_ para tarefas, mantém memória técnica por projeto, detecta contexto desatualizado e expõe tudo por uma CLI (`nexus`) e por um servidor MCP local.
 
 Princípios que orientam todas as decisões: local-first, privacy-first, evidence-first, incremental-first, agente-agnóstico, segurança por desenho, consciência de recursos, operações reversíveis, mensurabilidade, manutenibilidade e **UI honesta** (nada de métricas ou estados inventados).
 
@@ -23,28 +23,28 @@ Princípios que orientam todas as decisões: local-first, privacy-first, evidenc
 
 - **Um único core** (`crates/nexus-core`) concentra a lógica de negócio. Desktop, CLI e MCP são adaptadores finos: validam entrada, chamam o core e formatam saída.
 - **Banco compartilhado**: os três processos usam o mesmo arquivo SQLite em modo WAL com `busy_timeout` e transações curtas (ADR-0002).
-- O frontend **nunca** acessa o sistema de arquivos diretamente; só chama comandos explicitamente registrados e listados nas *capabilities* do Tauri.
+- O frontend **nunca** acessa o sistema de arquivos diretamente; só chama comandos explicitamente registrados e listados nas _capabilities_ do Tauri.
 
 ## 3. Módulos lógicos
 
-| # | Módulo | Onde vive | Estado |
-|---|---|---|---|
-| 1 | Desktop Shell | `apps/desktop/src-tauri` | Fase 1 |
-| 2 | Application Commands | `apps/desktop/src-tauri/src/commands` | Fase 1 (app, diagnóstico, configurações) |
-| 3 | Project Registry | `nexus-core::projects` | *(planejado — Fase 2)* |
-| 4 | Filesystem Scanner | `nexus-core::scan` | *(planejado — Fase 2)* |
-| 5 | Incremental Indexer | `nexus-core::index` | *(planejado — Fase 2)* |
-| 6 | Language/Symbol Analyzer | `nexus-core::analysis` | *(planejado — Fases 2/6)* |
-| 7 | Search Engine | `nexus-core::search` | *(planejado — Fase 3)* |
-| 8 | Context Retrieval Engine | `nexus-core::context` | *(planejado — Fase 3)* |
-| 9 | Project Memory | `nexus-core::memory` | *(planejado — Fase 4)* |
-| 10 | Freshness & Conflict Detection | `nexus-core::freshness` | *(planejado — Fase 4)* |
-| 11 | Context Pack Compiler | `nexus-core::context` | *(planejado — Fase 3)* |
-| 12 | MCP Server | `crates/nexus-mcp` | *(planejado — Fase 5)* |
-| 13 | CLI | `crates/nexus-cli` | Fase 1 (`init`, `diagnostics`) |
-| 14 | Storage & Migrations | `nexus-core::storage` | Fase 1 |
-| 15 | Telemetry & Diagnostics (local) | `nexus-core::{ops,diagnostics,logging}` | Fase 1 |
-| 16 | Security & Permissions | capabilities Tauri, `nexus-core::settings` (allowlist), validação | Fase 1 (linha de base) |
+| #   | Módulo                          | Onde vive                                                         | Estado                                   |
+| --- | ------------------------------- | ----------------------------------------------------------------- | ---------------------------------------- |
+| 1   | Desktop Shell                   | `apps/desktop/src-tauri`                                          | Fase 1                                   |
+| 2   | Application Commands            | `apps/desktop/src-tauri/src/commands`                             | Fase 1 (app, diagnóstico, configurações) |
+| 3   | Project Registry                | `nexus-core::projects`                                            | _(planejado — Fase 2)_                   |
+| 4   | Filesystem Scanner              | `nexus-core::scan`                                                | _(planejado — Fase 2)_                   |
+| 5   | Incremental Indexer             | `nexus-core::index`                                               | _(planejado — Fase 2)_                   |
+| 6   | Language/Symbol Analyzer        | `nexus-core::analysis`                                            | _(planejado — Fases 2/6)_                |
+| 7   | Search Engine                   | `nexus-core::search`                                              | _(planejado — Fase 3)_                   |
+| 8   | Context Retrieval Engine        | `nexus-core::context`                                             | _(planejado — Fase 3)_                   |
+| 9   | Project Memory                  | `nexus-core::memory`                                              | _(planejado — Fase 4)_                   |
+| 10  | Freshness & Conflict Detection  | `nexus-core::freshness`                                           | _(planejado — Fase 4)_                   |
+| 11  | Context Pack Compiler           | `nexus-core::context`                                             | _(planejado — Fase 3)_                   |
+| 12  | MCP Server                      | `crates/nexus-mcp`                                                | _(planejado — Fase 5)_                   |
+| 13  | CLI                             | `crates/nexus-cli`                                                | Fase 1 (`init`, `diagnostics`)           |
+| 14  | Storage & Migrations            | `nexus-core::storage`                                             | Fase 1                                   |
+| 15  | Telemetry & Diagnostics (local) | `nexus-core::{ops,diagnostics,logging}`                           | Fase 1                                   |
+| 16  | Security & Permissions          | capabilities Tauri, `nexus-core::settings` (allowlist), validação | Fase 1 (linha de base)                   |
 
 ## 4. Contrato UI ↔ core
 
@@ -61,7 +61,7 @@ Detalhes em [`database-schema.md`](database-schema.md).
 - Migrations versionadas e embutidas no binário, uma transação por migration, checksum registrado (ADR-0007).
 - Backup automático (SQLite Online Backup API) antes de aplicar migrations pendentes num banco existente.
 - Banco criado por versão mais nova do NEXUS ⇒ recusa explícita (`incompatible_schema`), nunca downgrade silencioso.
-- O código-fonte indexado **não** será copiado para o banco (ADR-0003): o FTS5 será *contentless* e os trechos serão lidos do disco e verificados por hash.
+- O código-fonte indexado **não** será copiado para o banco (ADR-0003): o FTS5 será _contentless_ e os trechos serão lidos do disco e verificados por hash.
 
 ## 6. Observabilidade local
 
@@ -88,7 +88,7 @@ Detalhes em [`threat-model.md`](threat-model.md). Linha de base da Fase 1:
 - Textos em pt-BR centralizados em `src/lib/i18n/pt-BR.ts` (ADR-0008).
 - Design tokens em `src/styles/tokens.css`: tema escuro grafite padrão, tema claro completo, acento violeta usado com moderação.
 
-## 9. Pipeline de contexto *(planejado)*
+## 9. Pipeline de contexto _(planejado)_
 
 ```
 pasta autorizada ─▶ scanner (ignore, exclusões, sensíveis, sem symlinks)

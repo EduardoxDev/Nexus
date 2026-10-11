@@ -6,11 +6,11 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "pnpm --filter @nexus/desktop tauri dev",
-    "build": "pnpm --filter @nexus/desktop build",
-    "check": "pnpm --filter @nexus/desktop check",
-    "test": "pnpm --filter @nexus/desktop test",
-    "e2e": "pnpm --filter @nexus/desktop e2e",
-    "bundle": "pnpm --filter @nexus/desktop tauri build"
+    "dev": "npm --prefix apps/desktop run tauri:dev",
+    "build": "npm --prefix apps/desktop run build",
+    "check": "npm --prefix apps/desktop run check",
+    "test": "npm --prefix apps/desktop run test",
+    "e2e": "npm --prefix apps/desktop run e2e:build && npm --prefix apps/desktop run e2e",
+    "bundle": "npm --prefix apps/desktop run tauri:build"
   }
 }

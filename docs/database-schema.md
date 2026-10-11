@@ -6,15 +6,16 @@ Pragmas aplicados em toda conexão: `journal_mode=WAL`, `foreign_keys=ON`, `sync
 
 ## Migrations
 
-| Versão | Nome | Fase | Tabelas |
-|---|---|---|---|
-| 1 | `foundation` | 1 | `settings`, `operations` |
-| 2 | `projects_index` | 2 *(planejada)* | `projects`, `files`, `chunks`, `chunks_fts`, `paths_fts`, `indexing_jobs`, `index_errors` |
-| 3 | `analysis` | 2/6 *(planejada)* | `symbols`, `symbols_fts`, `symbol_removals`, `edges` |
-| 4 | `context` | 3 *(planejada)* | `context_packs`, `context_sources` |
-| 5 | `memory_freshness` | 4 *(planejada)* | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues` |
+| Versão | Nome               | Fase              | Tabelas                                                                                   |
+| ------ | ------------------ | ----------------- | ----------------------------------------------------------------------------------------- |
+| 1      | `foundation`       | 1                 | `settings`, `operations`                                                                  |
+| 2      | `projects_index`   | 2 _(planejada)_   | `projects`, `files`, `chunks`, `chunks_fts`, `paths_fts`, `indexing_jobs`, `index_errors` |
+| 3      | `analysis`         | 2/6 _(planejada)_ | `symbols`, `symbols_fts`, `symbol_removals`, `edges`                                      |
+| 4      | `context`          | 3 _(planejada)_   | `context_packs`, `context_sources`                                                        |
+| 5      | `memory_freshness` | 4 _(planejada)_   | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`         |
 
 Regras (ADR-0007):
+
 - Migrations são SQL embutido no binário (`crates/nexus-core/src/storage/migrations/`), aplicadas em ordem, **uma transação por migration**.
 - `schema_migrations` registra `version`, `name`, `checksum` (blake3 do SQL), `applied_at`, `duration_ms`.
 - Se o SQL de uma migration já aplicada mudar, a abertura falha com `storage` + mensagem explícita (o binário não corresponde ao histórico do banco).
@@ -24,39 +25,42 @@ Regras (ADR-0007):
 ## Versão 1 — `foundation`
 
 ### `schema_migrations`
-| Coluna | Tipo | Notas |
-|---|---|---|
-| `version` | INTEGER PK | |
-| `name` | TEXT NOT NULL | |
-| `checksum` | TEXT NOT NULL | blake3 hex do SQL |
-| `applied_at` | INTEGER NOT NULL | Unix ms |
-| `duration_ms` | INTEGER NOT NULL | |
+
+| Coluna        | Tipo             | Notas             |
+| ------------- | ---------------- | ----------------- |
+| `version`     | INTEGER PK       |                   |
+| `name`        | TEXT NOT NULL    |                   |
+| `checksum`    | TEXT NOT NULL    | blake3 hex do SQL |
+| `applied_at`  | INTEGER NOT NULL | Unix ms           |
+| `duration_ms` | INTEGER NOT NULL |                   |
 
 ### `settings`
-| Coluna | Tipo | Notas |
-|---|---|---|
-| `key` | TEXT PK | somente chaves da allowlist (`nexus-core::settings`) |
-| `value_json` | TEXT NOT NULL | JSON validado por chave |
-| `updated_at` | INTEGER NOT NULL | Unix ms |
+
+| Coluna       | Tipo             | Notas                                                |
+| ------------ | ---------------- | ---------------------------------------------------- |
+| `key`        | TEXT PK          | somente chaves da allowlist (`nexus-core::settings`) |
+| `value_json` | TEXT NOT NULL    | JSON validado por chave                              |
+| `updated_at` | INTEGER NOT NULL | Unix ms                                              |
 
 Chaves atuais: `ui.theme` (`"system" \| "dark" \| "light"`), `ui.reduced_motion` (`"system" \| "on" \| "off"`), `ui.sidebar_collapsed` (bool).
 
 ### `operations`
+
 Histórico local de operações (diagnóstico). Nunca contém conteúdo de arquivos.
 
-| Coluna | Tipo | Notas |
-|---|---|---|
-| `id` | TEXT PK | UUIDv7 (`op_id`) |
-| `kind` | TEXT NOT NULL | ex.: `app.startup`, `storage.migrate`, `storage.integrity_check`, `storage.backup` |
-| `project_id` | INTEGER NULL | sem FK até a migration 2 |
-| `status` | TEXT NOT NULL | `running` \| `succeeded` \| `failed` \| `cancelled` \| `interrupted` (CHECK) |
-| `started_at` | INTEGER NOT NULL | Unix ms |
-| `heartbeat_at` | INTEGER NOT NULL | atualizado periodicamente por operações longas |
-| `finished_at` | INTEGER NULL | |
-| `duration_ms` | INTEGER NULL | |
-| `detail_json` | TEXT NULL | metadados estruturados (contagens, versões) |
-| `error_code` | TEXT NULL | |
-| `error_message` | TEXT NULL | mensagem sem conteúdo sensível |
+| Coluna          | Tipo             | Notas                                                                              |
+| --------------- | ---------------- | ---------------------------------------------------------------------------------- |
+| `id`            | TEXT PK          | UUIDv7 (`op_id`)                                                                   |
+| `kind`          | TEXT NOT NULL    | ex.: `app.startup`, `storage.migrate`, `storage.integrity_check`, `storage.backup` |
+| `project_id`    | INTEGER NULL     | sem FK até a migration 2                                                           |
+| `status`        | TEXT NOT NULL    | `running` \| `succeeded` \| `failed` \| `cancelled` \| `interrupted` (CHECK)       |
+| `started_at`    | INTEGER NOT NULL | Unix ms                                                                            |
+| `heartbeat_at`  | INTEGER NOT NULL | atualizado periodicamente por operações longas                                     |
+| `finished_at`   | INTEGER NULL     |                                                                                    |
+| `duration_ms`   | INTEGER NULL     |                                                                                    |
+| `detail_json`   | TEXT NULL        | metadados estruturados (contagens, versões)                                        |
+| `error_code`    | TEXT NULL        |                                                                                    |
+| `error_message` | TEXT NULL        | mensagem sem conteúdo sensível                                                     |
 
 Índices: `operations(started_at DESC)`, `operations(kind, started_at DESC)`.
 

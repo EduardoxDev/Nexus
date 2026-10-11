@@ -139,15 +139,16 @@ pub(crate) fn backups(dir: &Path) -> Result<Vec<BackupInfo>> {
         .collect())
 }
 
-pub(crate) fn schema_section(
-    conn: &Connection,
-) -> Result<(
+/// (versão do schema, migrations, FTS5 disponível, total de operações, última verificação).
+pub(crate) type SchemaSection = (
     i64,
     Vec<AppliedMigration>,
     bool,
     i64,
     Option<OperationRecord>,
-)> {
+);
+
+pub(crate) fn schema_section(conn: &Connection) -> Result<SchemaSection> {
     let migrations = migrate::applied_migrations(conn)?;
     let version = migrations.last().map_or(0, |m| m.version);
     let fts5 = storage::fts5_available(conn)?;

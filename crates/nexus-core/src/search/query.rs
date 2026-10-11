@@ -369,6 +369,34 @@ fn expansions(word: &str) -> &'static [&'static str] {
         .map_or(&[][..], |(_, v)| *v)
 }
 
+/// Sufixos flexionais comuns em português (particípios, gerúndios, plurais, infinitivos).
+const PT_SUFFIXES: &[&str] = &[
+    "acoes", "acao", "adas", "ados", "idas", "idos", "ada", "ado", "ida", "ido", "ando", "endo",
+    "indo", "amos", "emos", "ar", "er", "ir", "am", "em", "ou", "as", "os", "es", "a", "o", "s",
+];
+
+/// Expansões via radical quando a palavra flexionada não está no dicionário
+/// (`validada` → `valid` → entradas `validar`/`validacao`). Radical mínimo de 4 letras.
+fn stem_expansions(word: &str) -> Vec<&'static str> {
+    for suffix in PT_SUFFIXES {
+        let Some(stem) = word.strip_suffix(suffix) else {
+            continue;
+        };
+        if stem.chars().count() < 4 {
+            continue;
+        }
+        let found: Vec<&'static str> = EXPANSIONS
+            .iter()
+            .filter(|(k, _)| k.starts_with(stem))
+            .flat_map(|(_, v)| v.iter().copied())
+            .collect();
+        if !found.is_empty() {
+            return found;
+        }
+    }
+    Vec::new()
+}
+
 fn intent_of(word: &str) -> Option<Intent> {
     Some(match word {
         "teste" | "testes" | "test" | "tests" | "spec" | "specs" | "cobertura" | "coverage"
@@ -428,9 +456,15 @@ pub fn analyze(text: &str) -> QueryAnalysis {
                 continue;
             }
             let mut variants = BTreeSet::new();
-            for e in expansions(&word) {
-                if *e != word {
-                    variants.insert((*e).to_owned());
+            let direct = expansions(&word);
+            let expanded: Vec<&str> = if direct.is_empty() {
+                stem_expansions(&word)
+            } else {
+                direct.to_vec()
+            };
+            for e in expanded {
+                if e != word {
+                    variants.insert(e.to_owned());
                 }
             }
             // Identificadores compostos: `validateSession` também busca `validate` e `session`.
@@ -544,6 +578,21 @@ mod tests {
         let expr = fts_expression(&["auth".into(), "db".into(), "x\" OR 1".into()]).unwrap();
         assert_eq!(expr, "\"auth\"* OR \"db\" OR \"xOR1\"*");
         assert!(fts_expression(&["***".into()]).is_none());
+    }
+
+    #[test]
+    fn inflected_portuguese_words_use_the_stem() {
+        let a = analyze("Onde é validada a sessão?");
+        let validada = a.concepts.iter().find(|c| c.term == "validada").unwrap();
+        assert!(validada.variants.contains(&"validate".to_owned()));
+        let b = analyze("pedidos salvos");
+        assert!(
+            b.concepts
+                .iter()
+                .any(|c| c.variants.contains(&"save".to_owned()))
+        );
+        // Radicais curtos demais não expandem.
+        assert!(analyze("uso").concepts[0].variants.is_empty());
     }
 
     #[test]

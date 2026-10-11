@@ -345,23 +345,18 @@ fn prescore(
     }
 }
 
-/// Força da correspondência de uma linha: 2 por termo exato, 1 por variante.
+/// Força da correspondência de uma linha: conceitos distintos encontrados (×2), +1 se algum
+/// aparece como termo exato, +1 se a linha é uma declaração.
 fn line_strength(line: &str, concepts: &[&Concept]) -> u32 {
     let norm = normalize(line);
-    concepts
-        .iter()
-        .map(|c| {
-            if norm.contains(c.term.as_str()) {
-                2
-            } else if concept_in(c, &norm) {
-                1
-            } else {
-                0
-            }
-        })
-        .sum()
+    let distinct = concepts.iter().filter(|c| concept_in(c, &norm)).count() as u32;
+    if distinct == 0 {
+        return 0;
+    }
+    let exact = u32::from(concepts.iter().any(|c| norm.contains(c.term.as_str())));
+    let declaration = u32::from(declared_name(line).is_some());
+    distinct * 2 + exact + declaration
 }
-
 /// Escolhe a janela do trecho dentro do chunk (ancorada na linha de correspondência mais forte)
 /// e as linhas com correspondência.
 fn snippet_window(
@@ -540,14 +535,17 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
                     weight: 0.20 * cov,
                 });
             }
-            // A declaração mais específica vence: nome igual ao termo > contém o termo > igual a uma variante.
+            // A declaração mais específica vence: nome igual ao termo > contém o termo >
+            // uma das palavras do identificador é uma variante (`saveOrder` → save, order).
+            // Substrings soltas não contam (`AUTHORIZE_URL` não declara nada sobre "auth").
             let declared: Option<String> = verified
                 .lines
                 .iter()
                 .filter_map(|l| {
                     let name = declared_name(l)?;
                     let n = normalize(name);
-                    let rank = analysis
+                    let words = crate::chunk::split_identifier(name);
+                    let ranks: Vec<u8> = analysis
                         .concepts
                         .iter()
                         .filter_map(|cc| {
@@ -558,18 +556,20 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
                             } else if cc
                                 .variants
                                 .iter()
-                                .any(|v| v.len() >= 4 && n.contains(v.as_str()))
+                                .any(|v| v.len() >= 3 && words.contains(v))
                             {
                                 Some(2)
                             } else {
                                 None
                             }
                         })
-                        .min()?;
-                    Some((rank, name.to_owned()))
+                        .collect();
+                    let rank = *ranks.iter().min()?;
+                    // Empate: vence a declaração que cobre mais conceitos (`validateSession`).
+                    Some((rank, std::cmp::Reverse(ranks.len()), name.to_owned()))
                 })
-                .min_by_key(|(rank, _)| *rank)
-                .map(|(_, name)| name);
+                .min_by_key(|(rank, coverage, _)| (*rank, *coverage))
+                .map(|(_, _, name)| name);
             if let Some(name) = declared {
                 c.score += 0.10;
                 c.reasons.push(Reason {

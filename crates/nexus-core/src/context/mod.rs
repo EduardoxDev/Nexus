@@ -31,6 +31,8 @@ const MAX_TASK_CHARS: usize = 2_000;
 /// Linhas máximas por trecho incluído no pack.
 const EXCERPT_LINES: i64 = 50;
 const PACKS_KEPT_PER_PROJECT: i64 = 100;
+/// Máximo de documentos genéricos (não decisões/convenções) por pack.
+const MAX_GENERIC_DOCS: usize = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -370,9 +372,8 @@ fn role_priority(role: SourceRole, analysis: &QueryAnalysis) -> u8 {
     use crate::search::query::Intent;
     let asked = match role {
         SourceRole::Test => analysis.has(Intent::Tests),
-        SourceRole::Decision | SourceRole::Doc | SourceRole::Convention => {
-            analysis.has(Intent::Docs)
-        }
+        // Documentação genérica não é promovida: decisões e convenções sim.
+        SourceRole::Decision | SourceRole::Convention => analysis.has(Intent::Docs),
         SourceRole::Config => analysis.has(Intent::Config) || analysis.has(Intent::Ci),
         SourceRole::Dependency => analysis.has(Intent::Config),
         _ => false,
@@ -466,13 +467,18 @@ pub fn compile(
         }
     }
 
-    // Testes com nome correspondente aos arquivos principais.
+    // Testes com nome correspondente aos arquivos principais e relacionados.
     let primaries: Vec<String> = drafts
         .iter()
         .filter(|d| d.role == SourceRole::Primary)
         .map(|d| d.rel_path.clone())
         .collect();
-    for primary in &primaries {
+    let code_files: Vec<String> = drafts
+        .iter()
+        .filter(|d| matches!(d.role, SourceRole::Primary | SourceRole::Related))
+        .map(|d| d.rel_path.clone())
+        .collect();
+    for primary in &code_files {
         for test in test_counterparts(conn, project.id, primary)? {
             if seen.insert(test.clone()) {
                 drafts.push(Draft {
@@ -528,6 +534,16 @@ pub fn compile(
             });
         }
     }
+
+    // Documentação genérica (README, guias) é limitada para não ocupar o lugar do código.
+    let mut generic_docs = 0;
+    drafts.retain(|d| {
+        if d.role != SourceRole::Doc {
+            return true;
+        }
+        generic_docs += 1;
+        generic_docs <= MAX_GENERIC_DOCS
+    });
 
     // Prioridade estável: papel, depois pontuação.
     drafts.sort_by(|a, b| {

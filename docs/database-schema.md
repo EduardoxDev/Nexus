@@ -6,13 +6,13 @@ Pragmas aplicados em toda conexão: `journal_mode=WAL`, `foreign_keys=ON`, `sync
 
 ## Migrations
 
-| Versão | Nome               | Fase              | Tabelas                                                                                  |
-| ------ | ------------------ | ----------------- | ---------------------------------------------------------------------------------------- |
-| 1      | `foundation`       | 1                 | `settings`, `operations`                                                                 |
-| 2      | `projects_index`   | 2                 | `projects`, `contents`, `files`, `chunks`, `chunks_fts`, `indexing_jobs`, `index_errors` |
-| 3      | `analysis`         | 2/6 _(planejada)_ | `symbols`, `symbols_fts`, `symbol_removals`, `edges`                                     |
-| 4      | `context`          | 3 _(planejada)_   | `context_packs`, `context_sources`                                                       |
-| 5      | `memory_freshness` | 4 _(planejada)_   | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`        |
+| Versão | Nome               | Fase            | Tabelas                                                                                  |
+| ------ | ------------------ | --------------- | ---------------------------------------------------------------------------------------- |
+| 1      | `foundation`       | 1               | `settings`, `operations`                                                                 |
+| 2      | `projects_index`   | 2               | `projects`, `contents`, `files`, `chunks`, `chunks_fts`, `indexing_jobs`, `index_errors` |
+| 3      | `context_packs`    | 3               | `context_packs`, `context_sources`                                                       |
+| 4      | `memory_freshness` | 4 _(planejada)_ | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`        |
+| 5      | `analysis`         | 6 _(planejada)_ | `symbols`, `symbols_fts`, `symbol_removals`, `edges`                                     |
 
 Regras (ADR-0007):
 
@@ -87,7 +87,18 @@ Integridade e concorrência:
 - Índice único parcial `indexing_jobs_one_active` (`status IN (running, paused)`) é a trava entre processos: no máximo um job ativo por projeto. Jobs sem heartbeat há mais de 2 minutos são marcados `interrupted` antes de uma nova tentativa e na abertura do core.
 - Arquivos sensíveis nunca têm hash nem conteúdo no banco — apenas caminho, tamanho e motivo.
 
+## Versão 3 — `context_packs`
+
+| Tabela            | Conteúdo                                                                                                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `context_packs`   | um registro por pack: tarefa, data, geração do índice, commit, orçamento, tokens estimados, nº de fontes e `plan_json` (plano completo **sem texto de código**) |
+| `context_sources` | fontes do pack: caminho, papel, intervalo de linhas, hash do arquivo na criação, pontuação. Permite saber quais packs citaram um arquivo                        |
+
+Os trechos são lidos do disco ao abrir/exportar e comparados com o hash da criação (ADR-0010).
+
 ## Retenção
+
+- `context_packs`: 100 mais recentes por projeto (fontes removidas em cascata).
 
 - `indexing_jobs` (e seus `index_errors`): 50 mais recentes por projeto.
 - Conteúdos sem nenhum arquivo apontando para eles são removidos ao fim de cada job (com seus chunks e linhas do FTS).

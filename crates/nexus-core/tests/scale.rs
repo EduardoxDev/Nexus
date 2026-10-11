@@ -74,6 +74,64 @@ fn ten_thousand_files_incremental_touches_exactly_one() {
     assert_eq!(one.processed, 1, "apenas o arquivo alterado é reprocessado");
     assert_eq!(one.unchanged, FILES as i64 - 1);
 
+    // Latência de busca e de Context Pack com 10 000 arquivos indexados.
+    let queries = [
+        "computeTotal4242",
+        "helper",
+        "record total",
+        "módulo 777",
+        "reduce items",
+        "export interface",
+        "valor total dos registros",
+        "m9999",
+    ];
+    let mut search_ms = Vec::new();
+    for round in 0..3 {
+        for q in queries {
+            let t = Instant::now();
+            let r = core
+                .search(&nexus_core::search::SearchRequest {
+                    project_id: id,
+                    query: q.into(),
+                    limit: Some(10),
+                    ..Default::default()
+                })
+                .unwrap();
+            if round == 0 {
+                assert!(r.took_ms >= 0);
+            }
+            search_ms.push(t.elapsed().as_secs_f64() * 1000.0);
+        }
+    }
+    let mut pack_ms = Vec::new();
+    for q in [
+        "alterar computeTotal42 para aceitar descontos",
+        "helper de registros",
+        "valor total",
+    ] {
+        let t = Instant::now();
+        core.compile_context_pack(&nexus_core::context::ContextPackRequest {
+            project_id: id,
+            task: q.into(),
+            token_budget: None,
+            max_files: None,
+        })
+        .unwrap();
+        pack_ms.push(t.elapsed().as_secs_f64() * 1000.0);
+    }
+    search_ms.sort_by(f64::total_cmp);
+    pack_ms.sort_by(f64::total_cmp);
+    let p = |v: &[f64], q: f64| v[((v.len() - 1) as f64 * q).round() as usize];
+    eprintln!(
+        "busca ({} consultas): p50 {:.1} ms, p95 {:.1} ms; Context Pack ({}): mín {:.1} ms, máx {:.1} ms",
+        search_ms.len(),
+        p(&search_ms, 0.5),
+        p(&search_ms, 0.95),
+        pack_ms.len(),
+        pack_ms[0],
+        pack_ms[pack_ms.len() - 1]
+    );
+
     let db_size = std::fs::metadata(core.paths().db()).unwrap().len();
     let wal_size =
         std::fs::metadata(core.paths().db().with_extension("db-wal")).map_or(0, |m| m.len());

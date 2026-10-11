@@ -63,6 +63,19 @@ Indexação concluída em 0.5 s (geração 1).
 
 Arquivos indexados/ignorados/com erro, tamanho, linhas, geração do índice, ref e commit do git, último job. JSON: `ProjectSummary[]`.
 
+### `nexus search <CONSULTA> [--project P] [--limit N] [--kind K]... [--path PASTA] [--plain]`
+
+Busca híbrida (padrão) ou simples (`--plain`, só bm25 com os termos digitados). Com um único projeto, `--project` é opcional. `--kind` aceita `code`, `test`, `doc`, `config`, `manifest`, `ci` (pode repetir). Saída humana mostra caminho, linhas, pontuação, motivos, "também em" e as 6 primeiras linhas do trecho (`>` marca linhas com correspondência). JSON: `SearchResponse`.
+
+```text
+1. src/checkout/shipping.ts:1-7  (pontuação 0.882)
+   motivos: Conteúdo corresponde à consulta · Caminho corresponde a: frete→shipping · …
+```
+
+### `nexus context <TAREFA> [--project P] [--budget N] [--max-files N] [--format md|json] [--output ARQUIVO] [--exclude CAMINHO]... [--notes TEXTO]`
+
+Compila e persiste um Context Pack e imprime (ou grava) a exportação. `--budget` 1000–50000 tokens estimados (padrão 8000); `--max-files` 1–40 (padrão 12). Com `--json` global, exporta em JSON. O Markdown começa com o aviso de que trechos citados são dados, não instruções.
+
 ## Códigos de saída
 
 | Código | Significado                                                              |
@@ -75,4 +88,4 @@ Arquivos indexados/ignorados/com erro, tamanho, linhas, geração do índice, re
 
 ## Planejado (Fase 5)
 
-`search`, `context`, `memory`, `freshness` e `mcp serve` — ver [roadmap](roadmap.md).
+`memory`, `freshness` e `mcp serve` — ver [roadmap](roadmap.md).

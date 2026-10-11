@@ -7,7 +7,7 @@ Cada fase termina com aplicação executável e testes aprovados. Critérios de 
 | 0    | Reconhecimento e arquitetura | concluída |
 | 1    | Fundação desktop             | concluída |
 | 2    | Indexação de projetos        | concluída |
-| 3    | Busca e Context Packs        | planejada |
+| 3    | Busca e Context Packs        | concluída |
 | 4    | Memória e atualidade         | planejada |
 | 5    | MCP e CLI                    | planejada |
 | 6    | Inteligência avançada        | planejada |
@@ -67,7 +67,15 @@ Fora do escopo desta fase (seguem no roadmap): símbolos e imports (Fase 3/6); b
 - Trechos lidos do disco e verificados por hash ⇒ estado de atualidade por resultado; deduplicação por conteúdo; preview.
 - Compilador de Context Pack: análise da tarefa, busca, expansão por dependências, testes relacionados, orçamento estimado de tokens, limitações sempre presentes; persistido com fontes e versão do índice; edição, cópia e exportação Markdown (cercas seguras + aviso de conteúdo não confiável) e JSON versionado.
 
-Aceite: 100% das referências (caminho + linhas + hash) válidas por teste invariante; avaliação com ≥ 25 consultas medindo Recall@k, Precision@k e MRR comparando FTS puro × híbrido × contextual, com números reais publicados.
+Critérios de aceitação (verificados em 2026-10-11):
+
+- [x] 100% das referências válidas por teste invariante: 644/644 (conjunto principal) e 278/278 (reservado) — caminho, linhas e hash conferidos no disco.
+- [x] Avaliação com 28 tarefas (+12 reservadas) medindo Recall@k, Precision@k e MRR para busca simples × híbrida × contextual; números reais em [evaluation.md](evaluation.md). Busca híbrida: MRR 0,958 (simples: 0,668); no conjunto reservado, 0,833 × 0,616.
+- [x] Resultados com caminho, trecho, motivo, linhas, data de indexação e estado de atualidade; deduplicação por conteúdo; prévia restrita a arquivos indexados.
+- [x] Context Packs com objetivo, resumo, arquivos, trechos, convenções, decisões, dependências, testes, riscos, contradições (pendente: Fase 4), fontes, data/atualidade e limitações; persistidos só como referências; exportação Markdown/JSON com exclusões e notas.
+- [x] Desktop (Busca, Context Packs) e CLI (`search`, `context`) com testes de componente, CLI e E2E no app real.
+
+Decisões em [ADR-0010](decisions/ADR-0010-busca-explicavel-e-packs-por-referencia.md). Pendências desta área: grafo de dependências e símbolos (Fase 6), contradições (Fase 4).
 
 ## Fase 4 — Memória e atualidade
 

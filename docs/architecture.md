@@ -1,6 +1,6 @@
 # Arquitetura do NEXUS
 
-> Estado: **Fase 2 (indexação) concluída**. Seções marcadas com _(planejado)_ descrevem o desenho aprovado para fases futuras e ainda não existem no código.
+> Estado: **Fase 3 (busca e Context Packs) concluída**. Seções marcadas com _(planejado)_ descrevem o desenho aprovado para fases futuras e ainda não existem no código.
 
 ## 1. Visão
 
@@ -35,11 +35,11 @@ Princípios que orientam todas as decisões: local-first, privacy-first, evidenc
 | 4   | Filesystem Scanner              | `nexus-core::{scan,sensitive}`, watcher em `src-tauri/src/watch.rs`                               | Fase 2                                                            |
 | 5   | Incremental Indexer             | `nexus-core::{index,chunk}`, fila em `src-tauri/src/indexing.rs`                                  | Fase 2                                                            |
 | 6   | Language/Symbol Analyzer        | `nexus-core::classify` (linguagem/tipo por caminho); símbolos e imports _(planejado — Fases 3/6)_ | parcial                                                           |
-| 7   | Search Engine                   | `nexus-core::search`                                                                              | _(planejado — Fase 3)_                                            |
-| 8   | Context Retrieval Engine        | `nexus-core::context`                                                                             | _(planejado — Fase 3)_                                            |
+| 7   | Search Engine                   | `nexus-core::search` (ranking híbrido, análise de consulta, evidência verificada)                 | Fase 3                                                            |
+| 8   | Context Retrieval Engine        | `nexus-core::context` (seleção por papel, testes correspondentes, manifestos)                     | Fase 3                                                            |
 | 9   | Project Memory                  | `nexus-core::memory`                                                                              | _(planejado — Fase 4)_                                            |
 | 10  | Freshness & Conflict Detection  | `nexus-core::freshness`                                                                           | _(planejado — Fase 4)_                                            |
-| 11  | Context Pack Compiler           | `nexus-core::context`                                                                             | _(planejado — Fase 3)_                                            |
+| 11  | Context Pack Compiler           | `nexus-core::context` + `context::export` (Markdown/JSON)                                         | Fase 3                                                            |
 | 12  | MCP Server                      | `crates/nexus-mcp`                                                                                | _(planejado — Fase 5)_                                            |
 | 13  | CLI                             | `crates/nexus-cli`                                                                                | Fases 1–2 (`init`, `diagnostics`, `projects`, `index`, `status`)  |
 | 14  | Storage & Migrations            | `nexus-core::storage`                                                                             | Fase 1                                                            |
@@ -111,14 +111,42 @@ Detalhes e justificativas em [ADR-0009](decisions/ADR-0009-indexacao-incremental
 | Git                                                               | leitura de `.git/HEAD`, refs e `packed-refs` | não lê histórico de commits                                      |
 | "Mais alterados"                                                  | mudanças de hash observadas pelo NEXUS       | não usa `git log`; começa a contar quando o projeto é adicionado |
 
-## 10. Pipeline de contexto _(planejado)_
+## 10. Pipeline de contexto
 
 ```
-pasta autorizada ─▶ scanner (ignore, exclusões, sensíveis, sem symlinks)
-                ─▶ indexador incremental (stat → hash → chunks → FTS5 contentless → símbolos/imports)
-                ─▶ busca híbrida (bm25 + caminho + símbolo + intenção + recência + grafo) com motivos
-                ─▶ compilador de Context Pack (expansão por dependências, testes, memória, atualidade, orçamento)
-                ─▶ desktop · CLI · MCP · exportação Markdown/JSON
+pasta autorizada ─▶ scanner ─▶ indexador incremental ─▶ busca híbrida (motivos) ─▶ Context Pack (referências)
+                                                                   │                           │
+                                                          desktop · CLI · (MCP — Fase 5)  exportação Markdown/JSON
 ```
 
-Cada resultado carregará caminho, intervalo de linhas, hash do conteúdo indexado e estado de atualidade (atual / modificado desde a indexação / ausente).
+## 11. Busca e Context Packs (Fase 3)
+
+Decisões em [ADR-0010](decisions/ADR-0010-busca-explicavel-e-packs-por-referencia.md); qualidade medida em [evaluation.md](evaluation.md).
+
+**Análise da consulta** (`search::query`): normalização (minúsculas, sem acentos — igual ao tokenizador FTS), stopwords pt/en, dicionário PT→EN de termos técnicos (~100 entradas) com tratamento leve de flexões (`validada` → `validar`), subpalavras de identificadores (`validateSession` → validate, session), detecção de intenção (testes, documentação/decisões, configuração, CI) e de caminhos citados.
+
+**Ranking híbrido** (`search`), por arquivo:
+
+| Componente                                             | Peso          | Observação                                                           |
+| ------------------------------------------------------ | ------------- | -------------------------------------------------------------------- |
+| Conteúdo (bm25 do melhor chunk, normalizado)           | 0,40          | FTS5 com OR dos termos e prefixo para termos ≥ 4 letras              |
+| Caminho (nome do arquivo 1,0; pastas 0,5 por conceito) | 0,25          | arquivos só com correspondência de caminho também entram             |
+| Cobertura de conceitos no arquivo                      | 0,20          | lido do disco para os candidatos de topo                             |
+| Declaração do termo (função, classe, const…)           | 0,10          | casa por palavras do identificador, não por substring                |
+| Intenção por tipo                                      | −0,30 a +0,25 | lockfile penalizado; testes/docs/config promovidos só quando pedidos |
+| Recência                                               | até 0,03      | mtime nos últimos 7/30 dias                                          |
+| Caminho citado na consulta                             | 0,50          |                                                                      |
+
+Resultados são deduplicados por hash ("também em"), cada um com trecho de até 14 linhas ancorado na linha de correspondência mais forte, linhas destacadas, estado de atualidade (`fresh`/`modified`/`missing`) e avisos (termos sem correspondência, arquivos alterados). O modo `plain` (só bm25 com os termos digitados) existe como referência para a avaliação.
+
+**Prévia** (`search::evidence::file_context`): até 400 linhas de um arquivo **indexado**; arquivos ignorados (sensíveis, binários) retornam "não encontrado".
+
+**Context Pack** (`context`):
+
+1. Busca híbrida pela tarefa + busca dedicada de documentação.
+2. Papéis: principal (≥ 50% da melhor pontuação de código), relacionado, teste, decisão (ADR), documentação (no máximo 2 genéricos), convenção (guia de contribuição, só quando há evidência), dependências (manifesto mais próximo dos principais), configuração.
+3. Testes correspondentes por nome (`payment.ts` ↔ `payment.test.ts`, `service.py` ↔ `test_service.py`).
+4. Ordem por papel, promovendo o que a tarefa pede (decisões, testes, configuração); orçamento de tokens estimado (caracteres ÷ 4) e limite de arquivos; o que não cabe vai para "omitidos".
+5. Riscos (fontes alteradas, ausência de testes, sensíveis excluídos nas pastas relevantes, índice antigo) e limitações sempre presentes.
+6. Persistido como plano (sem texto); materializado ao abrir com verificação de hash; retenção de 100 packs por projeto.
+7. Exportação Markdown (cercas seguras + aviso de conteúdo não confiável + tabela de fontes) e JSON (`nexus.context-pack`, `schemaVersion` 1), com exclusões e notas do usuário.

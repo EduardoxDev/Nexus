@@ -40,6 +40,18 @@ Observações:
 | Segunda passada            | 0 processados, todos inalterados                              |
 | Banco após fechar          | 1,1 MiB (`nexus.db`; sem WAL residual)                        |
 
+## Busca e Context Packs (10 000 arquivos)
+
+Mesmo teste de escala (`tests/scale.rs`, release), após indexar: 24 buscas (8 consultas × 3 rodadas) e 3 Context Packs.
+
+| Medida (2026-10-11)                             | Resultado                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Busca híbrida                                   | p50 37,0 ms · p95 44,1 ms                                                                  |
+| Context Pack (compilar + gravar + materializar) | 77–113 ms                                                                                  |
+| Indexação inicial nesta execução                | 7,9 s (variação em relação às execuções anteriores, 2,9–4,1 s, com a máquina mais ocupada) |
+
+Na fixture de avaliação (47 arquivos): busca p50 2,5 ms; Context Pack p50 7,9 ms — ver [evaluation.md](evaluation.md).
+
 ## Pendentes
 
-Consumo de memória e uso de CPU durante a indexação, latência de busca e de Context Packs (Fases 3 e 6).
+Consumo de memória e uso de CPU durante a indexação (Fase 6).

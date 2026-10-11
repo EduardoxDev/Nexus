@@ -7,7 +7,7 @@ pub mod ops;
 pub mod paths;
 pub mod settings;
 pub mod storage;
-mod time_util;
+pub mod time_util;
 
 use std::time::Instant;
 

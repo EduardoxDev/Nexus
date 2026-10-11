@@ -16,13 +16,22 @@ pub enum SettingKey {
     UiReducedMotion,
     #[serde(rename = "ui.sidebar_collapsed")]
     UiSidebarCollapsed,
+    #[serde(rename = "indexing.threads")]
+    IndexingThreads,
+    #[serde(rename = "indexing.max_file_size_kb")]
+    MaxFileSizeKb,
+    #[serde(rename = "indexing.watch")]
+    WatchProjects,
 }
 
 impl SettingKey {
-    pub const ALL: [Self; 3] = [
+    pub const ALL: [Self; 6] = [
         Self::UiTheme,
         Self::UiReducedMotion,
         Self::UiSidebarCollapsed,
+        Self::IndexingThreads,
+        Self::MaxFileSizeKb,
+        Self::WatchProjects,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -30,6 +39,9 @@ impl SettingKey {
             Self::UiTheme => "ui.theme",
             Self::UiReducedMotion => "ui.reduced_motion",
             Self::UiSidebarCollapsed => "ui.sidebar_collapsed",
+            Self::IndexingThreads => "indexing.threads",
+            Self::MaxFileSizeKb => "indexing.max_file_size_kb",
+            Self::WatchProjects => "indexing.watch",
         }
     }
 
@@ -56,13 +68,37 @@ pub enum MotionPreference {
     Off,
 }
 
+/// Limites aceitos para as configurações numéricas.
+pub const MAX_INDEXING_THREADS: u32 = 16;
+pub const MIN_FILE_SIZE_KB: u32 = 16;
+pub const MAX_FILE_SIZE_KB: u32 = 10 * 1024;
+
 /// Configurações efetivas (padrões aplicados às chaves ausentes).
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub theme: ThemePreference,
     pub reduced_motion: MotionPreference,
     pub sidebar_collapsed: bool,
+    /// Threads de indexação; 0 = automático (metade dos núcleos).
+    pub indexing_threads: u32,
+    /// Arquivos maiores que isso não são indexados.
+    pub max_file_size_kb: u32,
+    /// Reindexar automaticamente quando arquivos dos projetos mudam.
+    pub watch_projects: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            theme: ThemePreference::default(),
+            reduced_motion: MotionPreference::default(),
+            sidebar_collapsed: false,
+            indexing_threads: 0,
+            max_file_size_kb: 1024,
+            watch_projects: true,
+        }
+    }
 }
 
 impl Settings {
@@ -77,6 +113,27 @@ impl Settings {
             }
             SettingKey::UiSidebarCollapsed => {
                 self.sidebar_collapsed = serde_json::from_value(value).map_err(invalid)?;
+            }
+            SettingKey::IndexingThreads => {
+                let n: u32 = serde_json::from_value(value).map_err(invalid)?;
+                if n > MAX_INDEXING_THREADS {
+                    return Err(Error::InvalidInput(format!(
+                        "indexing.threads deve estar entre 0 (automático) e {MAX_INDEXING_THREADS}"
+                    )));
+                }
+                self.indexing_threads = n;
+            }
+            SettingKey::MaxFileSizeKb => {
+                let n: u32 = serde_json::from_value(value).map_err(invalid)?;
+                if !(MIN_FILE_SIZE_KB..=MAX_FILE_SIZE_KB).contains(&n) {
+                    return Err(Error::InvalidInput(format!(
+                        "indexing.max_file_size_kb deve estar entre {MIN_FILE_SIZE_KB} e {MAX_FILE_SIZE_KB}"
+                    )));
+                }
+                self.max_file_size_kb = n;
+            }
+            SettingKey::WatchProjects => {
+                self.watch_projects = serde_json::from_value(value).map_err(invalid)?;
             }
         }
         Ok(())
@@ -142,5 +199,20 @@ mod tests {
         s.apply(SettingKey::UiTheme, serde_json::json!("light"))
             .unwrap();
         assert_eq!(s.theme, ThemePreference::Light);
+        assert!(
+            s.apply(SettingKey::IndexingThreads, serde_json::json!(17))
+                .is_err()
+        );
+        assert!(
+            s.apply(SettingKey::IndexingThreads, serde_json::json!(-1))
+                .is_err()
+        );
+        assert!(
+            s.apply(SettingKey::MaxFileSizeKb, serde_json::json!(8))
+                .is_err()
+        );
+        s.apply(SettingKey::MaxFileSizeKb, serde_json::json!(2048))
+            .unwrap();
+        assert_eq!(s.max_file_size_kb, 2048);
     }
 }

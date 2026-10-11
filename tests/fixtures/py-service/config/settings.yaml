@@ -1,0 +1,5 @@
+payments:
+  gateway_url: https://gateway.example.test
+  retry_count: 3
+logging:
+  level: info

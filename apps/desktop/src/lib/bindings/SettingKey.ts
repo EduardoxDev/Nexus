@@ -3,4 +3,4 @@
 /**
  * Chaves aceitas. Qualquer outra chave é rejeitada na desserialização.
  */
-export type SettingKey = "ui.theme" | "ui.reduced_motion" | "ui.sidebar_collapsed";
+export type SettingKey = "ui.theme" | "ui.reduced_motion" | "ui.sidebar_collapsed" | "indexing.threads" | "indexing.max_file_size_kb" | "indexing.watch";

@@ -25,6 +25,9 @@ pub mod kinds {
     pub const INTEGRITY_CHECK: &str = "storage.integrity_check";
     pub const SETTINGS_UPDATE: &str = "settings.update";
     pub const CLI_INIT: &str = "cli.init";
+    pub const PROJECT_ADD: &str = "project.add";
+    pub const PROJECT_REMOVE: &str = "project.remove";
+    pub const INDEX_RUN: &str = "index.run";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

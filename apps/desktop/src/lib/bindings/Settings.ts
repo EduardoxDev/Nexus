@@ -5,4 +5,16 @@ import type { ThemePreference } from "./ThemePreference";
 /**
  * Configurações efetivas (padrões aplicados às chaves ausentes).
  */
-export type Settings = { theme: ThemePreference, reducedMotion: MotionPreference, sidebarCollapsed: boolean, };
+export type Settings = { theme: ThemePreference, reducedMotion: MotionPreference, sidebarCollapsed: boolean, 
+/**
+ * Threads de indexação; 0 = automático (metade dos núcleos).
+ */
+indexingThreads: number, 
+/**
+ * Arquivos maiores que isso não são indexados.
+ */
+maxFileSizeKb: number, 
+/**
+ * Reindexar automaticamente quando arquivos dos projetos mudam.
+ */
+watchProjects: boolean, };

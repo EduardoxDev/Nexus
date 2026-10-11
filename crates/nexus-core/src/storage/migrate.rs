@@ -27,11 +27,18 @@ impl Migration {
 }
 
 /// Migrations conhecidas por este binário, em ordem crescente.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "foundation",
-    sql: include_str!("migrations/0001_foundation.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "foundation",
+        sql: include_str!("migrations/0001_foundation.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "projects_index",
+        sql: include_str!("migrations/0002_projects_index.sql"),
+    },
+];
 
 pub fn latest_version() -> i64 {
     MIGRATIONS.last().map_or(0, |m| m.version)

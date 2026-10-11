@@ -20,6 +20,10 @@ uuid.workspace = true
 time.workspace = true
 dirs.workspace = true
 ts-rs.workspace = true
+ignore.workspace = true
+rayon.workspace = true
+regex.workspace = true
+dunce.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

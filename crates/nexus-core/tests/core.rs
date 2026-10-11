@@ -33,7 +33,10 @@ fn open_creates_layout_and_records_operation() {
     assert_eq!(ops.len(), 1);
     assert_eq!(ops[0].id, report.op_id);
     assert_eq!(ops[0].status, OperationStatus::Succeeded);
-    assert_eq!(ops[0].detail.as_ref().unwrap()["toVersion"], json!(1));
+    assert_eq!(
+        ops[0].detail.as_ref().unwrap()["toVersion"],
+        json!(nexus_core::storage::migrate::latest_version())
+    );
 }
 
 #[test]

@@ -1,14 +1,22 @@
 //! Núcleo do NEXUS. Toda a lógica de negócio vive aqui; desktop, CLI e MCP são adaptadores finos.
 
+pub mod chunk;
+pub mod classify;
 pub mod diagnostics;
 pub mod error;
+pub mod git;
+pub mod index;
 pub mod logging;
 pub mod ops;
 pub mod paths;
+pub mod projects;
+pub mod scan;
+pub mod sensitive;
 pub mod settings;
 pub mod storage;
 pub mod time_util;
 
+use std::path::Path;
 use std::time::Instant;
 
 pub use error::{Error, ErrorCode, ErrorInfo, Result};
@@ -16,7 +24,12 @@ pub use paths::DataPaths;
 use serde_json::json;
 
 use crate::diagnostics::{DiagnosticsReport, IntegrityReport};
+use crate::index::{
+    IndexError, IndexJob, IndexMode, IndexObserver, IndexOptions, IndexTrigger, JobControl,
+    JobStatus,
+};
 use crate::ops::{OperationQuery, OperationRecord};
+use crate::projects::{Project, ProjectOverview, ProjectSummary, SkippedFile};
 use crate::settings::{SettingKey, Settings};
 use crate::storage::{BackupPolicy, Db, MigrationReport};
 
@@ -56,7 +69,8 @@ impl Core {
 
         let now = time_util::now_ms();
         let (recovered, pruned) = db.write(|conn| {
-            let recovered = ops::recover_interrupted(conn, now, ops::STALE_AFTER_MS)?;
+            let recovered = ops::recover_interrupted(conn, now, ops::STALE_AFTER_MS)?
+                + index::job::recover_stale(conn, None, now)?;
             let pruned = ops::prune(
                 conn,
                 now,
@@ -178,5 +192,133 @@ impl Core {
     /// Registra uma operação pontual do adaptador (ex.: inicialização do app).
     pub fn record_event(&self, kind: &str, detail: serde_json::Value) -> Result<String> {
         ops::record_completed(&self.db, kind, time_util::now_ms(), 0, Some(&detail))
+    }
+
+    // ---- Projetos -------------------------------------------------------------------------
+
+    /// Autoriza uma pasta como projeto (validada e canonicalizada).
+    pub fn add_project(&self, path: &Path) -> Result<Project> {
+        let data_dir = self.paths.root().to_path_buf();
+        ops::run(&self.db, ops::kinds::PROJECT_ADD, None, |_| {
+            let project = self.db.write(|c| projects::add(c, path, &data_dir))?;
+            let detail = json!({ "projectId": project.id });
+            Ok((project, Some(detail)))
+        })
+    }
+
+    pub fn project(&self, id: i64) -> Result<Project> {
+        self.db.read(|c| projects::require(c, id))
+    }
+
+    /// Localiza por ID, nome ou caminho.
+    pub fn find_project(&self, reference: &str) -> Result<Project> {
+        self.db.read(|c| projects::find(c, reference))
+    }
+
+    pub fn list_projects(&self) -> Result<Vec<ProjectSummary>> {
+        self.db.read(projects::summaries)
+    }
+
+    pub fn project_summary(&self, id: i64) -> Result<ProjectSummary> {
+        self.db
+            .read(|c| projects::summary(c, projects::require(c, id)?))
+    }
+
+    pub fn project_overview(&self, id: i64) -> Result<ProjectOverview> {
+        self.db.read(|c| projects::overview(c, id))
+    }
+
+    pub fn touch_project(&self, id: i64) -> Result<()> {
+        self.db.write(|c| projects::touch(c, id))
+    }
+
+    /// Remove o projeto do índice. **Não** altera arquivos no disco.
+    pub fn remove_project(&self, id: i64) -> Result<Project> {
+        ops::run(&self.db, ops::kinds::PROJECT_REMOVE, Some(id), |_| {
+            let project = self.db.write(|c| projects::remove(c, id))?;
+            Ok((project, Some(json!({ "projectId": id }))))
+        })
+    }
+
+    pub fn skipped_files(&self, id: i64, limit: u32) -> Result<Vec<SkippedFile>> {
+        let limit = limit.clamp(1, 1000);
+        self.db.read(|c| projects::skipped_files(c, id, limit))
+    }
+
+    // ---- Indexação ------------------------------------------------------------------------
+
+    /// Opções de indexação a partir das configurações atuais.
+    pub fn index_options(&self, mode: IndexMode, trigger: IndexTrigger) -> Result<IndexOptions> {
+        Ok(IndexOptions::from_settings(
+            &self.settings()?,
+            mode,
+            trigger,
+        ))
+    }
+
+    /// Executa um job de indexação (bloqueante). Use `control` para pausar/cancelar de outra thread.
+    pub fn index_project(
+        &self,
+        project_id: i64,
+        opts: &IndexOptions,
+        control: &JobControl,
+        observer: &dyn IndexObserver,
+    ) -> Result<IndexJob> {
+        let project = self.project(project_id)?;
+        let op = ops::start(&self.db, ops::kinds::INDEX_RUN, Some(project_id))?;
+        let result = index::run(
+            &self.db,
+            project_id,
+            Path::new(&project.root_path),
+            op.id(),
+            opts,
+            control,
+            observer,
+        );
+        let logged = match &result {
+            Ok(job) if job.status == JobStatus::Cancelled => {
+                ops::fail(&self.db, &op, &Error::Cancelled)
+            }
+            Ok(job) => ops::succeed(
+                &self.db,
+                &op,
+                Some(&json!({
+                    "mode": job.mode.as_str(),
+                    "trigger": job.trigger.as_str(),
+                    "discovered": job.discovered,
+                    "processed": job.processed,
+                    "unchanged": job.unchanged,
+                    "newContents": job.new_contents,
+                    "reusedContents": job.reused_contents,
+                    "skipped": job.skipped,
+                    "removed": job.removed,
+                    "renamed": job.renamed,
+                    "failed": job.failed,
+                    "generation": job.generation,
+                })),
+            ),
+            Err(e) => ops::fail(&self.db, &op, e),
+        };
+        if let Err(e) = logged {
+            tracing::warn!(error = %e, "falha ao registrar a operação de indexação");
+        }
+        result.map_err(|e| Error::InOperation {
+            op_id: op.id().to_owned(),
+            source: Box::new(e),
+        })
+    }
+
+    pub fn list_jobs(&self, project_id: i64, limit: u32) -> Result<Vec<IndexJob>> {
+        self.db
+            .read(|c| index::job::list(c, project_id, limit.clamp(1, 100)))
+    }
+
+    pub fn active_job(&self, project_id: i64) -> Result<Option<IndexJob>> {
+        self.db.read(|c| index::job::active(c, project_id))
+    }
+
+    pub fn job_errors(&self, job_id: &str, limit: u32) -> Result<Vec<IndexError>> {
+        self.db
+            .read(|c| index::job::errors(c, job_id, limit.clamp(1, 1000)))
     }
 }

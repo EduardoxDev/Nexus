@@ -9,10 +9,16 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use nexus_core::classify::FileKind;
 use nexus_core::diagnostics::{
     AppInfo, BackupInfo, DiagnosticsReport, FileStat, IntegrityReport, StartupStatus,
 };
+use nexus_core::index::{IndexError, IndexJob, IndexMode, IndexTrigger, JobPhase, JobStatus};
 use nexus_core::ops::{OperationQuery, OperationRecord, OperationStatus};
+use nexus_core::projects::{
+    ChangedFile, DirStat, FileCounts, KindStat, LanguageStat, Project, ProjectOverview,
+    ProjectSummary, SkippedFile, StatusStat,
+};
 use nexus_core::settings::{MotionPreference, SettingKey, Settings, ThemePreference};
 use nexus_core::storage::AppliedMigration;
 use nexus_core::{ErrorCode, ErrorInfo};
@@ -50,6 +56,23 @@ fn generate() -> BTreeMap<String, String> {
     render::<IntegrityReport>(&cfg, &mut files);
     render::<StartupStatus>(&cfg, &mut files);
     render::<serde_json::Value>(&cfg, &mut files);
+    render::<FileKind>(&cfg, &mut files);
+    render::<Project>(&cfg, &mut files);
+    render::<FileCounts>(&cfg, &mut files);
+    render::<ProjectSummary>(&cfg, &mut files);
+    render::<LanguageStat>(&cfg, &mut files);
+    render::<KindStat>(&cfg, &mut files);
+    render::<StatusStat>(&cfg, &mut files);
+    render::<DirStat>(&cfg, &mut files);
+    render::<ChangedFile>(&cfg, &mut files);
+    render::<SkippedFile>(&cfg, &mut files);
+    render::<ProjectOverview>(&cfg, &mut files);
+    render::<IndexJob>(&cfg, &mut files);
+    render::<IndexMode>(&cfg, &mut files);
+    render::<IndexTrigger>(&cfg, &mut files);
+    render::<JobStatus>(&cfg, &mut files);
+    render::<JobPhase>(&cfg, &mut files);
+    render::<IndexError>(&cfg, &mut files);
 
     let mut index = String::from("// Gerado por crates/nexus-core/tests/bindings.rs. Não edite.\n");
     for name in files.keys() {

@@ -25,6 +25,12 @@ uuid = { version = "1.28", features = ["v7"] }
 time = { version = "0.3", features = ["formatting", "macros"] }
 dirs = "7"
 ts-rs = { version = "12", features = ["serde-json-impl"] }
+ignore = "0.4.33"
+rayon = "1.12"
+regex = "1.13"
+dunce = "1.0"
+notify = "8.2"
+notify-debouncer-full = "0.7"
 clap = { version = "4.6", features = ["derive"] }
 
 tauri = { version = "2.12", features = [] }

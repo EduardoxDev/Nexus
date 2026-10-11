@@ -39,6 +39,26 @@ impl AppState {
     }
 }
 
+/// Executa uma chamada ao core fora da thread do webview.
+pub async fn blocking<T, F>(state: &AppState, f: F) -> Result<T, ErrorInfo>
+where
+    T: Send + 'static,
+    F: FnOnce(&Core) -> nexus_core::Result<T> + Send + 'static,
+{
+    let core = state.core()?;
+    tauri::async_runtime::spawn_blocking(move || f(&core))
+        .await
+        .map_err(|e| ErrorInfo {
+            code: ErrorCode::Internal,
+            message: format!("tarefa interna falhou: {e}"),
+            op_id: None,
+        })?
+        .map_err(|e| {
+            tracing::warn!(code = e.code().as_str(), error = %e, "comando falhou");
+            e.to_info()
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,24 +102,4 @@ mod tests {
             serde_json::from_value(serde_json::json!("fs.scope"));
         assert!(parsed.is_err());
     }
-}
-
-/// Executa uma chamada ao core fora da thread do webview.
-pub async fn blocking<T, F>(state: &AppState, f: F) -> Result<T, ErrorInfo>
-where
-    T: Send + 'static,
-    F: FnOnce(&Core) -> nexus_core::Result<T> + Send + 'static,
-{
-    let core = state.core()?;
-    tauri::async_runtime::spawn_blocking(move || f(&core))
-        .await
-        .map_err(|e| ErrorInfo {
-            code: ErrorCode::Internal,
-            message: format!("tarefa interna falhou: {e}"),
-            op_id: None,
-        })?
-        .map_err(|e| {
-            tracing::warn!(code = e.code().as_str(), error = %e, "comando falhou");
-            e.to_info()
-        })
 }

@@ -1,4 +1,4 @@
-//! Testes de integraÃ§Ã£o da fachada `Core`: abertura, configuraÃ§Ãµes, operaÃ§Ãµes, diagnÃ³stico e integridade.
+//! Testes de integração da fachada `Core`: abertura, configurações, operações, diagnóstico e integridade.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::io::{Seek, SeekFrom, Write};
@@ -74,7 +74,7 @@ fn invalid_setting_fails_with_op_id_and_is_logged() {
         .db()
         .read(|c| ops::get(c, &op_id))
         .unwrap()
-        .expect("operaÃ§Ã£o registrada");
+        .expect("operação registrada");
     assert_eq!(record.status, OperationStatus::Failed);
     assert_eq!(record.error_code.as_deref(), Some("invalid_input"));
     assert_eq!(core.settings().unwrap().theme, ThemePreference::Dark);
@@ -161,7 +161,7 @@ fn stale_running_operations_become_interrupted_on_reopen() {
         let core = open(&dir);
         let op = ops::start(core.db(), "test.long", None).unwrap();
         op_id = op.id().to_owned();
-        // Simula um processo que morreu hÃ¡ 11 minutos sem finalizar a operaÃ§Ã£o.
+        // Simula um processo que morreu há 11 minutos sem finalizar a operação.
         core.db()
             .write(|c| {
                 c.execute(
@@ -184,7 +184,7 @@ fn fresh_running_operations_are_not_interrupted() {
     let dir = tempfile::tempdir().unwrap();
     let core = open(&dir);
     let op = ops::start(core.db(), "test.long", None).unwrap();
-    // Outro processo abrindo o mesmo banco nÃ£o pode marcar a operaÃ§Ã£o ativa.
+    // Outro processo abrindo o mesmo banco não pode marcar a operação ativa.
     let other = open(&dir);
     assert_eq!(other.open_report().recovered_operations, 0);
     let record = core.db().read(|c| ops::get(c, op.id())).unwrap().unwrap();
@@ -236,7 +236,7 @@ fn retention_prunes_old_and_excess_operations() {
         .unwrap();
     assert!(
         remaining.contains(&"running-old".to_owned()),
-        "operaÃ§Ãµes em execuÃ§Ã£o nÃ£o sÃ£o podadas"
+        "operações em execução não são podadas"
     );
     assert!(remaining.iter().all(|id| !id.starts_with("old-")));
     assert!(removed >= 20);
@@ -284,7 +284,7 @@ fn corruption_is_detected() {
             })
             .unwrap();
     }
-    // Sobrescreve pÃ¡ginas no meio do arquivo.
+    // Sobrescreve páginas no meio do arquivo.
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .open(&db_path)
@@ -292,7 +292,7 @@ fn corruption_is_detected() {
     let len = f.metadata().unwrap().len();
     assert!(
         len > 64 * 1024,
-        "o banco de teste precisa ter vÃ¡rias pÃ¡ginas"
+        "o banco de teste precisa ter várias páginas"
     );
     f.seek(SeekFrom::Start(len / 2)).unwrap();
     f.write_all(&[0xA5; 16 * 1024]).unwrap();
@@ -307,6 +307,6 @@ fn corruption_is_detected() {
     };
     assert!(
         detected,
-        "corrupÃ§Ã£o deve ser detectada na abertura ou pela verificaÃ§Ã£o"
+        "corrupção deve ser detectada na abertura ou pela verificação"
     );
 }

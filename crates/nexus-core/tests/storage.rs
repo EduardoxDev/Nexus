@@ -1,4 +1,4 @@
-//! Testes de integraÃ§Ã£o do armazenamento: migrations, checksum, downgrade, backup e pragmas.
+//! Testes de integração do armazenamento: migrations, checksum, downgrade, backup e pragmas.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use nexus_core::storage::migrate::{self, BackupPolicy, Migration};
@@ -38,8 +38,8 @@ fn fresh_database_migrates_to_latest() {
     assert_eq!(report.from_version, 0);
     assert_eq!(report.to_version, migrate::latest_version());
     assert_eq!(report.applied.len(), migrate::MIGRATIONS.len());
-    assert!(report.backup.is_none(), "banco novo nÃ£o precisa de backup");
-    let applied = db.read(|c| migrate::applied_migrations(c)).unwrap();
+    assert!(report.backup.is_none(), "banco novo não precisa de backup");
+    let applied = db.read(migrate::applied_migrations).unwrap();
     assert_eq!(applied.len(), migrate::MIGRATIONS.len());
     assert_eq!(applied[0].checksum, migrate::MIGRATIONS[0].checksum());
 }
@@ -108,7 +108,7 @@ fn failed_migration_rolls_back_completely() {
     assert_eq!(err.code(), ErrorCode::Storage);
     assert!(
         !table_exists(&conn, "b"),
-        "a transaÃ§Ã£o deve desfazer a migration parcial"
+        "a transação deve desfazer a migration parcial"
     );
     let applied = migrate::applied_migrations(&conn).unwrap();
     assert_eq!(applied.last().unwrap().version, 1);
@@ -138,7 +138,7 @@ fn backup_is_taken_before_migrating_existing_data_and_is_restorable() {
             .starts_with("nexus-v1-")
     );
 
-    // O backup Ã© um banco completo no estado anterior Ã  migration.
+    // O backup é um banco completo no estado anterior à migration.
     let restored = Connection::open(&backup).unwrap();
     let x: i64 = restored
         .query_row("SELECT x FROM a", [], |r| r.get(0))
@@ -202,8 +202,8 @@ fn embedded_sqlite_has_fts5() {
     assert!(storage::fts5_available(&conn).unwrap());
     conn.execute_batch(
         "CREATE VIRTUAL TABLE t USING fts5(body, content='', contentless_delete=1);
-         INSERT INTO t (rowid, body) VALUES (1, 'contexto verificÃ¡vel');
+         INSERT INTO t (rowid, body) VALUES (1, 'contexto verificável');
          DELETE FROM t WHERE rowid = 1;",
     )
-    .expect("FTS5 contentless_delete (ADR-0003) precisa estar disponÃ­vel");
+    .expect("FTS5 contentless_delete (ADR-0003) precisa estar disponível");
 }

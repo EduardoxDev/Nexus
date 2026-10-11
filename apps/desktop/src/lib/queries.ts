@@ -1,7 +1,14 @@
 /** Hooks TanStack Query sobre os comandos do core. Chaves centralizadas para invalidação. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { OperationQuery, SettingKey } from "@/lib/bindings";
+import type {
+  ContextPackRequest,
+  ExportFormat,
+  ExportOptions,
+  OperationQuery,
+  SearchRequest,
+  SettingKey,
+} from "@/lib/bindings";
 import { call } from "@/lib/ipc";
 
 export const queryKeys = {
@@ -165,6 +172,92 @@ export function useRevealProjectDir() {
   return useMutation({
     mutationFn: (projectId: number) => call("reveal_project_dir", { projectId }),
   });
+}
+
+// ---- Busca e Context Packs --------------------------------------------------------------
+
+export const contextKeys = {
+  search: (req: SearchRequest | null) => ["search", req] as const,
+  fileContext: (projectId: number, relPath: string, start: number, end: number) =>
+    ["fileContext", projectId, relPath, start, end] as const,
+  packs: (projectId: number) => ["packs", projectId] as const,
+  pack: (id: string) => ["pack", id] as const,
+  packsAll: ["packs"] as const,
+};
+
+/** Executa a busca quando há uma requisição (enviada pelo formulário). */
+export function useSearch(request: SearchRequest | null) {
+  return useQuery({
+    queryKey: contextKeys.search(request),
+    queryFn: () => {
+      if (!request) throw new Error("sem consulta");
+      return call("search_project", { request });
+    },
+    enabled: request !== null,
+    staleTime: 0,
+  });
+}
+
+export function useFileContext(
+  projectId: number,
+  relPath: string | null,
+  startLine: number,
+  endLine: number,
+) {
+  return useQuery({
+    queryKey: contextKeys.fileContext(projectId, relPath ?? "", startLine, endLine),
+    queryFn: () =>
+      call("get_file_context", { projectId, relPath: relPath ?? "", startLine, endLine }),
+    enabled: relPath !== null,
+  });
+}
+
+export function useContextPacks(projectId: number | null) {
+  return useQuery({
+    queryKey: contextKeys.packs(projectId ?? -1),
+    queryFn: () => call("list_context_packs", { projectId: projectId ?? -1, limit: 50 }),
+    enabled: projectId !== null,
+  });
+}
+
+export function useContextPack(packId: string | null) {
+  return useQuery({
+    queryKey: contextKeys.pack(packId ?? ""),
+    queryFn: () => call("get_context_pack", { packId: packId ?? "" }),
+    enabled: packId !== null,
+  });
+}
+
+export function useCompilePack() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: ContextPackRequest) => call("compile_context_pack", { request }),
+    onSuccess: (pack) => {
+      client.setQueryData(contextKeys.pack(pack.plan.id), pack);
+      void client.invalidateQueries({ queryKey: contextKeys.packsAll });
+      void client.invalidateQueries({ queryKey: queryKeys.operationsAll });
+    },
+  });
+}
+
+export function useDeletePack() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (packId: string) => call("delete_context_pack", { packId }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: contextKeys.packsAll }),
+  });
+}
+
+export function usePackExport() {
+  const render = useMutation({
+    mutationFn: (args: { packId: string; format: ExportFormat; options: ExportOptions }) =>
+      call("render_context_pack", args),
+  });
+  const save = useMutation({
+    mutationFn: (args: { packId: string; format: ExportFormat; options: ExportOptions }) =>
+      call("save_context_pack", args),
+  });
+  return { render, save };
 }
 
 /** Consulta padrão de operações (todos os campos explícitos, como exige o contrato). */

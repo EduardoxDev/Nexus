@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-compile-context-pack"
+description = "Enables the compile_context_pack command without any pre-configured scope."
+commands.allow = ["compile_context_pack"]
+
+[[permission]]
+identifier = "deny-compile-context-pack"
+description = "Denies the compile_context_pack command without any pre-configured scope."
+commands.deny = ["compile_context_pack"]

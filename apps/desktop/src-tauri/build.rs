@@ -24,6 +24,14 @@ const COMMANDS: &[&str] = &[
     "list_skipped_files",
     "touch_project",
     "reveal_project_dir",
+    "search_project",
+    "get_file_context",
+    "compile_context_pack",
+    "list_context_packs",
+    "get_context_pack",
+    "delete_context_pack",
+    "render_context_pack",
+    "save_context_pack",
 ];
 
 fn main() {

@@ -8,7 +8,9 @@ import { StatusBar } from "@/app/shell/StatusBar";
 import { useGlobalShortcuts } from "@/app/useGlobalShortcuts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { OverviewPage } from "@/features/overview/OverviewPage";
+import { ContextPacksPage } from "@/features/packs/ContextPacksPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
+import { SearchPage } from "@/features/search/SearchPage";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { ShortcutsDialog } from "@/features/palette/ShortcutsDialog";
 import { SettingsPage } from "@/features/settings/SettingsPage";
@@ -22,9 +24,14 @@ import { useUi } from "@/stores/ui";
 const PAGES: Partial<Record<RouteId, () => ReactNode>> = {
   overview: () => <OverviewPage />,
   projects: () => <ProjectsPage />,
+  search: () => <SearchPage />,
+  contextPacks: () => <ContextPacksPage />,
   settings: () => <SettingsPage />,
   diagnostics: () => <DiagnosticsPage />,
 };
+
+/** Páginas que gerenciam a própria rolagem (layout em colunas). */
+const FULL_HEIGHT = new Set<RouteId>(["diagnostics", "projects", "search", "contextPacks"]);
 
 export function AppShell({ settings }: { settings: Settings }) {
   const route = useUi((s) => s.route);
@@ -62,11 +69,7 @@ export function AppShell({ settings }: { settings: Settings }) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.12, ease: "easeOut" }}
-                  className={
-                    route === "diagnostics" || route === "projects"
-                      ? "h-full"
-                      : "h-full overflow-y-auto"
-                  }
+                  className={FULL_HEIGHT.has(route) ? "h-full" : "h-full overflow-y-auto"}
                 >
                   {page}
                 </motion.div>

@@ -27,6 +27,14 @@
     "allow-get-job-errors",
     "allow-list-skipped-files",
     "allow-touch-project",
-    "allow-reveal-project-dir"
+    "allow-reveal-project-dir",
+    "allow-search-project",
+    "allow-get-file-context",
+    "allow-compile-context-pack",
+    "allow-list-context-packs",
+    "allow-get-context-pack",
+    "allow-delete-context-pack",
+    "allow-render-context-pack",
+    "allow-save-context-pack"
   ]
 }

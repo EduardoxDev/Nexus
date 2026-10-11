@@ -6,6 +6,14 @@ import { invoke } from "@tauri-apps/api/core";
 
 import type {
   AppInfo,
+  ContextPack,
+  ContextPackRequest,
+  ContextPackSummary,
+  ExportFormat,
+  ExportOptions,
+  FileContext,
+  SearchRequest,
+  SearchResponse,
   DiagnosticsReport,
   ErrorCode,
   ErrorInfo,
@@ -26,7 +34,21 @@ import type {
 
 type ProjectArgs = { projectId: number };
 
+type PackArgs = { packId: string };
+type ExportArgs = PackArgs & { format: ExportFormat; options: ExportOptions };
+
 export interface Commands {
+  search_project: { args: { request: SearchRequest }; result: SearchResponse };
+  get_file_context: {
+    args: ProjectArgs & { relPath: string; startLine: number | null; endLine: number | null };
+    result: FileContext;
+  };
+  compile_context_pack: { args: { request: ContextPackRequest }; result: ContextPack };
+  list_context_packs: { args: ProjectArgs & { limit: number }; result: ContextPackSummary[] };
+  get_context_pack: { args: PackArgs; result: ContextPack };
+  delete_context_pack: { args: PackArgs; result: null };
+  render_context_pack: { args: ExportArgs; result: string };
+  save_context_pack: { args: ExportArgs; result: string | null };
   list_projects: { args: undefined; result: ProjectSummary[] };
   get_project_overview: { args: ProjectArgs; result: ProjectOverview };
   pick_project_folder: { args: undefined; result: string | null };

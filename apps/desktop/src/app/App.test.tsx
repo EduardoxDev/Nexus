@@ -18,9 +18,9 @@ describe("shell do app", () => {
     setupIpc();
     renderApp();
     const nav = await screen.findByRole("navigation", { name: "Navegação principal" });
-    const search = within(nav).getByRole("button", { name: /Busca/ });
+    const search = within(nav).getByRole("button", { name: /Memória/ });
     expect(search).toHaveAttribute("aria-disabled", "true");
-    expect(within(search).getByText("Fase 3")).toBeInTheDocument();
+    expect(within(search).getByText("Fase 4")).toBeInTheDocument();
     await user.click(search);
     expect(screen.getByRole("heading", { name: "Visão geral" })).toBeInTheDocument();
   });

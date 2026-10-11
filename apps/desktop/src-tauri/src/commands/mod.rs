@@ -2,6 +2,7 @@
 //! A lista precisa estar sincronizada com `build.rs` e `capabilities/default.json`.
 
 pub mod app;
+pub mod context;
 pub mod diagnostics;
 pub mod projects;
 pub mod settings;

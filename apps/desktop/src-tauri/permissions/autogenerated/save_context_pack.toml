@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-context-pack"
+description = "Enables the save_context_pack command without any pre-configured scope."
+commands.allow = ["save_context_pack"]
+
+[[permission]]
+identifier = "deny-save-context-pack"
+description = "Denies the save_context_pack command without any pre-configured scope."
+commands.deny = ["save_context_pack"]

@@ -160,6 +160,14 @@ pub fn run() {
             commands::projects::list_skipped_files,
             commands::projects::touch_project,
             commands::projects::reveal_project_dir,
+            commands::context::search_project,
+            commands::context::get_file_context,
+            commands::context::compile_context_pack,
+            commands::context::list_context_packs,
+            commands::context::get_context_pack,
+            commands::context::delete_context_pack,
+            commands::context::render_context_pack,
+            commands::context::save_context_pack,
         ])
         .build(tauri::generate_context!());
 

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-render-context-pack"
+description = "Enables the render_context_pack command without any pre-configured scope."
+commands.allow = ["render_context_pack"]
+
+[[permission]]
+identifier = "deny-render-context-pack"
+description = "Denies the render_context_pack command without any pre-configured scope."
+commands.deny = ["render_context_pack"]

@@ -17,6 +17,9 @@ interface UiState {
   /** Projeto aberto na seção Projetos. */
   selectedProjectId: number | null;
   selectProject: (id: number | null) => void;
+  /** Tarefa sugerida para o próximo Context Pack (ex.: vinda da Busca). */
+  draftTask: string;
+  setDraftTask: (task: string) => void;
   /** Navega para uma seção disponível. Retorna `false` se a seção ainda não existe. */
   navigate: (route: RouteId) => boolean;
   back: () => void;
@@ -33,6 +36,8 @@ export const useUi = create<UiState>()((set, get) => ({
   shortcutsOpen: false,
   selectedProjectId: null,
   selectProject: (selectedProjectId) => set({ selectedProjectId }),
+  draftTask: "",
+  setDraftTask: (draftTask) => set({ draftTask }),
   navigate: (route) => {
     if (!isAvailable(route)) return false;
     const current = get().route;
@@ -65,5 +70,6 @@ export function resetUi(): void {
     paletteOpen: false,
     shortcutsOpen: false,
     selectedProjectId: null,
+    draftTask: "",
   });
 }

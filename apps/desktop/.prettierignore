@@ -1,0 +1,7 @@
+dist
+node_modules
+src-tauri
+src/lib/bindings
+test-results
+playwright-report
+pnpm-lock.yaml

@@ -46,6 +46,47 @@ impl AppInfo {
     }
 }
 
+/// Resultado da abertura do core pelo adaptador. Se `ready` for falso, `error` explica o motivo
+/// (ex.: schema incompatível) e o app continua abrindo para mostrar o diagnóstico ao usuário.
+#[derive(Debug, Clone, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct StartupStatus {
+    pub ready: bool,
+    pub data_dir: Option<String>,
+    pub error: Option<crate::ErrorInfo>,
+    pub schema_version: Option<i64>,
+    pub applied_migrations: Vec<i64>,
+    pub backup_created: bool,
+    pub recovered_operations: i64,
+}
+
+impl StartupStatus {
+    pub fn from_core(core: &crate::Core) -> Self {
+        let report = core.open_report();
+        Self {
+            ready: true,
+            data_dir: Some(core.paths().root().display().to_string()),
+            error: None,
+            schema_version: Some(report.migration.to_version),
+            applied_migrations: report.migration.applied.clone(),
+            backup_created: report.migration.backup.is_some(),
+            recovered_operations: i64::try_from(report.recovered_operations).unwrap_or(i64::MAX),
+        }
+    }
+
+    pub fn failed(data_dir: Option<String>, error: &crate::Error) -> Self {
+        Self {
+            ready: false,
+            data_dir,
+            error: Some(error.to_info()),
+            schema_version: None,
+            applied_migrations: Vec::new(),
+            backup_created: false,
+            recovered_operations: 0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct FileStat {

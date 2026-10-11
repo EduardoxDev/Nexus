@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissões da janela principal: apenas eventos e os comandos do NEXUS. Sem fs, shell ou http.",
+  "windows": ["main"],
+  "permissions": [
+    "core:event:default",
+    "allow-get-startup-status",
+    "allow-get-app-info",
+    "allow-get-diagnostics",
+    "allow-run-integrity-check",
+    "allow-list-operations",
+    "allow-get-settings",
+    "allow-set-setting",
+    "allow-reveal-data-dir"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "nexus-workspace",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @nexus/desktop tauri dev",
+    "build": "pnpm --filter @nexus/desktop build",
+    "check": "pnpm --filter @nexus/desktop check",
+    "test": "pnpm --filter @nexus/desktop test",
+    "e2e": "pnpm --filter @nexus/desktop e2e",
+    "bundle": "pnpm --filter @nexus/desktop tauri build"
+  }
+}

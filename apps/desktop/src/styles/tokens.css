@@ -1,0 +1,86 @@
+/*
+ * Design tokens do NEXUS.
+ * Tema escuro (grafite) é o padrão; tema claro completo. Acento violeta usado só para foco,
+ * ação primária e seleção. Contraste verificado em src/styles/tokens.test.ts.
+ */
+
+:root,
+.light {
+  color-scheme: light;
+  --bg: oklch(0.985 0.002 270);
+  --surface-1: oklch(1 0 0);
+  --surface-2: oklch(0.967 0.003 270);
+  --surface-3: oklch(0.94 0.004 270);
+  --border: oklch(0.9 0.005 270);
+  --border-strong: oklch(0.82 0.008 270);
+
+  --fg: oklch(0.22 0.01 270);
+  --fg-muted: oklch(0.42 0.012 270);
+  --fg-subtle: oklch(0.5 0.012 270);
+
+  --accent: oklch(0.52 0.2 288);
+  --accent-hover: oklch(0.47 0.2 288);
+  --accent-fg: oklch(0.99 0 0);
+  --accent-text: oklch(0.48 0.2 288);
+  --accent-subtle: oklch(0.95 0.03 288);
+  --focus-ring: oklch(0.6 0.19 288);
+
+  --success: oklch(0.5 0.13 155);
+  --warning: oklch(0.53 0.13 70);
+  --danger: oklch(0.53 0.2 25);
+  --info: oklch(0.5 0.12 240);
+  --success-subtle: oklch(0.96 0.03 155);
+  --warning-subtle: oklch(0.96 0.04 85);
+  --danger-subtle: oklch(0.96 0.03 25);
+  --info-subtle: oklch(0.96 0.025 240);
+
+  --shadow-overlay:
+    0 12px 32px -8px oklch(0.2 0.02 270 / 0.22), 0 2px 6px oklch(0.2 0.02 270 / 0.1);
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: oklch(0.175 0.006 270);
+  --surface-1: oklch(0.2 0.006 270);
+  --surface-2: oklch(0.228 0.007 270);
+  --surface-3: oklch(0.262 0.008 270);
+  --border: oklch(0.29 0.008 270);
+  --border-strong: oklch(0.36 0.01 270);
+
+  --fg: oklch(0.95 0.003 270);
+  --fg-muted: oklch(0.76 0.008 270);
+  --fg-subtle: oklch(0.65 0.01 270);
+
+  --accent: oklch(0.56 0.19 288);
+  --accent-hover: oklch(0.61 0.18 288);
+  --accent-fg: oklch(0.99 0 0);
+  --accent-text: oklch(0.78 0.12 288);
+  --accent-subtle: oklch(0.27 0.05 288);
+  --focus-ring: oklch(0.7 0.16 288);
+
+  --success: oklch(0.76 0.14 155);
+  --warning: oklch(0.82 0.13 80);
+  --danger: oklch(0.72 0.17 25);
+  --info: oklch(0.76 0.1 235);
+  --success-subtle: oklch(0.26 0.04 155);
+  --warning-subtle: oklch(0.27 0.04 80);
+  --danger-subtle: oklch(0.27 0.05 25);
+  --info-subtle: oklch(0.26 0.035 235);
+
+  --shadow-overlay: 0 16px 40px -8px oklch(0 0 0 / 0.55), 0 2px 8px oklch(0 0 0 / 0.35);
+}
+
+:root {
+  --font-sans:
+    "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono:
+    "Cascadia Mono", "Cascadia Code", Consolas, "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --sidebar-width: 232px;
+  --sidebar-width-collapsed: 56px;
+}

@@ -9,7 +9,9 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use nexus_core::diagnostics::{AppInfo, BackupInfo, DiagnosticsReport, FileStat, IntegrityReport};
+use nexus_core::diagnostics::{
+    AppInfo, BackupInfo, DiagnosticsReport, FileStat, IntegrityReport, StartupStatus,
+};
 use nexus_core::ops::{OperationQuery, OperationRecord, OperationStatus};
 use nexus_core::settings::{MotionPreference, SettingKey, Settings, ThemePreference};
 use nexus_core::storage::AppliedMigration;
@@ -46,6 +48,8 @@ fn generate() -> BTreeMap<String, String> {
     render::<BackupInfo>(&cfg, &mut files);
     render::<DiagnosticsReport>(&cfg, &mut files);
     render::<IntegrityReport>(&cfg, &mut files);
+    render::<StartupStatus>(&cfg, &mut files);
+    render::<serde_json::Value>(&cfg, &mut files);
 
     let mut index = String::from("// Gerado por crates/nexus-core/tests/bindings.rs. Não edite.\n");
     for name in files.keys() {
@@ -68,7 +72,9 @@ fn bindings_are_up_to_date() {
         }
         std::fs::create_dir_all(&dir).unwrap();
         for (name, body) in &generated {
-            std::fs::write(dir.join(name), body).unwrap();
+            let path = dir.join(name);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
         }
         return;
     }
@@ -82,15 +88,7 @@ fn bindings_are_up_to_date() {
             stale.push(name.clone());
         }
     }
-    let on_disk: Vec<String> = std::fs::read_dir(&dir)
-        .map(|entries| {
-            entries
-                .flatten()
-                .map(|e| e.file_name().to_string_lossy().into_owned())
-                .collect()
-        })
-        .unwrap_or_default();
-    for name in on_disk {
+    for name in files_on_disk(&dir, &dir) {
         if !generated.contains_key(&name) {
             stale.push(format!("{name} (órfão)"));
         }
@@ -99,4 +97,26 @@ fn bindings_are_up_to_date() {
         stale.is_empty(),
         "bindings desatualizados: {stale:?}. Rode `NEXUS_UPDATE_BINDINGS=1 cargo test -p nexus-core --test bindings`."
     );
+}
+
+/// Arquivos existentes sob `dir`, como caminhos relativos a `root` com `/`.
+fn files_on_disk(root: &std::path::Path, dir: &std::path::Path) -> Vec<String> {
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            out.extend(files_on_disk(root, &path));
+        } else {
+            let rel = path.strip_prefix(root).unwrap();
+            let parts: Vec<String> = rel
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                .collect();
+            out.push(parts.join("/"));
+        }
+    }
+    out
 }

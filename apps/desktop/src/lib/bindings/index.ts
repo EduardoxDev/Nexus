@@ -13,4 +13,6 @@ export type * from "./OperationRecord";
 export type * from "./OperationStatus";
 export type * from "./SettingKey";
 export type * from "./Settings";
+export type * from "./StartupStatus";
 export type * from "./ThemePreference";
+export type * from "./serde_json/JsonValue";

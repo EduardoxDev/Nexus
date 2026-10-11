@@ -1,0 +1,34 @@
+# Rust
+/target/
+**/target/
+
+# Node / frontend
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# Playwright
+apps/desktop/test-results/
+apps/desktop/playwright-report/
+apps/desktop/blob-report/
+
+# Tauri gerado
+apps/desktop/src-tauri/gen/
+
+# Dados locais e segredos — nunca versionar
+.env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# Editores / SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

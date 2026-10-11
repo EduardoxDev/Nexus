@@ -30,6 +30,9 @@ export const defaultSettings: Settings = {
   theme: "dark",
   reducedMotion: "system",
   sidebarCollapsed: false,
+  indexingThreads: 0,
+  maxFileSizeKb: 1024,
+  watchProjects: true,
 };
 
 export const appInfo: AppInfo = {
@@ -107,22 +110,27 @@ export function setupIpc(overrides: Partial<Record<CommandName, Handler>> = {}) 
     list_operations: () => [operation()],
     run_integrity_check: () => ({ ok: true, messages: ["ok"], durationMs: 3, opId: "op-check" }),
     reveal_data_dir: () => null,
+    list_projects: () => [],
+    get_indexing_queue: () => ({ running: null, paused: false, queued: [] }),
     ...overrides,
   };
-  mockIPC((cmd, payload) => {
-    const args = (payload ?? {}) as Record<string, unknown>;
-    calls.push({ cmd, args });
-    const handler = handlers[cmd];
-    if (!handler) throw new Error(`comando não simulado: ${cmd}`);
-    try {
-      return handler(args);
-    } catch (e) {
-      // O Tauri rejeita com o objeto serializado do erro (ErrorInfo), não com um Error.
-      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-      if (e instanceof IpcError) return Promise.reject(e.info);
-      throw e;
-    }
-  });
+  mockIPC(
+    (cmd, payload) => {
+      const args = (payload ?? {}) as Record<string, unknown>;
+      calls.push({ cmd, args });
+      const handler = handlers[cmd];
+      if (!handler) throw new Error(`comando não simulado: ${cmd}`);
+      try {
+        return handler(args);
+      } catch (e) {
+        // O Tauri rejeita com o objeto serializado do erro (ErrorInfo), não com um Error.
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+        if (e instanceof IpcError) return Promise.reject(e.info);
+        throw e;
+      }
+    },
+    { shouldMockEvents: true },
+  );
   return { calls };
 }
 

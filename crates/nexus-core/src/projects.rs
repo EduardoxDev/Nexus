@@ -353,6 +353,7 @@ pub fn overview(conn: &Connection, id: i64) -> Result<ProjectOverview> {
     let mut stmt = conn.prepare(
         "SELECT language, COUNT(*), SUM(size), COALESCE(SUM(line_count), 0) FROM files
          WHERE project_id = ?1 AND status = 'indexed' AND language IS NOT NULL
+           AND kind <> 'lockfile'
          GROUP BY language ORDER BY SUM(size) DESC LIMIT 12",
     )?;
     let languages = stmt

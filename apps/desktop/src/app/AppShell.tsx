@@ -8,10 +8,12 @@ import { StatusBar } from "@/app/shell/StatusBar";
 import { useGlobalShortcuts } from "@/app/useGlobalShortcuts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { OverviewPage } from "@/features/overview/OverviewPage";
+import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { CommandPalette } from "@/features/palette/CommandPalette";
 import { ShortcutsDialog } from "@/features/palette/ShortcutsDialog";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import type { Settings } from "@/lib/bindings";
+import { useIndexingEvents } from "@/lib/events";
 import { useSetSetting } from "@/lib/queries";
 import { useApplyAppearance } from "@/lib/theme";
 import { useUi } from "@/stores/ui";
@@ -19,6 +21,7 @@ import { useUi } from "@/stores/ui";
 /** Páginas disponíveis. Seções futuras não têm página (a navegação as recusa). */
 const PAGES: Partial<Record<RouteId, () => ReactNode>> = {
   overview: () => <OverviewPage />,
+  projects: () => <ProjectsPage />,
   settings: () => <SettingsPage />,
   diagnostics: () => <DiagnosticsPage />,
 };
@@ -27,6 +30,7 @@ export function AppShell({ settings }: { settings: Settings }) {
   const route = useUi((s) => s.route);
   const setSetting = useSetSetting();
   const appearance = useApplyAppearance(settings.theme, settings.reducedMotion);
+  useIndexingEvents();
 
   const toggleSidebar = useCallback(() => {
     setSetting.mutate({ key: "ui.sidebar_collapsed", value: !settings.sidebarCollapsed });
@@ -58,7 +62,11 @@ export function AppShell({ settings }: { settings: Settings }) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.12, ease: "easeOut" }}
-                  className={route === "diagnostics" ? "h-full" : "h-full overflow-y-auto"}
+                  className={
+                    route === "diagnostics" || route === "projects"
+                      ? "h-full"
+                      : "h-full overflow-y-auto"
+                  }
                 >
                   {page}
                 </motion.div>

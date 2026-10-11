@@ -1,5 +1,15 @@
 import { Command } from "cmdk";
-import { FolderOpen, Keyboard, Monitor, Moon, ShieldCheck, Sun } from "lucide-react";
+import {
+  FolderGit2,
+  FolderOpen,
+  FolderPlus,
+  Keyboard,
+  Monitor,
+  Moon,
+  RefreshCw,
+  ShieldCheck,
+  Sun,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { ROUTES } from "@/app/routes";
@@ -7,12 +17,22 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { ThemePreference } from "@/lib/bindings";
 import { t } from "@/lib/i18n/pt-BR";
-import { useIntegrityCheck, useRevealDataDir, useSetSetting } from "@/lib/queries";
+import {
+  useAddProject,
+  useIndexControl,
+  useIntegrityCheck,
+  useProjects,
+  useRevealDataDir,
+  useSetSetting,
+} from "@/lib/queries";
 import { useUi } from "@/stores/ui";
 
 export function CommandPalette() {
   const open = useUi((s) => s.paletteOpen);
-  const { setPaletteOpen, navigate, setShortcutsOpen } = useUi.getState();
+  const { setPaletteOpen, navigate, setShortcutsOpen, selectProject } = useUi.getState();
+  const projects = useProjects();
+  const addProject = useAddProject();
+  const control = useIndexControl();
   const setSetting = useSetSetting();
   const integrity = useIntegrityCheck();
   const reveal = useRevealDataDir();
@@ -60,7 +80,57 @@ export function CommandPalette() {
               })}
             </Group>
 
+            {projects.data && projects.data.length > 0 && (
+              <Group heading={t.palette.groupProjects}>
+                {projects.data.map((p) => (
+                  <Item
+                    key={`open-${p.project.id}`}
+                    value={t.projects.paletteOpen(p.project.name)}
+                    onSelect={() =>
+                      run(() => {
+                        selectProject(p.project.id);
+                        navigate("projects");
+                      })
+                    }
+                  >
+                    <FolderGit2 aria-hidden="true" />
+                    {t.projects.paletteOpen(p.project.name)}
+                  </Item>
+                ))}
+                {projects.data.map((p) => (
+                  <Item
+                    key={`update-${p.project.id}`}
+                    value={t.projects.paletteUpdate(p.project.name)}
+                    onSelect={() =>
+                      run(() =>
+                        control.start.mutate({ projectId: p.project.id, mode: "incremental" }),
+                      )
+                    }
+                  >
+                    <RefreshCw aria-hidden="true" />
+                    {t.projects.paletteUpdate(p.project.name)}
+                  </Item>
+                ))}
+              </Group>
+            )}
+
             <Group heading={t.palette.groupActions}>
+              <Item
+                value={t.projects.add}
+                onSelect={() =>
+                  run(() => {
+                    navigate("projects");
+                    addProject.mutate(undefined, {
+                      onSuccess: (summary) => {
+                        if (summary) selectProject(summary.project.id);
+                      },
+                    });
+                  })
+                }
+              >
+                <FolderPlus aria-hidden="true" />
+                {t.projects.add}
+              </Item>
               <Item
                 value={t.palette.runIntegrity}
                 onSelect={() =>

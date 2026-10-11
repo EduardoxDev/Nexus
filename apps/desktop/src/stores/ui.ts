@@ -14,6 +14,9 @@ interface UiState {
   future: RouteId[];
   paletteOpen: boolean;
   shortcutsOpen: boolean;
+  /** Projeto aberto na seção Projetos. */
+  selectedProjectId: number | null;
+  selectProject: (id: number | null) => void;
   /** Navega para uma seção disponível. Retorna `false` se a seção ainda não existe. */
   navigate: (route: RouteId) => boolean;
   back: () => void;
@@ -28,6 +31,8 @@ export const useUi = create<UiState>()((set, get) => ({
   future: [],
   paletteOpen: false,
   shortcutsOpen: false,
+  selectedProjectId: null,
+  selectProject: (selectedProjectId) => set({ selectedProjectId }),
   navigate: (route) => {
     if (!isAvailable(route)) return false;
     const current = get().route;
@@ -59,5 +64,6 @@ export function resetUi(): void {
     future: [],
     paletteOpen: false,
     shortcutsOpen: false,
+    selectedProjectId: null,
   });
 }

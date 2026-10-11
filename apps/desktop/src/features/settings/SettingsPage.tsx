@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Segmented, type SegmentedOption } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MotionPreference, ThemePreference } from "@/lib/bindings";
+import { formatBytes } from "@/lib/format";
 import { t } from "@/lib/i18n/pt-BR";
 import { useRevealDataDir, useSetSetting, useSettings, useStartupStatus } from "@/lib/queries";
 
@@ -21,6 +22,59 @@ const MOTION_OPTIONS: readonly SegmentedOption<MotionPreference>[] = [
   { value: "on", label: t.settings.motionOptions.on },
   { value: "off", label: t.settings.motionOptions.off },
 ];
+
+const THREAD_OPTIONS = [
+  { value: "0", label: t.indexingSettings.threadsAuto },
+  { value: "1", label: "1" },
+  { value: "2", label: "2" },
+  { value: "4", label: "4" },
+  { value: "8", label: "8" },
+  { value: "16", label: "16" },
+];
+
+const SIZE_OPTIONS = [256, 512, 1024, 2048, 5120, 10240].map((kb) => ({
+  value: String(kb),
+  label: formatBytes(kb * 1024),
+}));
+
+const WATCH_OPTIONS: readonly SegmentedOption<"on" | "off">[] = [
+  { value: "on", label: t.indexingSettings.watchOn },
+  { value: "off", label: t.indexingSettings.watchOff },
+];
+
+function NativeSelect({
+  label,
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  // Valores fora da lista (ex.: definidos pela CLI) continuam visíveis.
+  const all = options.some((o) => o.value === value)
+    ? options
+    : [...options, { value, label: value }];
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-8 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg hover:border-border-strong disabled:opacity-50"
+    >
+      {all.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function SettingsPage() {
   const settings = useSettings();
@@ -62,6 +116,53 @@ export function SettingsPage() {
         )}
         {setSetting.isError && <ErrorState className="mt-3" error={setSetting.error} />}
       </Panel>
+
+      {settings.data && (
+        <Panel title={t.indexingSettings.title}>
+          <div className="flex flex-col divide-y divide-border">
+            <SettingRow
+              label={t.indexingSettings.threads}
+              description={t.indexingSettings.threadsDescription}
+            >
+              <NativeSelect
+                label={t.indexingSettings.threads}
+                value={String(settings.data.indexingThreads)}
+                options={THREAD_OPTIONS}
+                disabled={setSetting.isPending}
+                onChange={(v) => setSetting.mutate({ key: "indexing.threads", value: Number(v) })}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t.indexingSettings.maxSize}
+              description={t.indexingSettings.maxSizeDescription}
+            >
+              <NativeSelect
+                label={t.indexingSettings.maxSize}
+                value={String(settings.data.maxFileSizeKb)}
+                options={SIZE_OPTIONS}
+                disabled={setSetting.isPending}
+                onChange={(v) =>
+                  setSetting.mutate({ key: "indexing.max_file_size_kb", value: Number(v) })
+                }
+              />
+            </SettingRow>
+            <SettingRow
+              label={t.indexingSettings.watch}
+              description={t.indexingSettings.watchDescription}
+            >
+              <Segmented
+                aria-label={t.indexingSettings.watch}
+                value={settings.data.watchProjects ? "on" : "off"}
+                options={WATCH_OPTIONS}
+                disabled={setSetting.isPending}
+                onValueChange={(v) =>
+                  setSetting.mutate({ key: "indexing.watch", value: v === "on" })
+                }
+              />
+            </SettingRow>
+          </div>
+        </Panel>
+      )}
 
       <Panel title={t.settings.data} description={t.settings.dataDescription}>
         <div className="flex items-center gap-3">

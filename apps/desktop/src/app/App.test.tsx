@@ -18,10 +18,10 @@ describe("shell do app", () => {
     setupIpc();
     renderApp();
     const nav = await screen.findByRole("navigation", { name: "Navegação principal" });
-    const projects = within(nav).getByRole("button", { name: /Projetos/ });
-    expect(projects).toHaveAttribute("aria-disabled", "true");
-    expect(within(projects).getByText("Fase 2")).toBeInTheDocument();
-    await user.click(projects);
+    const search = within(nav).getByRole("button", { name: /Busca/ });
+    expect(search).toHaveAttribute("aria-disabled", "true");
+    expect(within(search).getByText("Fase 3")).toBeInTheDocument();
+    await user.click(search);
     expect(screen.getByRole("heading", { name: "Visão geral" })).toBeInTheDocument();
   });
 

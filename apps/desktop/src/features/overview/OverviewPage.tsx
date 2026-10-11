@@ -1,4 +1,4 @@
-import { ArrowRight, CircleCheck, CircleDashed, Inbox } from "lucide-react";
+import { ArrowRight, CircleCheck, CircleDashed, FolderGit2, Inbox } from "lucide-react";
 
 import { EmptyState, ErrorState, StatusDot } from "@/components/feedback";
 import { KeyValueList, Page, Panel } from "@/components/layout";
@@ -10,6 +10,11 @@ import { formatBytes, formatDateTime } from "@/lib/format";
 import { t } from "@/lib/i18n/pt-BR";
 import { operationQuery, useDiagnostics, useOperations, useStartupStatus } from "@/lib/queries";
 import { integrityPassed } from "@/features/operations/OperationsTable";
+import { CURRENT_PHASE } from "@/app/routes";
+import { activityLine } from "@/features/projects/activity";
+import type { ProjectSummary } from "@/lib/bindings";
+import { useProjects } from "@/lib/queries";
+import { useProjectActivity } from "@/stores/indexing";
 import { useUi } from "@/stores/ui";
 
 const RECENT = operationQuery({ limit: 6 });
@@ -22,7 +27,10 @@ export function OverviewPage() {
           <SystemPanel />
           <StepsPanel />
         </div>
-        <RecentOperationsPanel />
+        <div className="flex flex-col gap-5">
+          <ProjectsPanel />
+          <RecentOperationsPanel />
+        </div>
       </div>
     </Page>
   );
@@ -112,16 +120,32 @@ function StepsPanel() {
             {t.overview.available}
           </Badge>
         </li>
-        {t.overview.steps.map((step) => (
-          <li key={step.title} className="flex gap-3 border-t border-border py-2">
-            <CircleDashed className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden="true" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-fg">{step.title}</p>
-              <p className="text-sm text-fg-muted">{step.body}</p>
-            </div>
-            <Badge className="self-start">{t.nav.phaseBadge(step.phase)}</Badge>
-          </li>
-        ))}
+        {t.overview.steps.map((step) => {
+          const done = step.phase <= CURRENT_PHASE;
+          return (
+            <li key={step.title} className="flex gap-3 border-t border-border py-2">
+              {done ? (
+                <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
+              ) : (
+                <CircleDashed
+                  className="mt-0.5 size-4 shrink-0 text-fg-subtle"
+                  aria-hidden="true"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-fg">{step.title}</p>
+                <p className="text-sm text-fg-muted">{step.body}</p>
+              </div>
+              {done ? (
+                <Badge tone="success" className="self-start">
+                  {t.overview.available}
+                </Badge>
+              ) : (
+                <Badge className="self-start">{t.nav.phaseBadge(step.phase)}</Badge>
+              )}
+            </li>
+          );
+        })}
       </ol>
     </Panel>
   );
@@ -154,5 +178,64 @@ function RecentOperationsPanel() {
         <OperationsTable operations={operations.data} compact />
       )}
     </Panel>
+  );
+}
+
+function ProjectsPanel() {
+  const projects = useProjects();
+  const navigate = useUi((s) => s.navigate);
+  const selectProject = useUi((s) => s.selectProject);
+  const open = (id: number | null) => {
+    if (id !== null) selectProject(id);
+    navigate("projects");
+  };
+  return (
+    <Panel
+      title={t.projects.overviewTitle}
+      actions={
+        <Button variant="ghost" size="sm" onClick={() => open(null)}>
+          {t.projects.overviewAll}
+          <ArrowRight aria-hidden="true" />
+        </Button>
+      }
+    >
+      {projects.isError ? (
+        <ErrorState error={projects.error} onRetry={() => void projects.refetch()} />
+      ) : !projects.data ? (
+        <Skeleton className="h-10" />
+      ) : projects.data.length === 0 ? (
+        <EmptyState
+          icon={FolderGit2}
+          title={t.projects.overviewEmpty}
+          action={
+            <Button variant="primary" onClick={() => open(null)}>
+              {t.projects.add}
+            </Button>
+          }
+        />
+      ) : (
+        <ul className="flex flex-col">
+          {projects.data.slice(0, 5).map((p) => (
+            <li key={p.project.id} className="border-t border-border first:border-t-0">
+              <ProjectLine summary={p} onOpen={() => open(p.project.id)} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+function ProjectLine({ summary, onOpen }: { summary: ProjectSummary; onOpen: () => void }) {
+  const activity = useProjectActivity(summary.project.id);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center justify-between gap-3 rounded-sm py-2 text-left hover:bg-surface-2"
+    >
+      <span className="truncate text-sm font-medium text-fg">{summary.project.name}</span>
+      <span className="truncate text-xs text-fg-muted">{activityLine(summary, activity)}</span>
+    </button>
   );
 }

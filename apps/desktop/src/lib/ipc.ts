@@ -9,15 +9,39 @@ import type {
   DiagnosticsReport,
   ErrorCode,
   ErrorInfo,
+  IndexError,
+  IndexingQueue,
+  IndexJob,
+  IndexMode,
   IntegrityReport,
   OperationQuery,
   OperationRecord,
+  ProjectOverview,
+  ProjectSummary,
   SettingKey,
   Settings,
+  SkippedFile,
   StartupStatus,
 } from "@/lib/bindings";
 
+type ProjectArgs = { projectId: number };
+
 export interface Commands {
+  list_projects: { args: undefined; result: ProjectSummary[] };
+  get_project_overview: { args: ProjectArgs; result: ProjectOverview };
+  pick_project_folder: { args: undefined; result: string | null };
+  add_project: { args: { path: string }; result: ProjectSummary };
+  remove_project: { args: ProjectArgs; result: null };
+  start_index: { args: ProjectArgs & { mode: IndexMode }; result: null };
+  pause_index: { args: ProjectArgs; result: boolean };
+  resume_index: { args: ProjectArgs; result: boolean };
+  cancel_index: { args: ProjectArgs; result: boolean };
+  get_indexing_queue: { args: undefined; result: IndexingQueue };
+  list_jobs: { args: ProjectArgs & { limit: number }; result: IndexJob[] };
+  get_job_errors: { args: { jobId: string; limit: number }; result: IndexError[] };
+  list_skipped_files: { args: ProjectArgs & { limit: number }; result: SkippedFile[] };
+  touch_project: { args: ProjectArgs; result: null };
+  reveal_project_dir: { args: ProjectArgs; result: null };
   get_startup_status: { args: undefined; result: StartupStatus };
   get_app_info: { args: undefined; result: AppInfo };
   get_diagnostics: { args: undefined; result: DiagnosticsReport };

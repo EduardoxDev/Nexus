@@ -10,6 +10,11 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use nexus_core::classify::FileKind;
+use nexus_core::context::export::{ExportFormat, ExportOptions};
+use nexus_core::context::{
+    ContextPack, ContextPackPlan, ContextPackRequest, ContextPackSummary, PackExcerpt, PackSource,
+    QueryAnalysisSnapshot, SourceRole,
+};
 use nexus_core::diagnostics::{
     AppInfo, BackupInfo, DiagnosticsReport, FileStat, IntegrityReport, StartupStatus,
 };
@@ -20,6 +25,11 @@ use nexus_core::ops::{OperationQuery, OperationRecord, OperationStatus};
 use nexus_core::projects::{
     ChangedFile, DirStat, FileCounts, KindStat, LanguageStat, Project, ProjectOverview,
     ProjectSummary, SkippedFile, StatusStat,
+};
+use nexus_core::search::evidence::{FileContext, Freshness};
+use nexus_core::search::query::{Concept, Intent, QueryAnalysis};
+use nexus_core::search::{
+    Reason, ReasonKind, SearchHit, SearchMode, SearchRequest, SearchResponse,
 };
 use nexus_core::settings::{MotionPreference, SettingKey, Settings, ThemePreference};
 use nexus_core::storage::AppliedMigration;
@@ -76,6 +86,27 @@ fn generate() -> BTreeMap<String, String> {
     render::<JobPhase>(&cfg, &mut files);
     render::<IndexError>(&cfg, &mut files);
     render::<IndexingQueue>(&cfg, &mut files);
+    render::<SearchMode>(&cfg, &mut files);
+    render::<SearchRequest>(&cfg, &mut files);
+    render::<SearchResponse>(&cfg, &mut files);
+    render::<SearchHit>(&cfg, &mut files);
+    render::<Reason>(&cfg, &mut files);
+    render::<ReasonKind>(&cfg, &mut files);
+    render::<QueryAnalysis>(&cfg, &mut files);
+    render::<Concept>(&cfg, &mut files);
+    render::<Intent>(&cfg, &mut files);
+    render::<Freshness>(&cfg, &mut files);
+    render::<FileContext>(&cfg, &mut files);
+    render::<ContextPackRequest>(&cfg, &mut files);
+    render::<ContextPack>(&cfg, &mut files);
+    render::<ContextPackPlan>(&cfg, &mut files);
+    render::<ContextPackSummary>(&cfg, &mut files);
+    render::<PackSource>(&cfg, &mut files);
+    render::<PackExcerpt>(&cfg, &mut files);
+    render::<SourceRole>(&cfg, &mut files);
+    render::<QueryAnalysisSnapshot>(&cfg, &mut files);
+    render::<ExportFormat>(&cfg, &mut files);
+    render::<ExportOptions>(&cfg, &mut files);
 
     let mut index = String::from("// Gerado por crates/nexus-core/tests/bindings.rs. Não edite.\n");
     for name in files.keys() {

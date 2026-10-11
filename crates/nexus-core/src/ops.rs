@@ -28,6 +28,8 @@ pub mod kinds {
     pub const PROJECT_ADD: &str = "project.add";
     pub const PROJECT_REMOVE: &str = "project.remove";
     pub const INDEX_RUN: &str = "index.run";
+    pub const SEARCH: &str = "search.query";
+    pub const CONTEXT_COMPILE: &str = "context.compile";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

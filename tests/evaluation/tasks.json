@@ -1,0 +1,146 @@
+{
+  "fixture": "saas-app",
+  "description": "Tarefas de avaliação da recuperação. 'relevant' lista as fontes que uma pessoa que conhece o projeto consideraria necessárias para responder; foram definidas antes de medir.",
+  "tasks": [
+    {
+      "id": "auth-where",
+      "query": "Onde fica a autenticação?",
+      "relevant": ["src/auth/session.ts", "src/auth/password.ts", "src/server/middleware/requireSession.ts", "src/server/routes/auth.routes.ts"]
+    },
+    {
+      "id": "checkout-files",
+      "query": "Quais arquivos controlam o checkout?",
+      "relevant": ["src/checkout/checkout.ts", "src/checkout/cart.ts", "src/checkout/shipping.ts", "src/server/routes/orders.routes.ts", "src/web/components/CheckoutPage.tsx"]
+    },
+    {
+      "id": "payment-tests",
+      "query": "Quais testes verificam o serviço de pagamentos?",
+      "relevant": ["tests/checkout/checkout.test.ts", "tests/billing/invoices.test.ts"]
+    },
+    {
+      "id": "decision-sessions",
+      "query": "Onde foi decidido usar sessões em vez de JWT?",
+      "relevant": ["docs/decisions/0001-sessions-not-jwt.md"]
+    },
+    {
+      "id": "decision-cents",
+      "query": "Por que valores monetários são guardados em centavos?",
+      "relevant": ["docs/decisions/0002-money-in-cents.md", "src/utils/money.ts"]
+    },
+    {
+      "id": "database-url",
+      "query": "Onde é configurada a URL do banco de dados?",
+      "relevant": ["src/config/index.ts", "src/db/client.ts", ".env.example"]
+    },
+    {
+      "id": "rate-limit",
+      "query": "rate limit middleware",
+      "relevant": ["src/server/middleware/rateLimit.ts"]
+    },
+    {
+      "id": "coupon",
+      "query": "Como aplicar cupom de desconto?",
+      "relevant": ["src/checkout/discounts.ts", "tests/checkout/discounts.test.ts"]
+    },
+    {
+      "id": "shipping",
+      "query": "cálculo de frete",
+      "relevant": ["src/checkout/shipping.ts"]
+    },
+    {
+      "id": "order-email",
+      "query": "enviar email de confirmação do pedido",
+      "relevant": ["src/notifications/email.ts", "src/notifications/templates.ts"]
+    },
+    {
+      "id": "password-hash",
+      "query": "hash de senha",
+      "relevant": ["src/auth/password.ts", "tests/auth/password.test.ts"]
+    },
+    {
+      "id": "google-login",
+      "query": "Adicionar login com Google respeitando a arquitetura de autenticação existente",
+      "relevant": ["src/auth/oauth/provider.ts", "src/auth/oauth/github.ts", "src/auth/session.ts", "docs/decisions/0003-oauth-providers.md", "src/server/routes/auth.routes.ts"]
+    },
+    {
+      "id": "validate-session",
+      "query": "validateSession",
+      "relevant": ["src/auth/session.ts", "src/server/middleware/requireSession.ts"]
+    },
+    {
+      "id": "orders-migration",
+      "query": "migração da tabela de pedidos",
+      "relevant": ["src/db/migrations/002_orders.sql"]
+    },
+    {
+      "id": "login-form",
+      "query": "componente de formulário de login",
+      "relevant": ["src/web/components/LoginForm.tsx"]
+    },
+    {
+      "id": "invoice-number",
+      "query": "geração do número da fatura",
+      "relevant": ["src/billing/invoices.ts", "tests/billing/invoices.test.ts"]
+    },
+    {
+      "id": "plan-upgrade",
+      "query": "upgrade de plano de assinatura",
+      "relevant": ["src/billing/subscriptions.ts", "src/server/routes/billing.routes.ts"]
+    },
+    {
+      "id": "format-money",
+      "query": "formatar dinheiro para exibição",
+      "relevant": ["src/utils/money.ts", "src/web/components/PriceTag.tsx"]
+    },
+    {
+      "id": "ci-pipeline",
+      "query": "pipeline de CI",
+      "relevant": [".github/workflows/ci.yml"]
+    },
+    {
+      "id": "conventions",
+      "query": "convenções de código do projeto",
+      "relevant": ["CONTRIBUTING.md"]
+    },
+    {
+      "id": "orders-api",
+      "query": "rotas da API de pedidos",
+      "relevant": ["src/server/routes/orders.routes.ts", "docs/api.md"]
+    },
+    {
+      "id": "order-repository",
+      "query": "salvar pedido no banco de dados",
+      "relevant": ["src/orders/orderRepository.ts"]
+    },
+    {
+      "id": "session-hook",
+      "query": "hook React de sessão no frontend",
+      "relevant": ["src/web/hooks/useSession.ts"]
+    },
+    {
+      "id": "logger",
+      "query": "logger estruturado",
+      "relevant": ["src/utils/logger.ts"]
+    },
+    {
+      "id": "checkout-coupon-change",
+      "query": "Mudar a API de checkout para aceitar cupons de desconto",
+      "relevant": ["src/checkout/checkout.ts", "src/checkout/discounts.ts", "src/server/routes/orders.routes.ts", "tests/checkout/checkout.test.ts"]
+    },
+    {
+      "id": "session-expiry",
+      "query": "tempo de expiração da sessão",
+      "relevant": ["src/auth/session.ts", "src/config/index.ts"]
+    },
+    {
+      "id": "stripe-charges",
+      "query": "Where are Stripe charges created?",
+      "relevant": ["src/billing/stripeClient.ts", "src/checkout/checkout.ts"]
+    },
+    {
+      "id": "architecture",
+      "query": "visão geral da arquitetura",
+      "relevant": ["docs/architecture.md"]
+    }
+  ]
+}

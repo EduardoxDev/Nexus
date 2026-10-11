@@ -2,6 +2,7 @@
 
 pub mod chunk;
 pub mod classify;
+pub mod context;
 pub mod diagnostics;
 pub mod error;
 pub mod git;
@@ -11,6 +12,7 @@ pub mod ops;
 pub mod paths;
 pub mod projects;
 pub mod scan;
+pub mod search;
 pub mod sensitive;
 pub mod settings;
 pub mod storage;
@@ -23,6 +25,8 @@ pub use error::{Error, ErrorCode, ErrorInfo, Result};
 pub use paths::DataPaths;
 use serde_json::json;
 
+use crate::context::export::{ExportFormat, ExportOptions};
+use crate::context::{ContextPack, ContextPackRequest, ContextPackSummary};
 use crate::diagnostics::{DiagnosticsReport, IntegrityReport};
 use crate::index::{
     IndexError, IndexJob, IndexMode, IndexObserver, IndexOptions, IndexTrigger, JobControl,
@@ -30,6 +34,8 @@ use crate::index::{
 };
 use crate::ops::{OperationQuery, OperationRecord};
 use crate::projects::{Project, ProjectOverview, ProjectSummary, SkippedFile};
+use crate::search::evidence::FileContext;
+use crate::search::{SearchRequest, SearchResponse};
 use crate::settings::{SettingKey, Settings};
 use crate::storage::{BackupPolicy, Db, MigrationReport};
 
@@ -320,5 +326,97 @@ impl Core {
     pub fn job_errors(&self, job_id: &str, limit: u32) -> Result<Vec<IndexError>> {
         self.db
             .read(|c| index::job::errors(c, job_id, limit.clamp(1, 1000)))
+    }
+
+    // ---- Busca e Context Packs ------------------------------------------------------------
+
+    /// Busca híbrida no índice do projeto. Registra apenas estatísticas (nunca o texto da consulta).
+    pub fn search(&self, req: &SearchRequest) -> Result<SearchResponse> {
+        let project = self.project(req.project_id)?;
+        let response = self.db.read(|c| search::search(c, &project, req))?;
+        let detail = json!({
+            "projectId": project.id,
+            "mode": response.mode,
+            "hits": response.hits.len(),
+            "candidates": response.candidates,
+            "tookMs": response.took_ms,
+        });
+        if let Err(e) = ops::record_completed(
+            &self.db,
+            ops::kinds::SEARCH,
+            time_util::now_ms() - response.took_ms,
+            response.took_ms,
+            Some(&detail),
+        ) {
+            tracing::warn!(error = %e, "não foi possível registrar a busca");
+        }
+        Ok(response)
+    }
+
+    /// Trecho de um arquivo **indexado** (arquivos ignorados/sensíveis não podem ser lidos).
+    pub fn file_context(
+        &self,
+        project_id: i64,
+        rel_path: &str,
+        start: Option<i64>,
+        end: Option<i64>,
+    ) -> Result<FileContext> {
+        let project = self.project(project_id)?;
+        let root = std::path::PathBuf::from(&project.root_path);
+        self.db
+            .read(|c| search::evidence::file_context(c, &root, project_id, rel_path, start, end))
+    }
+
+    /// Compila, persiste (só referências) e devolve o pack materializado.
+    pub fn compile_context_pack(&self, req: &ContextPackRequest) -> Result<ContextPack> {
+        let project = self.project(req.project_id)?;
+        ops::run(
+            &self.db,
+            ops::kinds::CONTEXT_COMPILE,
+            Some(project.id),
+            |_| {
+                let plan = self.db.read(|c| context::compile(c, &project, req))?;
+                self.db.write(|c| context::save(c, &plan))?;
+                let detail = json!({
+                    "packId": plan.id,
+                    "sources": plan.sources.len(),
+                    "omitted": plan.omitted.len(),
+                    "estimatedTokens": plan.estimated_tokens,
+                    "tokenBudget": plan.token_budget,
+                });
+                let pack = context::materialize(Path::new(&project.root_path), plan)?;
+                Ok((pack, Some(detail)))
+            },
+        )
+    }
+
+    pub fn list_context_packs(
+        &self,
+        project_id: i64,
+        limit: u32,
+    ) -> Result<Vec<ContextPackSummary>> {
+        self.db
+            .read(|c| context::list(c, project_id, limit.clamp(1, 200)))
+    }
+
+    /// Reabre um pack: os trechos são lidos do disco agora e comparados com o hash da criação.
+    pub fn context_pack(&self, id: &str) -> Result<ContextPack> {
+        let plan = self.db.read(|c| context::load(c, id))?;
+        let project = self.project(plan.project_id)?;
+        context::materialize(Path::new(&project.root_path), plan)
+    }
+
+    pub fn delete_context_pack(&self, id: &str) -> Result<()> {
+        self.db.write(|c| context::delete(c, id))
+    }
+
+    pub fn export_context_pack(
+        &self,
+        id: &str,
+        format: ExportFormat,
+        options: &ExportOptions,
+    ) -> Result<String> {
+        let pack = self.context_pack(id)?;
+        context::export::render(&pack, format, options)
     }
 }

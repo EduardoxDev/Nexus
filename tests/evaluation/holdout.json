@@ -1,0 +1,18 @@
+{
+  "fixture": "saas-app",
+  "description": "Conjunto reservado: escrito depois dos ajustes de ranking e nunca usado para ajustá-lo. Mede se as melhorias generalizam.",
+  "tasks": [
+    { "id": "h-logout", "query": "logout do usuário", "relevant": ["src/server/routes/auth.routes.ts", "src/auth/session.ts"] },
+    { "id": "h-github", "query": "provedor OAuth do GitHub", "relevant": ["src/auth/oauth/github.ts"] },
+    { "id": "h-free-shipping", "query": "frete grátis acima de 300 reais", "relevant": ["src/checkout/shipping.ts"] },
+    { "id": "h-subtotal", "query": "subtotal do carrinho", "relevant": ["src/checkout/cart.ts"] },
+    { "id": "h-domain-errors", "query": "erros de domínio", "relevant": ["src/utils/errors.ts"] },
+    { "id": "h-env-vars", "query": "variáveis de ambiente obrigatórias", "relevant": ["src/config/index.ts", ".env.example"] },
+    { "id": "h-list-orders", "query": "listar pedidos do usuário", "relevant": ["src/orders/orderRepository.ts", "src/server/routes/orders.routes.ts"] },
+    { "id": "h-expired-coupon-test", "query": "teste de cupom expirado", "relevant": ["tests/checkout/discounts.test.ts"] },
+    { "id": "h-pg-pool", "query": "pool de conexões postgres", "relevant": ["src/db/client.ts"] },
+    { "id": "h-checkout-page", "query": "página de checkout React", "relevant": ["src/web/components/CheckoutPage.tsx"] },
+    { "id": "h-email-template", "query": "email template for order confirmation", "relevant": ["src/notifications/templates.ts"] },
+    { "id": "h-plan-prices", "query": "plan prices", "relevant": ["src/billing/subscriptions.ts"] }
+  ]
+}

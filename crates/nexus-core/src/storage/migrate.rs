@@ -38,6 +38,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "projects_index",
         sql: include_str!("migrations/0002_projects_index.sql"),
     },
+    Migration {
+        version: 3,
+        name: "context_packs",
+        sql: include_str!("migrations/0003_context_packs.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

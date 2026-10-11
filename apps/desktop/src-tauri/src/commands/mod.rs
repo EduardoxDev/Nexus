@@ -3,4 +3,5 @@
 
 pub mod app;
 pub mod diagnostics;
+pub mod projects;
 pub mod settings;

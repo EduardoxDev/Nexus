@@ -106,6 +106,15 @@ impl IndexJob {
     }
 }
 
+/// Fila de indexação de um processo (desktop): o que está rodando e o que espera.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexingQueue {
+    pub running: Option<i64>,
+    pub paused: bool,
+    pub queued: Vec<i64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct IndexError {

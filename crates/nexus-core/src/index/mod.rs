@@ -19,7 +19,7 @@ use rayon::prelude::*;
 use rusqlite::{OptionalExtension, Transaction, params};
 
 pub use control::JobControl;
-pub use job::{IndexError, IndexJob, IndexMode, IndexTrigger, JobPhase, JobStatus};
+pub use job::{IndexError, IndexJob, IndexMode, IndexTrigger, IndexingQueue, JobPhase, JobStatus};
 use process::{Outcome, Processed};
 
 use crate::chunk::{self, Chunk, INDEXER_VERSION};

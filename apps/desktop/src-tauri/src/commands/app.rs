@@ -36,7 +36,7 @@ pub async fn reveal_data_dir(state: State<'_, AppState>) -> Result<(), ErrorInfo
     })
 }
 
-fn open_in_file_manager(dir: &std::path::Path) -> std::io::Result<()> {
+pub(crate) fn open_in_file_manager(dir: &std::path::Path) -> std::io::Result<()> {
     let program = if cfg!(target_os = "windows") {
         "explorer"
     } else if cfg!(target_os = "macos") {

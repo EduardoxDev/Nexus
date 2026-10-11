@@ -9,6 +9,21 @@ const COMMANDS: &[&str] = &[
     "get_settings",
     "set_setting",
     "reveal_data_dir",
+    "list_projects",
+    "get_project_overview",
+    "pick_project_folder",
+    "add_project",
+    "remove_project",
+    "start_index",
+    "pause_index",
+    "resume_index",
+    "cancel_index",
+    "get_indexing_queue",
+    "list_jobs",
+    "get_job_errors",
+    "list_skipped_files",
+    "touch_project",
+    "reveal_project_dir",
 ];
 
 fn main() {

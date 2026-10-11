@@ -14,6 +14,7 @@ export type * from "./IndexError";
 export type * from "./IndexJob";
 export type * from "./IndexMode";
 export type * from "./IndexTrigger";
+export type * from "./IndexingQueue";
 export type * from "./IntegrityReport";
 export type * from "./JobPhase";
 export type * from "./JobStatus";

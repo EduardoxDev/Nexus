@@ -13,7 +13,9 @@ use nexus_core::classify::FileKind;
 use nexus_core::diagnostics::{
     AppInfo, BackupInfo, DiagnosticsReport, FileStat, IntegrityReport, StartupStatus,
 };
-use nexus_core::index::{IndexError, IndexJob, IndexMode, IndexTrigger, JobPhase, JobStatus};
+use nexus_core::index::{
+    IndexError, IndexJob, IndexMode, IndexTrigger, IndexingQueue, JobPhase, JobStatus,
+};
 use nexus_core::ops::{OperationQuery, OperationRecord, OperationStatus};
 use nexus_core::projects::{
     ChangedFile, DirStat, FileCounts, KindStat, LanguageStat, Project, ProjectOverview,
@@ -73,6 +75,7 @@ fn generate() -> BTreeMap<String, String> {
     render::<JobStatus>(&cfg, &mut files);
     render::<JobPhase>(&cfg, &mut files);
     render::<IndexError>(&cfg, &mut files);
+    render::<IndexingQueue>(&cfg, &mut files);
 
     let mut index = String::from("// Gerado por crates/nexus-core/tests/bindings.rs. Não edite.\n");
     for name in files.keys() {

@@ -12,6 +12,21 @@
     "allow-list-operations",
     "allow-get-settings",
     "allow-set-setting",
-    "allow-reveal-data-dir"
+    "allow-reveal-data-dir",
+    "allow-list-projects",
+    "allow-get-project-overview",
+    "allow-pick-project-folder",
+    "allow-add-project",
+    "allow-remove-project",
+    "allow-start-index",
+    "allow-pause-index",
+    "allow-resume-index",
+    "allow-cancel-index",
+    "allow-get-indexing-queue",
+    "allow-list-jobs",
+    "allow-get-job-errors",
+    "allow-list-skipped-files",
+    "allow-touch-project",
+    "allow-reveal-project-dir"
   ]
 }

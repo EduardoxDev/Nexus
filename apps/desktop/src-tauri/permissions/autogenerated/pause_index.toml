@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pause-index"
+description = "Enables the pause_index command without any pre-configured scope."
+commands.allow = ["pause_index"]
+
+[[permission]]
+identifier = "deny-pause-index"
+description = "Denies the pause_index command without any pre-configured scope."
+commands.deny = ["pause_index"]

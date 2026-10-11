@@ -5,6 +5,9 @@ use std::sync::Arc;
 use nexus_core::diagnostics::StartupStatus;
 use nexus_core::{Core, Error, ErrorCode, ErrorInfo};
 
+use crate::indexing::JobManager;
+use crate::watch::ProjectWatcher;
+
 pub struct AppState {
     core: Result<Arc<Core>, ErrorInfo>,
     startup: StartupStatus,
@@ -36,6 +39,51 @@ impl AppState {
 
     pub fn core(&self) -> Result<Arc<Core>, ErrorInfo> {
         self.core.clone()
+    }
+}
+
+/// Fila de indexação e monitor de arquivos. Ausentes quando o core não abriu.
+pub struct Indexing(Option<IndexingParts>);
+
+pub struct IndexingParts {
+    pub core: Arc<Core>,
+    pub manager: JobManager,
+    pub watcher: ProjectWatcher,
+}
+
+impl Indexing {
+    pub fn new(parts: Option<IndexingParts>) -> Self {
+        Self(parts)
+    }
+
+    pub fn parts(&self) -> Result<&IndexingParts, ErrorInfo> {
+        self.0.as_ref().ok_or_else(|| ErrorInfo {
+            code: ErrorCode::Internal,
+            message: "A indexação não está disponível porque o banco local não abriu.".into(),
+            op_id: None,
+        })
+    }
+}
+
+impl IndexingParts {
+    /// Alinha o monitor de arquivos com os projetos e a configuração atuais.
+    pub fn resync(&self) {
+        let projects = match self.core.list_projects() {
+            Ok(list) => list
+                .into_iter()
+                .map(|s| (s.project.id, std::path::PathBuf::from(s.project.root_path)))
+                .collect::<Vec<_>>(),
+            Err(e) => {
+                tracing::warn!(error = %e, "não foi possível listar projetos para o monitor");
+                return;
+            }
+        };
+        let enabled = self
+            .core
+            .settings()
+            .map(|s| s.watch_projects)
+            .unwrap_or(false);
+        self.watcher.sync(&projects, enabled);
     }
 }
 

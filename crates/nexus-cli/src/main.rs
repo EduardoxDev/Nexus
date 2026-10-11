@@ -1,6 +1,7 @@
 //! `nexus` — CLI do NEXUS. Adaptador fino sobre `nexus-core`: valida argumentos, chama o core e
 //! formata a saída (humana ou `--json`).
 
+mod context_cmd;
 mod output;
 mod projects_cmd;
 
@@ -65,6 +66,10 @@ enum Command {
         /// ID, nome ou caminho do projeto.
         project: Option<String>,
     },
+    /// Busca no índice de um projeto (código e documentação), com motivos e trechos verificados.
+    Search(context_cmd::SearchArgs),
+    /// Compila um Context Pack para uma tarefa e o exporta (Markdown por padrão).
+    Context(context_cmd::ContextArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -180,6 +185,8 @@ fn run(cli: Cli) -> Result<(), Error> {
         Command::Status { project } => {
             projects_cmd::status(&core, project.as_deref(), cli.global.json)
         }
+        Command::Search(args) => context_cmd::search(&core, &args, cli.global.json),
+        Command::Context(args) => context_cmd::context(&core, &args, cli.global.json),
     }
 }
 

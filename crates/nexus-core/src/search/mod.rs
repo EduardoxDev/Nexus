@@ -20,7 +20,9 @@ use crate::error::{Error, Result};
 use crate::projects::Project;
 use crate::time_util::now_ms;
 use evidence::{Freshness, verify};
-use query::{Concept, Intent, QueryAnalysis, analyze, concept_in, fts_expression, normalize};
+use query::{
+    Concept, Intent, QueryAnalysis, analyze, concept_in, fts_expression, matched_form, normalize,
+};
 
 pub const MAX_LIMIT: u32 = 50;
 const DEFAULT_LIMIT: u32 = 10;
@@ -284,12 +286,12 @@ fn prescore(
     let file_name = path.rsplit('/').next().unwrap_or(&path).to_owned();
     let (mut path_score, mut matched) = (0.0, Vec::new());
     for concept in &analysis.concepts {
-        if concept_in(concept, &file_name) {
+        if let Some(form) = matched_form(concept, &file_name) {
             path_score += 1.0;
-            matched.push(concept.term.clone());
-        } else if concept_in(concept, &path) {
+            matched.push(form);
+        } else if let Some(form) = matched_form(concept, &path) {
             path_score += 0.5;
-            matched.push(concept.term.clone());
+            matched.push(form);
         }
     }
     if !analysis.concepts.is_empty() && path_score > 0.0 {
@@ -522,8 +524,7 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
             let covered: Vec<String> = analysis
                 .concepts
                 .iter()
-                .filter(|cc| concept_in(cc, &norm))
-                .map(|cc| cc.term.clone())
+                .filter_map(|cc| matched_form(cc, &norm))
                 .collect();
             if !analysis.concepts.is_empty() && !covered.is_empty() {
                 let cov = covered.len() as f64 / analysis.concepts.len() as f64;
@@ -539,7 +540,7 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
                     weight: 0.20 * cov,
                 });
             }
-            // A declaração mais específica vence: nome igual ao termo > contém o termo > contém uma variante.
+            // A declaração mais específica vence: nome igual ao termo > contém o termo > igual a uma variante.
             let declared: Option<String> = verified
                 .lines
                 .iter()

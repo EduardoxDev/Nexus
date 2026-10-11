@@ -485,6 +485,18 @@ pub fn fts_expression(terms: &[String]) -> Option<String> {
     (!parts.is_empty()).then(|| parts.join(" OR "))
 }
 
+/// Forma que casou no texto, para rótulos honestos: `termo` ou `termo→variante`.
+pub fn matched_form(concept: &Concept, normalized_text: &str) -> Option<String> {
+    if normalized_text.contains(&concept.term) {
+        return Some(concept.term.clone());
+    }
+    concept
+        .variants
+        .iter()
+        .find(|v| v.len() >= 3 && normalized_text.contains(v.as_str()))
+        .map(|v| format!("{}→{v}", concept.term))
+}
+
 /// O texto contém alguma variante do conceito? (comparação normalizada, por substring)
 pub fn concept_in(concept: &Concept, normalized_text: &str) -> bool {
     normalized_text.contains(&concept.term)

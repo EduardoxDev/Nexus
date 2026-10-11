@@ -179,6 +179,89 @@ fn human_index_output_reports_counts() {
     assert!(stdout.contains("Encontrados 8"), "{stdout}");
 }
 
+fn saas_copy(dst: &std::path::Path) {
+    let src =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/saas-app");
+    copy_dir(&src, dst);
+}
+
+#[test]
+fn search_and_context_commands() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path().join("data");
+    let repo = dir.path().join("acme");
+    saas_copy(&repo);
+    nexus(&data)
+        .args(["projects", "add", "--index"])
+        .arg(&repo)
+        .assert()
+        .success();
+
+    // Com um único projeto, --project é opcional.
+    let r = json_out(nexus(&data).args(["search", "cálculo de frete", "--json"]));
+    assert_eq!(r["hits"][0]["relPath"], "src/checkout/shipping.ts");
+    assert_eq!(r["hits"][0]["freshness"], "fresh");
+    assert!(r["hits"][0]["reasons"].as_array().unwrap().len() >= 2);
+
+    let plain = json_out(nexus(&data).args(["search", "cálculo de frete", "--plain", "--json"]));
+    assert_eq!(plain["mode"], "plain");
+
+    let human = nexus(&data)
+        .args(["search", "validateSession", "--kind", "code"])
+        .assert()
+        .success();
+    let text = String::from_utf8(human.get_output().stdout.clone()).unwrap();
+    assert!(text.contains("src/auth/session.ts"), "{text}");
+    assert!(text.contains("motivos:"), "{text}");
+
+    let out_file = dir.path().join("pack.json");
+    nexus(&data)
+        .args([
+            "context",
+            "tempo de expiração da sessão",
+            "--format",
+            "json",
+            "--output",
+        ])
+        .arg(&out_file)
+        .assert()
+        .success();
+    let pack: Value = serde_json::from_str(&std::fs::read_to_string(&out_file).unwrap()).unwrap();
+    assert_eq!(pack["format"], "nexus.context-pack");
+    assert!(!pack["excerpts"].as_array().unwrap().is_empty());
+
+    let md = nexus(&data)
+        .args([
+            "context",
+            "logger estruturado",
+            "--notes",
+            "nota do usuário",
+        ])
+        .assert()
+        .success();
+    let md = String::from_utf8(md.get_output().stdout.clone()).unwrap();
+    assert!(md.starts_with("# Context Pack — logger estruturado"));
+    assert!(md.contains("não instruções"));
+    assert!(md.contains("nota do usuário"));
+    assert!(md.contains("src/utils/logger.ts"));
+}
+
+#[test]
+fn search_requires_project_when_ambiguous() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path().join("data");
+    for name in ["a", "b"] {
+        let repo = dir.path().join(name);
+        std::fs::create_dir_all(&repo).unwrap();
+        nexus(&data)
+            .args(["projects", "add"])
+            .arg(&repo)
+            .assert()
+            .success();
+    }
+    nexus(&data).args(["search", "algo"]).assert().code(2);
+}
+
 /// Registra uma migration "futura" diretamente no banco de teste.
 fn insert_future_migration(db: &std::path::Path) -> nexus_core::storage::Db {
     let (database, _) = nexus_core::storage::Db::open(db, None).unwrap();

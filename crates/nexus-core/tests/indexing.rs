@@ -492,11 +492,13 @@ fn stale_job_from_dead_process_is_interrupted_and_replaced() {
 /// Cancela depois do primeiro lote gravado.
 struct CancelAfterFirstBatch<'a> {
     control: &'a JobControl,
+    cancelled_at: Mutex<Option<std::time::Instant>>,
 }
 
 impl IndexObserver for CancelAfterFirstBatch<'_> {
     fn on_update(&self, job: &IndexJob) {
-        if job.processed > 0 {
+        if job.processed > 0 && !self.control.is_cancelled() {
+            *self.cancelled_at.lock().unwrap() = Some(std::time::Instant::now());
             self.control.cancel();
         }
     }
@@ -509,8 +511,10 @@ fn cancel_keeps_committed_batches_and_resume_reaches_clean_state() {
 
     let env = setup("ts-webapp");
     let control = JobControl::new();
-    let observer = CancelAfterFirstBatch { control: &control };
-    let started = std::time::Instant::now();
+    let observer = CancelAfterFirstBatch {
+        control: &control,
+        cancelled_at: Mutex::new(None),
+    };
     let job = env
         .core
         .index_project(
@@ -520,13 +524,13 @@ fn cancel_keeps_committed_batches_and_resume_reaches_clean_state() {
             &observer,
         )
         .unwrap();
-    let elapsed = started.elapsed();
+    let elapsed = observer.cancelled_at.lock().unwrap().unwrap().elapsed();
     assert_eq!(job.status, JobStatus::Cancelled);
     assert!(
         job.processed > 0 && job.processed < job.to_process,
         "{job:?}"
     );
-    eprintln!("cancelamento: job terminou {elapsed:?} após o início");
+    eprintln!("cancelamento: job encerrado {elapsed:?} após o pedido");
 
     let resumed = index(&env, IndexMode::Incremental);
     assert_eq!(resumed.status, JobStatus::Succeeded);

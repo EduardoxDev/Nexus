@@ -18,7 +18,7 @@ Características do instalador (configuradas em `apps/desktop/src-tauri/tauri.co
 - WebView2: baixado via bootstrapper silencioso se não existir;
 - ícone próprio gerado de `apps/desktop/assets/icon.svg` (`pnpm tauri icon assets/icon.svg -o src-tauri/icons`).
 
-Verificação realizada na Fase 1 (build de depuração, 3,67 MiB): instalação silenciosa (`/S /D=<pasta>`), suíte E2E completa contra o executável instalado (5/5) e desinstalação silenciosa sem resíduos do instalador.
+Verificação mais recente (Fase 2, build de depuração, 4,60 MiB): instalação silenciosa (`/S /D=<pasta>`), suíte E2E completa contra o executável instalado (7/7, incluindo indexação e monitor de arquivos) e desinstalação silenciosa sem resíduos do instalador.
 
 No CI, o job `bundle` (disparo manual com `bundle: true`) gera o mesmo instalador **não assinado** como artefato.
 

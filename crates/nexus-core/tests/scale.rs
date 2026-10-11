@@ -74,12 +74,15 @@ fn ten_thousand_files_incremental_touches_exactly_one() {
     assert_eq!(one.processed, 1, "apenas o arquivo alterado é reprocessado");
     assert_eq!(one.unchanged, FILES as i64 - 1);
 
-    let db_size = std::fs::metadata(core.paths().db()).unwrap().len()
-        + std::fs::metadata(core.paths().db().with_extension("db-wal")).map_or(0, |m| m.len());
+    let db_size = std::fs::metadata(core.paths().db()).unwrap().len();
+    let wal_size =
+        std::fs::metadata(core.paths().db().with_extension("db-wal")).map_or(0, |m| m.len());
     let source_size: u64 = (0..FILES).map(|i| synthetic_file(i).len() as u64).sum();
+    let mib = |b: u64| b as f64 / 1_048_576.0;
     eprintln!(
-        "fonte: {:.1} MiB; banco+WAL: {:.1} MiB",
-        source_size as f64 / 1_048_576.0,
-        db_size as f64 / 1_048_576.0
+        "fonte: {:.1} MiB; banco: {:.1} MiB; WAL: {:.1} MiB",
+        mib(source_size),
+        mib(db_size),
+        mib(wal_size)
     );
 }

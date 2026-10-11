@@ -15,7 +15,7 @@ nexus <comando>                              # binário compilado (target/releas
 | `--json`              | Saída JSON estável para automações (erros vão para stderr como `{"error": {...}}`) |
 | `--version`, `--help` |                                                                                    |
 
-## Comandos (Fase 1)
+## Comandos
 
 ### `nexus init`
 
@@ -37,16 +37,42 @@ Mostra versões, caminhos, tamanhos, migrations, backups e operações. `--check
 
 JSON: `{ "app": AppInfo, "diagnostics": DiagnosticsReport, "integrity": IntegrityReport | null }` — os mesmos tipos gerados em `apps/desktop/src/lib/bindings/`.
 
+### `nexus projects [list]`
+
+Lista os projetos autorizados com contagens e data da última indexação. JSON: `ProjectSummary[]`.
+
+### `nexus projects add <PASTA> [--index]`
+
+Autoriza a pasta (validada e canonicalizada; raiz de disco, pasta pessoal, pastas do sistema, a pasta de dados do NEXUS e sobreposições são recusadas). Com `--index`, indexa em seguida. JSON: `{ "project": Project, "job": IndexJob | null }`.
+
+### `nexus projects remove <PROJETO> --yes`
+
+Remove o projeto **do índice**. Sem `--yes`, recusa com código 2. Nenhum arquivo da pasta é alterado. `<PROJETO>` aceita ID, nome ou caminho.
+
+### `nexus index <PROJETO> [--full]`
+
+Indexação incremental (padrão) ou completa (`--full`, relê e confere o hash de todos os arquivos). Progresso em stderr na saída humana. Usa as configurações `indexing.threads` e `indexing.max_file_size_kb`. Se outro processo (ex.: o app) já estiver indexando o mesmo projeto, falha com `conflict`. JSON: `IndexJob`.
+
+```text
+Indexação concluída em 0.5 s (geração 1).
+  Encontrados 255 · processados 255 · inalterados 0 · ignorados 20 · removidos 0 · renomeados 0 · erros 0
+  Conteúdos novos 235 · reaproveitados 0 · lidos 916,0 KiB
+```
+
+### `nexus status [PROJETO]`
+
+Arquivos indexados/ignorados/com erro, tamanho, linhas, geração do índice, ref e commit do git, último job. JSON: `ProjectSummary[]`.
+
 ## Códigos de saída
 
-| Código | Significado                                                            |
-| ------ | ---------------------------------------------------------------------- |
-| 0      | sucesso                                                                |
-| 1      | falha interna ou não classificada                                      |
-| 2      | uso inválido (argumentos) ou recurso não encontrado                    |
-| 3      | erro de armazenamento ou de E/S                                        |
-| 4      | banco criado por uma versão mais nova do NEXUS (`incompatible_schema`) |
+| Código | Significado                                                              |
+| ------ | ------------------------------------------------------------------------ |
+| 0      | sucesso                                                                  |
+| 1      | falha interna ou não classificada                                        |
+| 2      | uso inválido (argumentos), confirmação ausente ou recurso não encontrado |
+| 3      | erro de armazenamento ou de E/S                                          |
+| 4      | banco criado por uma versão mais nova do NEXUS (`incompatible_schema`)   |
 
 ## Planejado (Fase 5)
 
-`projects`, `index`, `status`, `search`, `context`, `memory`, `freshness` e `mcp serve` — ver [roadmap](roadmap.md).
+`search`, `context`, `memory`, `freshness` e `mcp serve` — ver [roadmap](roadmap.md).

@@ -6,7 +6,7 @@ Cada fase termina com aplicação executável e testes aprovados. Critérios de 
 | ---- | ---------------------------- | --------- |
 | 0    | Reconhecimento e arquitetura | concluída |
 | 1    | Fundação desktop             | concluída |
-| 2    | Indexação de projetos        | planejada |
+| 2    | Indexação de projetos        | concluída |
 | 3    | Busca e Context Packs        | planejada |
 | 4    | Memória e atualidade         | planejada |
 | 5    | MCP e CLI                    | planejada |
@@ -47,7 +47,19 @@ Medições registradas (não são metas): o teste E2E de abertura (iniciar o exe
 - Resource Governor: threads configuráveis, pausa, cancelamento, backoff, prioridade para interação; jobs órfãos marcados `interrupted` e retomáveis.
 - Watcher com debounce + reconciliação periódica; eventos de progresso na UI.
 
-Aceite: contagens exatas nas fixtures; alterar 1 arquivo num repositório sintético de 10 000 arquivos reprocessa exatamente 1; cancelamento medido; crash simulado no meio + retomada chega ao mesmo estado final; symlink/junction para fora do escopo ignorado.
+Critérios de aceitação (verificados em 2026-10-11):
+
+- [x] Contagens exatas nas fixtures, inclusive com casos adversariais gerados no teste (`initial_index_has_exact_counts`).
+- [x] Alterar 1 arquivo num repositório sintético de 10 000 arquivos reprocessa exatamente 1 (`tests/scale.rs`, release: 0,39–0,43 s; inicial 2,9–4,1 s — ver [benchmarks.md](benchmarks.md)).
+- [x] Cancelamento medido: ~4 ms do pedido até o job encerrado, lotes gravados preservados e retomada chegando ao mesmo estado de uma indexação limpa (`cancel_keeps_committed_batches_and_resume_reaches_clean_state`).
+- [x] Queda simulada no meio + retomada chega ao mesmo estado final; job órfão marcado como interrompido (`crash_mid_run_is_recovered`).
+- [x] Junction para fora do escopo não é seguida (`links_outside_the_project_are_not_followed`, junction real do Windows).
+- [x] Sensíveis nunca chegam ao FTS nem têm hash guardado; binários, grandes e outra codificação registrados com motivo.
+- [x] Renomeação detectada e conteúdo reaproveitado; duplicatas compartilham conteúdo; remoções limpam chunks e FTS.
+- [x] Pausa/retomada, trava entre processos, job de processo morto substituído.
+- [x] Desktop: progresso ao vivo, monitor de arquivos reindexando sozinho e remoção sem apagar arquivos — provados por E2E no app real.
+
+Fora do escopo desta fase (seguem no roadmap): símbolos e imports (Fase 3/6); busca exposta na interface (Fase 3). O "backoff quando o sistema estiver ocupado" ficou limitado a um job por vez, threads configuráveis e pausa manual — sem medição automática de carga do sistema.
 
 ## Fase 3 — Busca e Context Packs
 

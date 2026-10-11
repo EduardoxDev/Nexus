@@ -17,21 +17,21 @@ test.afterEach(async () => {
   data.cleanup();
 });
 
-test("abre na Visão geral com o banco migrado para o schema v1", async () => {
+test("abre na Visão geral com o banco migrado para o schema atual", async () => {
   app = await launchApp(data.dir);
   const { page } = app;
   await expect(page.getByRole("heading", { name: "Visão geral" })).toBeVisible();
-  await expect(page.getByText("Banco OK · schema v1")).toBeVisible();
-  await expect(page.getByText("Migrations aplicadas nesta inicialização: v1")).toBeVisible();
+  await expect(page.getByText("Banco OK · schema v2")).toBeVisible();
+  await expect(page.getByText("Migrations aplicadas nesta inicialização: v1, v2")).toBeVisible();
 });
 
 test("seções de fases futuras ficam desabilitadas", async () => {
   app = await launchApp(data.dir);
   const nav = app.page.getByRole("navigation", { name: "Navegação principal" });
-  const projects = nav.getByRole("button", { name: /Projetos/ });
-  await expect(projects).toHaveAttribute("aria-disabled", "true");
+  const search = nav.getByRole("button", { name: /Busca/ });
+  await expect(search).toHaveAttribute("aria-disabled", "true");
   // Playwright trata aria-disabled como desabilitado; força o clique como um usuário faria.
-  await projects.click({ force: true });
+  await search.click({ force: true });
   await expect(app.page.getByRole("heading", { name: "Visão geral" })).toBeVisible();
 });
 

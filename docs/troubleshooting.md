@@ -15,6 +15,19 @@ Comece pelo **Diagnóstico** (no app ou `nexus diagnostics`). Toda falha mostra 
 | `pnpm` não encontrado                                                      | pnpm não instalado globalmente                                        | Use `corepack pnpm …` ou `corepack enable`                                                                                     |
 | Banco em pasta de rede                                                     | SQLite em rede não é suportado (locks não confiáveis)                 | Use um disco local; `NEXUS_DATA_DIR` precisa ser local e absoluto                                                              |
 
+## Indexação
+
+| Sintoma                                                                     | Causa provável                                                                               | O que fazer                                                                                                    |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| "a pasta pessoal (ou uma pasta acima dela) não pode ser um projeto inteiro" | Proteção contra indexar o computador todo                                                    | Escolha a pasta do repositório                                                                                 |
+| "a pasta se sobrepõe ao projeto…"                                           | Projetos aninhados duplicariam o índice                                                      | Use o projeto existente ou remova-o antes                                                                      |
+| Arquivo esperado não aparece                                                | `.gitignore`, `.nexusignore` ou exclusão padrão (`node_modules`, `target`, `dist`, `build`…) | Confira as regras; links e junctions nunca são seguidos                                                        |
+| Arquivo legítimo marcado como "Sensível"                                    | Nome ou conteúdo parecido com credencial (ex.: token no formato de chave AWS em testes)      | Mova o valor para fora do código ou monte-o em tempo de execução; a detecção é preventiva por design           |
+| Erro `unstable` no histórico                                                | O arquivo mudou durante a leitura (ex.: sendo salvo)                                         | Nada: ele é tentado de novo na próxima indexação                                                               |
+| "já existe uma indexação em andamento para este projeto"                    | O app e a CLI tentaram indexar o mesmo projeto                                               | Aguarde; jobs de processos encerrados são liberados após 2 minutos sem heartbeat                               |
+| Alterações não aparecem sozinhas                                            | "Acompanhar alterações" desligado, ou pasta em rede/sincronizada que não emite eventos       | Ligue em Configurações; a verificação automática a cada 10 minutos e o botão "Atualizar índice" cobrem o resto |
+| Indexação deixa a máquina lenta                                             | Muitas threads                                                                               | Reduza "Threads de indexação" em Configurações ou pause o job                                                  |
+
 ## Isolar um problema
 
 ```bash

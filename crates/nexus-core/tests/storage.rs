@@ -183,6 +183,39 @@ fn pragmas_are_applied_to_writer_and_readers() {
 }
 
 #[test]
+fn closing_the_db_checkpoints_and_removes_the_wal() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("n.db");
+    let (db, _) = Db::open(&path, None).unwrap();
+    db.write(|c| {
+        c.execute_batch(
+            "CREATE TABLE big (x TEXT);
+             WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 2000)
+             INSERT INTO big SELECT hex(randomblob(64)) FROM n;",
+        )?;
+        Ok(())
+    })
+    .unwrap();
+    // Usa o pool de leitores para que haja conexões somente leitura abertas.
+    let count: i64 = db
+        .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM big", [], |r| r.get(0))?))
+        .unwrap();
+    assert_eq!(count, 2000);
+    let wal = path.with_extension("db-wal");
+    assert!(wal.exists());
+    drop(db);
+    assert!(
+        !wal.exists(),
+        "o WAL deve ser incorporado e removido ao fechar"
+    );
+    let reopened = Connection::open(&path).unwrap();
+    let count: i64 = reopened
+        .query_row("SELECT COUNT(*) FROM big", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 2000);
+}
+
+#[test]
 fn readers_cannot_write() {
     let dir = tempfile::tempdir().unwrap();
     let (db, _) = Db::open(&dir.path().join("n.db"), None).unwrap();

@@ -6,13 +6,13 @@ Pragmas aplicados em toda conexão: `journal_mode=WAL`, `foreign_keys=ON`, `sync
 
 ## Migrations
 
-| Versão | Nome               | Fase              | Tabelas                                                                                   |
-| ------ | ------------------ | ----------------- | ----------------------------------------------------------------------------------------- |
-| 1      | `foundation`       | 1                 | `settings`, `operations`                                                                  |
-| 2      | `projects_index`   | 2 _(planejada)_   | `projects`, `files`, `chunks`, `chunks_fts`, `paths_fts`, `indexing_jobs`, `index_errors` |
-| 3      | `analysis`         | 2/6 _(planejada)_ | `symbols`, `symbols_fts`, `symbol_removals`, `edges`                                      |
-| 4      | `context`          | 3 _(planejada)_   | `context_packs`, `context_sources`                                                        |
-| 5      | `memory_freshness` | 4 _(planejada)_   | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`         |
+| Versão | Nome               | Fase              | Tabelas                                                                                  |
+| ------ | ------------------ | ----------------- | ---------------------------------------------------------------------------------------- |
+| 1      | `foundation`       | 1                 | `settings`, `operations`                                                                 |
+| 2      | `projects_index`   | 2                 | `projects`, `contents`, `files`, `chunks`, `chunks_fts`, `indexing_jobs`, `index_errors` |
+| 3      | `analysis`         | 2/6 _(planejada)_ | `symbols`, `symbols_fts`, `symbol_removals`, `edges`                                     |
+| 4      | `context`          | 3 _(planejada)_   | `context_packs`, `context_sources`                                                       |
+| 5      | `memory_freshness` | 4 _(planejada)_   | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`        |
 
 Regras (ADR-0007):
 
@@ -42,7 +42,7 @@ Regras (ADR-0007):
 | `value_json` | TEXT NOT NULL    | JSON validado por chave                              |
 | `updated_at` | INTEGER NOT NULL | Unix ms                                              |
 
-Chaves atuais: `ui.theme` (`"system" \| "dark" \| "light"`), `ui.reduced_motion` (`"system" \| "on" \| "off"`), `ui.sidebar_collapsed` (bool).
+Chaves atuais: `ui.theme` (`"system" \| "dark" \| "light"`), `ui.reduced_motion` (`"system" \| "on" \| "off"`), `ui.sidebar_collapsed` (bool), `indexing.threads` (0–16; 0 = automático), `indexing.max_file_size_kb` (16–10240; padrão 1024), `indexing.watch` (bool; padrão `true`).
 
 ### `operations`
 
@@ -66,8 +66,31 @@ Histórico local de operações (diagnóstico). Nunca contém conteúdo de arqui
 
 Recuperação: na abertura do banco, operações `running` sem heartbeat há mais de 10 minutos são marcadas `interrupted` (o processo que as executava terminou sem finalizá-las).
 
+## Versão 2 — `projects_index`
+
+O código **não é copiado** para o banco (ADR-0003). O que é guardado:
+
+| Tabela          | Conteúdo                                                                                                                                                                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `projects`      | pasta autorizada (caminho canônico, único), nome, datas, `index_generation`, `head_ref`/`head_commit` lidos de `.git`                                                                                                            |
+| `contents`      | um registro por conteúdo único (blake3) por projeto: linhas, nº de chunks, versão do indexador. Arquivos idênticos compartilham o mesmo registro (deduplicação)                                                                  |
+| `files`         | caminho relativo (`/`), tamanho, mtime (ns), hash, linguagem, tipo, status (`indexed`, `skipped_sensitive`, `skipped_binary`, `skipped_large`, `skipped_encoding`, `error`), motivo, linhas, `change_count`, versão do indexador |
+| `chunks`        | blocos de até 60 linhas / 8 KiB de cada conteúdo: intervalo de linhas e hash do bloco                                                                                                                                            |
+| `chunks_fts`    | FTS5 **contentless** (`content='`, `contentless_delete=1`, `unicode61 remove_diacritics 2`); `rowid = chunks.id`. Guarda o índice invertido de termos (texto do bloco + subpalavras de identificadores), não o texto             |
+| `indexing_jobs` | um registro por execução (mesmo ID da operação `index.run`): modo, origem, status, fase, PID, heartbeat e contadores                                                                                                             |
+| `index_errors`  | erros por arquivo de cada job (código e mensagem; nunca conteúdo)                                                                                                                                                                |
+
+Integridade e concorrência:
+
+- `files → contents` usa FK composta **adiada** (a linha de conteúdo é inserida na mesma transação). Arquivos ignorados têm `content_hash` nulo e nenhum conteúdo.
+- `chunks → contents` com `ON DELETE CASCADE`; o gatilho `chunks_after_delete` remove a linha correspondente do FTS.
+- Índice único parcial `indexing_jobs_one_active` (`status IN (running, paused)`) é a trava entre processos: no máximo um job ativo por projeto. Jobs sem heartbeat há mais de 2 minutos são marcados `interrupted` antes de uma nova tentativa e na abertura do core.
+- Arquivos sensíveis nunca têm hash nem conteúdo no banco — apenas caminho, tamanho e motivo.
+
 ## Retenção
 
+- `indexing_jobs` (e seus `index_errors`): 50 mais recentes por projeto.
+- Conteúdos sem nenhum arquivo apontando para eles são removidos ao fim de cada job (com seus chunks e linhas do FTS).
 - `operations`: removidas as com mais de 90 dias **e**, além disso, mantidas no máximo 10 000 linhas (as mais recentes). Executado na inicialização.
 - Backups pré-migração: 5 mais recentes.
 - Logs: 7 arquivos diários.

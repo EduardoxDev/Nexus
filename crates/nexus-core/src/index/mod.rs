@@ -630,6 +630,10 @@ pub(crate) fn run(
         }
     };
     db.write(|c| job::save(c, &job))?;
+    // Devolve as páginas do WAL ao banco principal sem bloquear leitores (PASSIVE).
+    if let Err(e) = db.write(|c| Ok(c.execute_batch("PRAGMA wal_checkpoint(PASSIVE);")?)) {
+        tracing::warn!(error = %e, "checkpoint do WAL não executado");
+    }
     observer.on_update(&job);
     tracing::info!(
         job_id,

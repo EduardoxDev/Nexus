@@ -18,8 +18,10 @@ const MAX_IDLE_READERS: usize = 4;
 /// concorrentes com a escrita). Seguro para compartilhar entre threads via `Arc`.
 pub struct Db {
     path: PathBuf,
-    writer: Mutex<Connection>,
+    // Ordem importa: campos são descartados na ordem de declaração. Os leitores (somente
+    // leitura) fecham antes; o escritor fecha por último e faz o checkpoint final do WAL.
     readers: Mutex<Vec<Connection>>,
+    writer: Mutex<Connection>,
 }
 
 impl std::fmt::Debug for Db {

@@ -1,6 +1,6 @@
 # Arquitetura do NEXUS
 
-> Estado: **Fase 1 (fundação)**. Seções marcadas com _(planejado)_ descrevem o desenho aprovado para fases futuras e ainda não existem no código.
+> Estado: **Fase 2 (indexação) concluída**. Seções marcadas com _(planejado)_ descrevem o desenho aprovado para fases futuras e ainda não existem no código.
 
 ## 1. Visão
 
@@ -27,24 +27,24 @@ Princípios que orientam todas as decisões: local-first, privacy-first, evidenc
 
 ## 3. Módulos lógicos
 
-| #   | Módulo                          | Onde vive                                                         | Estado                                   |
-| --- | ------------------------------- | ----------------------------------------------------------------- | ---------------------------------------- |
-| 1   | Desktop Shell                   | `apps/desktop/src-tauri`                                          | Fase 1                                   |
-| 2   | Application Commands            | `apps/desktop/src-tauri/src/commands`                             | Fase 1 (app, diagnóstico, configurações) |
-| 3   | Project Registry                | `nexus-core::projects`                                            | _(planejado — Fase 2)_                   |
-| 4   | Filesystem Scanner              | `nexus-core::scan`                                                | _(planejado — Fase 2)_                   |
-| 5   | Incremental Indexer             | `nexus-core::index`                                               | _(planejado — Fase 2)_                   |
-| 6   | Language/Symbol Analyzer        | `nexus-core::analysis`                                            | _(planejado — Fases 2/6)_                |
-| 7   | Search Engine                   | `nexus-core::search`                                              | _(planejado — Fase 3)_                   |
-| 8   | Context Retrieval Engine        | `nexus-core::context`                                             | _(planejado — Fase 3)_                   |
-| 9   | Project Memory                  | `nexus-core::memory`                                              | _(planejado — Fase 4)_                   |
-| 10  | Freshness & Conflict Detection  | `nexus-core::freshness`                                           | _(planejado — Fase 4)_                   |
-| 11  | Context Pack Compiler           | `nexus-core::context`                                             | _(planejado — Fase 3)_                   |
-| 12  | MCP Server                      | `crates/nexus-mcp`                                                | _(planejado — Fase 5)_                   |
-| 13  | CLI                             | `crates/nexus-cli`                                                | Fase 1 (`init`, `diagnostics`)           |
-| 14  | Storage & Migrations            | `nexus-core::storage`                                             | Fase 1                                   |
-| 15  | Telemetry & Diagnostics (local) | `nexus-core::{ops,diagnostics,logging}`                           | Fase 1                                   |
-| 16  | Security & Permissions          | capabilities Tauri, `nexus-core::settings` (allowlist), validação | Fase 1 (linha de base)                   |
+| #   | Módulo                          | Onde vive                                                                                         | Estado                                                            |
+| --- | ------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 1   | Desktop Shell                   | `apps/desktop/src-tauri`                                                                          | Fase 1                                                            |
+| 2   | Application Commands            | `apps/desktop/src-tauri/src/commands`                                                             | Fases 1–2 (app, diagnóstico, configurações, projetos e indexação) |
+| 3   | Project Registry                | `nexus-core::projects`                                                                            | Fase 2                                                            |
+| 4   | Filesystem Scanner              | `nexus-core::{scan,sensitive}`, watcher em `src-tauri/src/watch.rs`                               | Fase 2                                                            |
+| 5   | Incremental Indexer             | `nexus-core::{index,chunk}`, fila em `src-tauri/src/indexing.rs`                                  | Fase 2                                                            |
+| 6   | Language/Symbol Analyzer        | `nexus-core::classify` (linguagem/tipo por caminho); símbolos e imports _(planejado — Fases 3/6)_ | parcial                                                           |
+| 7   | Search Engine                   | `nexus-core::search`                                                                              | _(planejado — Fase 3)_                                            |
+| 8   | Context Retrieval Engine        | `nexus-core::context`                                                                             | _(planejado — Fase 3)_                                            |
+| 9   | Project Memory                  | `nexus-core::memory`                                                                              | _(planejado — Fase 4)_                                            |
+| 10  | Freshness & Conflict Detection  | `nexus-core::freshness`                                                                           | _(planejado — Fase 4)_                                            |
+| 11  | Context Pack Compiler           | `nexus-core::context`                                                                             | _(planejado — Fase 3)_                                            |
+| 12  | MCP Server                      | `crates/nexus-mcp`                                                                                | _(planejado — Fase 5)_                                            |
+| 13  | CLI                             | `crates/nexus-cli`                                                                                | Fases 1–2 (`init`, `diagnostics`, `projects`, `index`, `status`)  |
+| 14  | Storage & Migrations            | `nexus-core::storage`                                                                             | Fase 1                                                            |
+| 15  | Telemetry & Diagnostics (local) | `nexus-core::{ops,diagnostics,logging}`                                                           | Fase 1                                                            |
+| 16  | Security & Permissions          | capabilities Tauri, `nexus-core::settings` (allowlist), validação                                 | Fase 1 (linha de base)                                            |
 
 ## 4. Contrato UI ↔ core
 
@@ -88,7 +88,30 @@ Detalhes em [`threat-model.md`](threat-model.md). Linha de base da Fase 1:
 - Textos em pt-BR centralizados em `src/lib/i18n/pt-BR.ts` (ADR-0008).
 - Design tokens em `src/styles/tokens.css`: tema escuro grafite padrão, tema claro completo, acento violeta usado com moderação.
 
-## 9. Pipeline de contexto _(planejado)_
+## 9. Indexação (Fase 2)
+
+Detalhes e justificativas em [ADR-0009](decisions/ADR-0009-indexacao-incremental.md); números em [benchmarks.md](benchmarks.md).
+
+1. **Registro**: a pasta escolhida é canonicalizada uma vez; raiz de disco, pasta pessoal (ou acima dela), pastas do sistema, a pasta de dados do NEXUS e sobreposições com outros projetos são recusadas.
+2. **Varredura** (`scan`): `ignore::WalkBuilder` com `.gitignore`, `.ignore` e `.nexusignore` (mesmo sem `.git`), sem ler `.gitignore` acima da raiz, profundidade máxima 64, diretórios padrão excluídos (`.git`, `node_modules`, `target`, `dist`, `build`, caches…). Links simbólicos e junctions/reparse points **não são seguidos**.
+3. **Comparação**: tamanho + mtime (ns) + versão do indexador ⇒ inalterado.
+4. **Processamento** (paralelo, fora de transações): nome sensível → ignorado; extensão binária → ignorado; acima do limite → ignorado; leitura estável (re-stat); byte nulo → binário; UTF-8 (com tolerância de 1% de substituições) senão codificação; conteúdo sensível (chaves privadas, tokens conhecidos) → ignorado; senão hash blake3, chunks de 60 linhas/8 KiB e texto do FTS com subpalavras de identificadores.
+5. **Gravação**: lotes de 64 arquivos, uma transação curta cada; conteúdo novo gera chunks + FTS, conteúdo já conhecido é reaproveitado.
+6. **Finalização**: remoções, detecção de renomeações por hash, coleta de conteúdo órfão, nova `index_generation` se algo mudou, HEAD do git, checkpoint passivo do WAL.
+7. **Desktop**: fila com um job por vez (pedidos do usuário à frente), pausa/retomada/cancelamento, eventos `nexus://job-progress|job-finished|queue-changed`; monitor de arquivos com debounce de 1,5 s + reconciliação ao abrir e a cada 10 minutos.
+
+### Cobertura dos analisadores (honesta)
+
+| Recurso                                                           | Como                                         | Limitação                                                        |
+| ----------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| Linguagem                                                         | extensão / nome do arquivo (~60 linguagens)  | não lê shebang nem conteúdo                                      |
+| Tipo (código, teste, doc, config, manifesto, lockfile, CI, dados) | convenções de caminho e nome                 | heurística; pastas fora do padrão podem ser mal classificadas    |
+| Busca textual                                                     | FTS5 + subpalavras de identificadores        | consulta ainda não exposta na interface (Fase 3)                 |
+| Símbolos, imports, grafo                                          | —                                            | _(planejado — Fases 3/6)_                                        |
+| Git                                                               | leitura de `.git/HEAD`, refs e `packed-refs` | não lê histórico de commits                                      |
+| "Mais alterados"                                                  | mudanças de hash observadas pelo NEXUS       | não usa `git log`; começa a contar quando o projeto é adicionado |
+
+## 10. Pipeline de contexto _(planejado)_
 
 ```
 pasta autorizada ─▶ scanner (ignore, exclusões, sensíveis, sem symlinks)

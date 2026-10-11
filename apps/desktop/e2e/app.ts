@@ -3,7 +3,7 @@
  * Cada teste usa um diretório de dados temporário (NEXUS_DATA_DIR) — nada toca os dados do usuário.
  */
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -14,6 +14,33 @@ import { chromium, type Browser, type Page } from "@playwright/test";
 export const APP_PATH =
   process.env.NEXUS_E2E_APP ??
   resolve(import.meta.dirname, "../../../target/debug/nexus-desktop.exe");
+
+/** CLI `nexus` (mesmo banco do app); usada para registrar projetos sem o seletor nativo. */
+export const CLI_PATH =
+  process.env.NEXUS_E2E_CLI ?? resolve(import.meta.dirname, "../../../target/debug/nexus.exe");
+
+export function runCli(dataDir: string, args: string[]): unknown {
+  const result = spawnSync(CLI_PATH, ["--data-dir", dataDir, "--json", ...args], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(`nexus ${args.join(" ")} falhou (${result.status}): ${result.stderr}`);
+  }
+  return JSON.parse(result.stdout) as unknown;
+}
+
+const FIXTURES = resolve(import.meta.dirname, "../../../tests/fixtures");
+
+/** Copia uma fixture para uma pasta temporária própria, com o nome de pasta indicado. */
+export function copyFixture(
+  fixture: string,
+  folderName: string,
+): { root: string; cleanup: () => void } {
+  const parent = mkdtempSync(join(tmpdir(), "nexus-e2e-repo-"));
+  const root = join(parent, folderName);
+  cpSync(join(FIXTURES, fixture), root, { recursive: true });
+  return { root, cleanup: () => rmSync(parent, { recursive: true, force: true }) };
+}
 
 export function createDataDir(): { dir: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), "nexus-e2e-"));

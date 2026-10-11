@@ -2,6 +2,7 @@
 //! formata a saída (humana ou `--json`).
 
 mod output;
+mod projects_cmd;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -45,6 +46,46 @@ enum Command {
         /// Também executa a verificação de integridade do banco.
         #[arg(long)]
         check: bool,
+    },
+    /// Lista, adiciona ou remove projetos autorizados.
+    Projects {
+        #[command(subcommand)]
+        action: Option<ProjectsAction>,
+    },
+    /// Indexa um projeto (incremental por padrão).
+    Index {
+        /// ID, nome ou caminho do projeto.
+        project: String,
+        /// Relê e confere o hash de todos os arquivos.
+        #[arg(long)]
+        full: bool,
+    },
+    /// Estado do índice de um projeto (ou de todos).
+    Status {
+        /// ID, nome ou caminho do projeto.
+        project: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum ProjectsAction {
+    /// Lista os projetos (padrão).
+    List,
+    /// Autoriza uma pasta como projeto.
+    Add {
+        /// Pasta do projeto.
+        path: PathBuf,
+        /// Indexa logo após adicionar.
+        #[arg(long)]
+        index: bool,
+    },
+    /// Remove o projeto do índice. Os arquivos originais não são alterados.
+    Remove {
+        /// ID, nome ou caminho do projeto.
+        project: String,
+        /// Confirma a remoção.
+        #[arg(long)]
+        yes: bool,
     },
 }
 
@@ -122,6 +163,22 @@ fn run(cli: Cli) -> Result<(), Error> {
                 integrity,
             };
             output::print(&report, cli.global.json, output::human_diagnostics)
+        }
+        Command::Projects { action } => {
+            let json = cli.global.json;
+            match action.unwrap_or(ProjectsAction::List) {
+                ProjectsAction::List => projects_cmd::list(&core, json),
+                ProjectsAction::Add { path, index } => projects_cmd::add(&core, &path, index, json),
+                ProjectsAction::Remove { project, yes } => {
+                    projects_cmd::remove(&core, &project, yes, json)
+                }
+            }
+        }
+        Command::Index { project, full } => {
+            projects_cmd::index(&core, &project, full, cli.global.json)
+        }
+        Command::Status { project } => {
+            projects_cmd::status(&core, project.as_deref(), cli.global.json)
         }
     }
 }

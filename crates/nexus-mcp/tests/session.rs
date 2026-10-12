@@ -617,3 +617,15 @@ fn tool_calls_are_audited_without_arguments() {
     );
     assert_eq!(ops.iter().filter(|o| o.kind == "mcp.session").count(), 1);
 }
+
+#[test]
+fn a_leading_utf8_bom_is_ignored() {
+    let env = setup();
+    let mut s = Server::new(&env.core);
+    let line = format!(
+        "\u{feff}{}",
+        json!({ "jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": { "_meta": meta() } })
+    );
+    let r = s.handle_line(&line).unwrap();
+    assert_eq!(r["result"]["resultType"], "complete");
+}

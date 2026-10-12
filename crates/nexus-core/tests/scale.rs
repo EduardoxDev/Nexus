@@ -38,6 +38,31 @@ fn ten_thousand_files_incremental_touches_exactly_one() {
     }
     eprintln!("gerar {FILES} arquivos: {:?}", started.elapsed());
 
+    // Custo de CPU da análise (lexer + declarações + imports), em memória e numa só thread:
+    // independe de disco/antivírus, que dominam o tempo de parede da indexação.
+    let texts: Vec<String> = (0..FILES).map(synthetic_file).collect();
+    let t = Instant::now();
+    let mut symbols = 0;
+    for text in &texts {
+        symbols +=
+            nexus_core::analysis::analyze(Some("typescript"), text).map_or(0, |a| a.symbols.len());
+    }
+    eprintln!(
+        "análise em memória ({FILES} arquivos, 1 thread): {:?} ({symbols} símbolos)",
+        t.elapsed()
+    );
+    let t = Instant::now();
+    for text in &texts {
+        let _ = nexus_core::chunk::chunk_lines(text)
+            .iter()
+            .map(|c| nexus_core::chunk::fts_body(&c.text))
+            .count();
+    }
+    eprintln!(
+        "chunking + texto do FTS em memória (referência): {:?}",
+        t.elapsed()
+    );
+
     let core = Core::open(DataPaths::at(tmp.path().join("data"))).unwrap();
     let id = core.add_project(&root).unwrap().id;
     let opts = IndexOptions::new(IndexMode::Incremental, IndexTrigger::Cli);

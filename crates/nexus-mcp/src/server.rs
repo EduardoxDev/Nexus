@@ -85,6 +85,8 @@ impl<'a> Server<'a> {
                 &RpcError::new(INVALID_REQUEST, "message too large"),
             ));
         }
+        // Alguns terminais (PowerShell) prefixam o stdin com BOM UTF-8.
+        let line = line.trim_start_matches('\u{feff}');
         let msg: Value = match serde_json::from_str(line) {
             Ok(v) => v,
             Err(e) => {

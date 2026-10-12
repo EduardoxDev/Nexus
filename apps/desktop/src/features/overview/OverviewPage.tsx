@@ -1,16 +1,16 @@
-import { ArrowRight, CircleCheck, CircleDashed, FolderGit2, Inbox } from "lucide-react";
+import { ArrowRight, FolderGit2, Inbox } from "lucide-react";
 
 import { EmptyState, ErrorState, StatusDot } from "@/components/feedback";
+import logoUrl from "@/assets/nexus-icon-128.png";
 import { KeyValueList, Page, Panel } from "@/components/layout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OperationsTable } from "@/features/operations/OperationsTable";
+import { cn } from "@/lib/cn";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { t } from "@/lib/i18n/pt-BR";
 import { operationQuery, useDiagnostics, useOperations, useStartupStatus } from "@/lib/queries";
 import { integrityPassed } from "@/features/operations/OperationsTable";
-import { CURRENT_PHASE } from "@/app/routes";
 import { activityLine } from "@/features/projects/activity";
 import type { ProjectSummary } from "@/lib/bindings";
 import { useProjects } from "@/lib/queries";
@@ -22,6 +22,7 @@ const RECENT = operationQuery({ limit: 6 });
 export function OverviewPage() {
   return (
     <Page title={t.nav.overview.label} description={t.nav.overview.description}>
+      <BrandHeader />
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-5">
           <SystemPanel />
@@ -107,47 +108,48 @@ function SystemPanel() {
 }
 
 function StepsPanel() {
+  const navigate = useUi((s) => s.navigate);
   return (
     <Panel title={t.overview.stepsTitle} description={t.overview.stepsDescription}>
       <ol className="flex flex-col">
-        <li className="flex gap-3 py-2">
-          <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-fg">{t.overview.foundationTitle}</p>
-            <p className="text-sm text-fg-muted">{t.overview.foundationBody}</p>
-          </div>
-          <Badge tone="success" className="self-start">
-            {t.overview.available}
-          </Badge>
-        </li>
-        {t.overview.steps.map((step) => {
-          const done = step.phase <= CURRENT_PHASE;
-          return (
-            <li key={step.title} className="flex gap-3 border-t border-border py-2">
-              {done ? (
-                <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
-              ) : (
-                <CircleDashed
-                  className="mt-0.5 size-4 shrink-0 text-fg-subtle"
-                  aria-hidden="true"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-fg">{step.title}</p>
-                <p className="text-sm text-fg-muted">{step.body}</p>
-              </div>
-              {done ? (
-                <Badge tone="success" className="self-start">
-                  {t.overview.available}
-                </Badge>
-              ) : (
-                <Badge className="self-start">{t.nav.phaseBadge(step.phase)}</Badge>
-              )}
-            </li>
-          );
-        })}
+        {t.overview.steps.map((step, index) => (
+          <li
+            key={step.title}
+            className={cn("flex items-start gap-3 py-2", index > 0 && "border-t border-border")}
+          >
+            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-xs font-semibold text-accent-text">
+              {index + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-fg">{step.title}</p>
+              <p className="text-sm text-fg-muted">{step.body}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate(step.route)}
+              aria-label={`${t.overview.open}: ${step.title}`}
+            >
+              {t.overview.open}
+            </Button>
+          </li>
+        ))}
       </ol>
     </Panel>
+  );
+}
+
+function BrandHeader() {
+  return (
+    <header className="flex items-center gap-4">
+      <img src={logoUrl} alt="" aria-hidden="true" className="size-14 shrink-0" draggable={false} />
+      <div className="min-w-0">
+        <p className="text-2xl font-semibold tracking-tight text-fg">{t.app.name}</p>
+        <p className="text-sm text-fg-muted">
+          {t.app.tagline} · <span className="text-accent-text">{t.app.slogan}</span>
+        </p>
+      </div>
+    </header>
   );
 }
 

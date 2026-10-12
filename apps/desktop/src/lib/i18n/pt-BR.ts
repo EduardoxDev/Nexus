@@ -6,6 +6,7 @@ export const ptBR = {
   app: {
     name: "NEXUS",
     tagline: "Camada de contexto local para engenharia de software",
+    slogan: "Conectando ideias, criando o amanhã.",
   },
   nav: {
     overview: { label: "Visão geral", description: "Estado do sistema e próximos passos." },
@@ -128,43 +129,41 @@ export const ptBR = {
       n === 1
         ? "1 operação interrompida anteriormente foi marcada como interrompida."
         : `${n} operações interrompidas anteriormente foram marcadas como interrompidas.`,
-    foundationTitle: "Fundação local",
-    foundationBody: "Banco SQLite migrado, diagnóstico, configurações e histórico de operações.",
-    stepsTitle: "Como o NEXUS vai funcionar",
-    stepsDescription:
-      "A fundação (banco, diagnóstico e configurações) está ativa. As próximas etapas chegam por fases.",
+    stepsTitle: "Como usar o NEXUS",
+    stepsDescription: "Do projeto autorizado ao contexto entregue a você e aos agentes.",
     steps: [
       {
-        title: "Autorizar um projeto",
-        body: "Você escolhe explicitamente as pastas que o NEXUS pode ler.",
-        phase: 2,
-      },
-      {
-        title: "Indexar incrementalmente",
-        body: "Apenas o que mudou é reprocessado; segredos e binários ficam de fora.",
-        phase: 2,
+        title: "Autorizar e indexar um projeto",
+        body: "Você escolhe as pastas. Só o que mudou é reprocessado; segredos e binários ficam de fora.",
+        route: "projects",
       },
       {
         title: "Buscar com evidências",
-        body: "Cada resultado traz caminho, linhas, hash e estado de atualidade.",
-        phase: 3,
+        body: "Português ou inglês; cada resultado traz caminho, linhas, motivo e se ainda é atual.",
+        route: "search",
       },
       {
-        title: "Compilar Context Packs",
-        body: "Contexto verificável para uma tarefa, pronto para exportar.",
-        phase: 3,
+        title: "Compilar um Context Pack",
+        body: "Arquivos, testes, decisões e dependências de uma tarefa, prontos para um agente.",
+        route: "contextPacks",
       },
       {
-        title: "Registrar memória e detectar desatualização",
-        body: "Decisões confirmadas por você, ADRs importados como propostas e alertas de contexto desatualizado ou contraditório.",
-        phase: 4,
+        title: "Registrar a memória do projeto",
+        body: "Decisões e convenções confirmadas por você; ADRs entram como propostas.",
+        route: "memory",
+      },
+      {
+        title: "Acompanhar a atualidade",
+        body: "Documentos e memórias desatualizados ou contraditórios, com a correção recomendada.",
+        route: "freshness",
       },
       {
         title: "Conectar agentes",
-        body: "Servidor MCP local e CLI `nexus` consultam o mesmo índice.",
-        phase: 5,
+        body: "Servidor MCP local para o Claude Code e outros clientes, sobre o mesmo índice.",
+        route: "integrations",
       },
     ],
+    open: "Abrir",
     available: "Disponível",
     recentTitle: "Operações recentes",
     recentEmpty: "Nenhuma operação registrada ainda.",

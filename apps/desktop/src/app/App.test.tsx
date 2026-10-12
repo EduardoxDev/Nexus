@@ -66,6 +66,21 @@ describe("shell do app", () => {
     expect(within(calls).getByText("OK")).toBeInTheDocument();
   });
 
+  it('mostra a marca e leva de "Como usar" a cada seção', async () => {
+    const user = userEvent.setup();
+    setupIpc();
+    renderApp();
+    expect(await screen.findByText("Conectando ideias, criando o amanhã.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Abrir: Registrar a memória do projeto" }));
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" });
+    await waitFor(() =>
+      expect(within(nav).getByRole("button", { name: /Memória/ })).toHaveAttribute(
+        "aria-current",
+        "page",
+      ),
+    );
+  });
+
   it("navega para o Diagnóstico e mostra migrations reais do contrato", async () => {
     const user = userEvent.setup();
     setupIpc();

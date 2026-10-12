@@ -13,9 +13,6 @@ import {
 
 import { t } from "@/lib/i18n/pt-BR";
 
-/** Última fase do roadmap entregue (as etapas até ela aparecem como disponíveis). */
-export const CURRENT_PHASE = 5;
-
 export type RouteId =
   | "overview"
   | "projects"

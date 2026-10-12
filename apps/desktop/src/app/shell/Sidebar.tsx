@@ -1,6 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { ROUTES, type RouteDef } from "@/app/routes";
+import logoUrl from "@/assets/nexus-icon-128.png";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
@@ -148,32 +149,6 @@ function NavItem({ route, collapsed }: { route: RouteDef; collapsed: boolean }) 
 
 function Logo() {
   return (
-    <svg viewBox="0 0 32 32" className="size-6 shrink-0" aria-hidden="true">
-      <rect width="32" height="32" rx="7" fill="var(--surface-3)" />
-      <path
-        d="M10 22V10l12 12V10"
-        fill="none"
-        stroke="var(--accent-text)"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {[
-        [10, 22],
-        [10, 10],
-        [22, 22],
-        [22, 10],
-      ].map(([cx, cy]) => (
-        <circle
-          key={`${cx}-${cy}`}
-          cx={cx}
-          cy={cy}
-          r="2.2"
-          fill="var(--surface-3)"
-          stroke="var(--accent-text)"
-          strokeWidth="1.6"
-        />
-      ))}
-    </svg>
+    <img src={logoUrl} alt="" aria-hidden="true" className="size-6 shrink-0" draggable={false} />
   );
 }

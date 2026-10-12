@@ -2,6 +2,7 @@
 //! formata a saída (humana ou `--json`).
 
 mod context_cmd;
+mod memory_cmd;
 mod output;
 mod projects_cmd;
 
@@ -70,6 +71,11 @@ enum Command {
     Search(context_cmd::SearchArgs),
     /// Compila um Context Pack para uma tarefa e o exporta (Markdown por padrão).
     Context(context_cmd::ContextArgs),
+    /// Memória do projeto: decisões, convenções e outros conhecimentos com histórico.
+    Memory(memory_cmd::MemoryArgs),
+    /// Alertas de atualidade: caminhos e símbolos citados que sumiram, memória desatualizada,
+    /// contradições e arquivos alterados desde a indexação.
+    Freshness(memory_cmd::FreshnessArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -101,6 +107,7 @@ mod exit {
     pub const INVALID_INPUT: u8 = 2;
     pub const STORAGE: u8 = 3;
     pub const INCOMPATIBLE_SCHEMA: u8 = 4;
+    pub const CONFLICT: u8 = 5;
 }
 
 fn exit_code_for(err: &Error) -> u8 {
@@ -108,6 +115,7 @@ fn exit_code_for(err: &Error) -> u8 {
         ErrorCode::InvalidInput | ErrorCode::NotFound => exit::INVALID_INPUT,
         ErrorCode::Storage | ErrorCode::Io => exit::STORAGE,
         ErrorCode::IncompatibleSchema => exit::INCOMPATIBLE_SCHEMA,
+        ErrorCode::Conflict => exit::CONFLICT,
         _ => exit::FAILURE,
     }
 }
@@ -187,6 +195,8 @@ fn run(cli: Cli) -> Result<(), Error> {
         }
         Command::Search(args) => context_cmd::search(&core, &args, cli.global.json),
         Command::Context(args) => context_cmd::context(&core, &args, cli.global.json),
+        Command::Memory(args) => memory_cmd::memory(&core, &args, cli.global.json),
+        Command::Freshness(args) => memory_cmd::freshness(&core, &args, cli.global.json),
     }
 }
 

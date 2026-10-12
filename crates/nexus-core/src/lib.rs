@@ -534,6 +534,11 @@ impl Core {
         })
     }
 
+    /// ID completo a partir do ID ou de um prefixo único.
+    pub fn resolve_memory_id(&self, reference: &str) -> Result<String> {
+        self.db.read(|c| memory::resolve_id(c, reference))
+    }
+
     pub fn list_memories(&self, query: &MemoryQuery) -> Result<Vec<Memory>> {
         self.project(query.project_id)?;
         self.db.read(|c| memory::list(c, query))

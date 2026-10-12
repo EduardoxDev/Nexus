@@ -17,8 +17,8 @@ fn init_creates_database_and_reports_json() {
     let data = dir.path().join("data");
     let out = nexus(&data).args(["init", "--json"]).assert().success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["schemaVersion"], 3);
-    assert_eq!(v["appliedMigrations"], serde_json::json!([1, 2, 3]));
+    assert_eq!(v["schemaVersion"], 4);
+    assert_eq!(v["appliedMigrations"], serde_json::json!([1, 2, 3, 4]));
     assert!(data.join("nexus.db").is_file());
 
     // Segunda execução: nada pendente.
@@ -33,7 +33,7 @@ fn init_human_output_is_portuguese() {
     let out = nexus(&dir.path().join("d")).arg("init").assert().success();
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     assert!(stdout.contains("NEXUS pronto."), "{stdout}");
-    assert!(stdout.contains("Schema:         v3"), "{stdout}");
+    assert!(stdout.contains("Schema:         v4"), "{stdout}");
 }
 
 #[test]
@@ -45,11 +45,11 @@ fn diagnostics_json_has_expected_shape() {
         .assert()
         .success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["diagnostics"]["schemaVersion"], 3);
+    assert_eq!(v["diagnostics"]["schemaVersion"], 4);
     assert_eq!(v["diagnostics"]["fts5Available"], true);
     assert_eq!(v["integrity"]["ok"], true);
     assert!(v["app"]["coreVersion"].is_string());
-    assert!(v["diagnostics"]["migrations"].as_array().unwrap().len() == 3);
+    assert!(v["diagnostics"]["migrations"].as_array().unwrap().len() == 4);
 }
 
 #[test]
@@ -276,4 +276,148 @@ fn insert_future_migration(db: &std::path::Path) -> nexus_core::storage::Db {
         })
         .unwrap();
     database
+}
+
+#[test]
+fn memory_and_freshness_commands() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path().join("data");
+    let repo = dir.path().join("acme");
+    saas_copy(&repo);
+    nexus(&data)
+        .args(["projects", "add", "--index"])
+        .arg(&repo)
+        .assert()
+        .success();
+
+    let report = json_out(nexus(&data).args(["memory", "import-adrs", "--json"]));
+    assert_eq!(report["created"], 3);
+    let list = json_out(nexus(&data).args(["memory", "list", "--status", "proposed", "--json"]));
+    assert_eq!(list.as_array().unwrap().len(), 3);
+
+    let added = json_out(nexus(&data).args([
+        "memory",
+        "add",
+        "--kind",
+        "convention",
+        "--title",
+        "Logs pelo logger estruturado",
+        "--body",
+        "Nada de console.log.",
+        "--ref",
+        "src/utils/logger.ts:1-5",
+        "--confirm",
+        "--json",
+    ]));
+    assert_eq!(added["status"], "confirmed");
+    assert_eq!(added["origin"], "cli");
+    let id = added["id"].as_str().unwrap().to_owned();
+    let prefix = &id[id.len() - 8..];
+
+    // Revisão esperada desatualizada: conflito (código 5).
+    let out = nexus(&data)
+        .args([
+            "memory",
+            "edit",
+            prefix,
+            "--title",
+            "Outro",
+            "--revision",
+            "99",
+            "--json",
+        ])
+        .assert()
+        .code(5);
+    let err: Value = serde_json::from_slice(&out.get_output().stderr).unwrap();
+    assert_eq!(err["error"]["code"], "conflict");
+
+    let edited = json_out(nexus(&data).args([
+        "memory",
+        "edit",
+        prefix,
+        "--body",
+        "Use src/utils/logger.ts; nada de console.log.",
+        "--json",
+    ]));
+    assert_eq!(edited["revision"], 2);
+
+    let show = nexus(&data)
+        .args(["memory", "show", prefix])
+        .assert()
+        .success();
+    let text = String::from_utf8(show.get_output().stdout.clone()).unwrap();
+    assert!(
+        text.contains("Convenção — Logs pelo logger estruturado"),
+        "{text}"
+    );
+    assert!(
+        text.contains("src/utils/logger.ts:1-5  [inalterado]"),
+        "{text}"
+    );
+    assert!(text.contains("rev 2"), "{text}");
+
+    // Referência inválida: erro de entrada (código 2).
+    nexus(&data)
+        .args([
+            "memory",
+            "add",
+            "--kind",
+            "bug",
+            "--title",
+            "Bug x",
+            "--ref",
+            "nao/existe.ts",
+        ])
+        .assert()
+        .code(2);
+
+    // Atualidade: link quebrado num documento novo.
+    std::fs::write(
+        repo.join("docs/guia.md"),
+        "# Guia\n\nVeja [antigo](../src/antigo.ts).\n",
+    )
+    .unwrap();
+    nexus(&data).args(["index", "acme"]).assert().success();
+    let f = json_out(nexus(&data).args(["freshness", "--json"]));
+    let issues = f["issues"].as_array().unwrap();
+    let missing: Vec<&Value> = issues
+        .iter()
+        .filter(|i| i["kind"] == "missing_path")
+        .collect();
+    assert_eq!(missing.len(), 1, "{issues:#?}");
+    assert_eq!(missing[0]["sources"][0]["relPath"], "docs/guia.md");
+    assert_eq!(missing[0]["sources"][0]["line"], 3);
+    assert!(f["summary"]["lastScan"].is_object());
+
+    let issue_id = missing[0]["id"].as_i64().unwrap().to_string();
+    let human = nexus(&data).args(["freshness", "scan"]).assert().success();
+    let text = String::from_utf8(human.get_output().stdout.clone()).unwrap();
+    assert!(text.contains("recomendação:"), "{text}");
+    assert!(text.contains("fonte: docs/guia.md:3"), "{text}");
+
+    let d = json_out(nexus(&data).args([
+        "freshness",
+        "dismiss",
+        &issue_id,
+        "--note",
+        "arquivo histórico",
+        "--json",
+    ]));
+    assert_eq!(d["status"], "dismissed");
+    let f = json_out(nexus(&data).args(["freshness", "--json"]));
+    assert!(
+        f["issues"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["kind"] != "missing_path")
+    );
+    let all = json_out(nexus(&data).args(["freshness", "list", "--all", "--json"]));
+    assert!(
+        all["issues"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["status"] == "dismissed")
+    );
 }

@@ -600,6 +600,28 @@ fn load_refs(conn: &Connection, memory_id: &str) -> Result<Vec<MemoryRef>> {
     Ok(rows.collect::<std::result::Result<_, _>>()?)
 }
 
+/// Resolve um ID completo ou um trecho único (≥ 6 caracteres) do início ou do fim, como na CLI.
+/// IDs são UUIDv7: o início é o carimbo de tempo, então o fim (aleatório) é o que distingue.
+pub fn resolve_id(conn: &Connection, reference: &str) -> Result<String> {
+    let r = reference.trim().to_ascii_lowercase();
+    if r.len() < 6 || !r.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
+        return Err(Error::InvalidInput(format!(
+            "identificador de memória inválido: \"{reference}\" (use o ID ou 6+ caracteres dele)"
+        )));
+    }
+    let mut stmt = conn.prepare("SELECT id FROM memories WHERE id LIKE ?1 || '%' OR id LIKE '%' || ?1 LIMIT 2")?;
+    let ids: Vec<String> = stmt
+        .query_map([&r], |row| row.get(0))?
+        .collect::<std::result::Result<_, _>>()?;
+    match ids.as_slice() {
+        [one] => Ok(one.clone()),
+        [] => Err(Error::NotFound(format!("memória {reference}"))),
+        _ => Err(Error::InvalidInput(format!(
+            "\"{reference}\" corresponde a mais de uma memória; use mais caracteres"
+        ))),
+    }
+}
+
 pub fn get(conn: &Connection, id: &str) -> Result<Memory> {
     let mut m = conn
         .query_row(

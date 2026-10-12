@@ -92,7 +92,7 @@ pub struct ContextArgs {
 }
 
 /// Projeto pedido ou, se omitido, o único projeto registrado.
-fn resolve_project(core: &Core, reference: Option<&str>) -> Result<i64, Error> {
+pub(crate) fn resolve_project(core: &Core, reference: Option<&str>) -> Result<i64, Error> {
     if let Some(r) = reference {
         return Ok(core.find_project(r)?.id);
     }

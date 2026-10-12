@@ -1,10 +1,12 @@
+![NEXUS — Conectando ideias, criando o amanhã.](docs/assets/banner.webp)
+
 # NEXUS
 
-**A camada de contexto local para engenharia de software assistida por IA.**
+**A camada de contexto local para engenharia de software assistida por IA.** _Conectando ideias, criando o amanhã._
 
-O NEXUS é um aplicativo desktop (Windows primeiro) que vai indexar os projetos que você autorizar, buscar código e documentação com **evidências verificáveis** e compilar **Context Packs** para tarefas — entregues a você, à CLI `nexus` e a agentes via **MCP**. Tudo roda localmente: nenhum código, caminho, consulta ou memória sai da sua máquina.
+O NEXUS é um aplicativo desktop (Windows primeiro) que indexa os projetos que você autorizar, busca código e documentação com **evidências verificáveis** e compila **Context Packs** para tarefas — entregues a você, à CLI `nexus` e a agentes via **MCP**. Tudo roda localmente: nenhum código, caminho, consulta ou memória sai da sua máquina.
 
-> **Estado atual: Fase 3 (busca e Context Packs) concluída.** Você autoriza pastas, o NEXUS indexa incrementalmente (sem segredos nem binários), busca código e documentação em português ou inglês mostrando **por que** cada resultado apareceu, e compila Context Packs com fontes verificadas por hash para entregar a agentes. Memória, contradições e MCP chegam nas Fases 4–5 — veja o [roadmap](docs/roadmap.md). Seções futuras aparecem desabilitadas no app, nunca simuladas.
+> **Estado atual: Fases 0–7 concluídas.** Indexação incremental sem segredos nem binários, busca explicável em português ou inglês, Context Packs verificados por hash, memória do projeto confirmada por você, alertas de atualidade e contradições, análise de código (TS/JS, Python, Rust) com grafo de dependências, CLI e servidor MCP para agentes. **Pendentes:** assinatura de código e atualização automática — veja o [roadmap](docs/roadmap.md).
 
 ![Busca com motivos de relevância e prévia verificada](docs/assets/busca-com-previa.png)
 
@@ -39,7 +41,7 @@ _Capturas reais do executável, feitas via CDP sobre a fixture `tests/fixtures/s
 | CLI                    | `nexus init`, `diagnostics`, `projects` (`add`, `remove`), `index [--full]`, `status`, `search`, `context`, `memory` (`add`, `edit`, `confirm`, `archive`, `import-adrs`…), `freshness` (`scan`, `dismiss`), `symbol`, `deps`, `mcp` (`serve`, `tools`) — saída humana ou `--json`, sobre o mesmo banco do app                                                                                                                                                               |
 | Análise de código      | Declarações e imports de TypeScript/JavaScript, Python e Rust (análise léxica com cobertura declarada, precisão medida); grafo de dependências com a linha de cada import como evidência; centralidade na busca, expansão 1-hop nos Context Packs, `nexus symbol`/`nexus deps` e dependências navegáveis na prévia — [detalhes](docs/architecture.md#14-análise-de-código-e-grafo-fase-6)                                                                                    |
 | MCP                    | `nexus mcp serve`: servidor stdio para Claude Code e outros agentes, compatível com a especificação 2026-07-28 e com clientes do handshake antigo. 13 ferramentas (busca, arquivos, símbolos, relacionados, memória, decisões, Context Packs, atualidade, estado e atualização do índice) com esquemas de saída, escopo restrito aos projetos autorizados e auditoria de cada chamada — [guia](docs/mcp.md)                                                                  |
-| Segurança              | Webview sem acesso a fs/shell/http; comandos em allowlist explícita (testada); CSP sem origens remotas; instância única                                                                                                                                                                                                                                                                                                                                                      |
+| Segurança              | Webview sem acesso a fs/shell/http; comandos em allowlist explícita (testada); CSP sem origens remotas; instância única; releituras nunca atravessam links trocados depois da indexação nem devolvem arquivos que passaram a conter segredos; queda no meio da indexação recuperada na hora                                                                                                                                                                                  |
 
 ## Instalação
 
@@ -47,10 +49,10 @@ Ainda não há release publicada. Para gerar o instalador localmente (Windows):
 
 ```bash
 corepack pnpm install
-corepack pnpm --filter @nexus/desktop tauri build
+powershell -ExecutionPolicy Bypass -File scripts/release.ps1
 ```
 
-O instalador NSIS fica em `target/release/bundle/nsis/`. Ele instala por usuário (sem admin) e baixa o WebView2 se faltar. **O binário não é assinado** — o SmartScreen pode alertar. Veja [release.md](docs/release.md).
+O instalador NSIS fica em `target/release/bundle/nsis/` e traz a CLI `nexus` ao lado do app. Ele instala por usuário (sem admin) e baixa o WebView2 se faltar. **O binário não é assinado** — o SmartScreen pode alertar. Veja [release.md](docs/release.md).
 
 ## Desenvolvimento
 
@@ -61,6 +63,12 @@ corepack pnpm install
 corepack pnpm dev                  # app em modo desenvolvimento
 cargo test --workspace             # testes Rust
 corepack pnpm check                # tipos, lint, formatação e testes do frontend
+```
+
+Demonstração completa pela CLI (autorizar, indexar, buscar, símbolo, grafo, memória, Context Pack, atualidade e MCP), numa pasta de dados descartável:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/demo.ps1
 ```
 
 Guia completo: [docs/development.md](docs/development.md) · Testes: [docs/testing.md](docs/testing.md).

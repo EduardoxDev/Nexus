@@ -2,16 +2,16 @@
 
 Cada fase termina com aplicação executável e testes aprovados. Critérios de aceitação são verificáveis; metas de desempenho só são registradas depois de medidas.
 
-| Fase | Tema                         | Estado    |
-| ---- | ---------------------------- | --------- |
-| 0    | Reconhecimento e arquitetura | concluída |
-| 1    | Fundação desktop             | concluída |
-| 2    | Indexação de projetos        | concluída |
-| 3    | Busca e Context Packs        | concluída |
-| 4    | Memória e atualidade         | concluída |
-| 5    | MCP e CLI                    | concluída |
-| 6    | Inteligência avançada        | concluída |
-| 7    | Hardening e release          | planejada |
+| Fase | Tema                         | Estado                                         |
+| ---- | ---------------------------- | ---------------------------------------------- |
+| 0    | Reconhecimento e arquitetura | concluída                                      |
+| 1    | Fundação desktop             | concluída                                      |
+| 2    | Indexação de projetos        | concluída                                      |
+| 3    | Busca e Context Packs        | concluída                                      |
+| 4    | Memória e atualidade         | concluída                                      |
+| 5    | MCP e CLI                    | concluída                                      |
+| 6    | Inteligência avançada        | concluída                                      |
+| 7    | Hardening e release          | concluída (assinatura e atualização pendentes) |
 
 ## Fase 0 — Reconhecimento e arquitetura
 
@@ -116,7 +116,7 @@ Critérios de aceitação (verificados em 2026-10-12):
 - [ ] MCP Inspector: não executado (exige baixar o pacote `@modelcontextprotocol/inspector` pelo npm; pendente de autorização).
 - [ ] Conversa real com o Claude Code: `claude mcp list` (2.1.296) reconhece o servidor e o deixa aguardando aprovação; a chamada pelo modelo ainda não foi feita porque envia o resultado das ferramentas à API do provedor — pendente de autorização do usuário.
 
-Limitações: `get_symbol_context` e `get_related_files` são heurísticos (sem análise por linguagem nem grafo de imports — Fase 6); o MCP não grava memória (propostas de agentes ficam para uma fase futura); a CLI não vem no instalador (Fase 7); sem resources, prompts nem transporte HTTP.
+Limitações: `get_symbol_context` e `get_related_files` são heurísticos (sem análise por linguagem nem grafo de imports — Fase 6); o MCP não grava memória (propostas de agentes ficam para uma fase futura); a CLI passou a vir no instalador na Fase 7; sem resources, prompts nem transporte HTTP.
 
 ## Fase 6 — Inteligência avançada
 
@@ -137,6 +137,17 @@ Limitações: resolução refeita para o projeto inteiro a cada geração (~0,25
 
 Auditoria de segurança, revisão do modelo de ameaças, testes de desempenho e recuperação, refinamento de UX, instalador final, CI completo, documentação final, demonstração reproduzível. Assinatura de código e atualização segura ficam marcadas como **pendentes** até estarem de fato configuradas.
 
+Critérios de aceitação (verificados em 2026-10-12):
+
+- [x] Auditoria de segurança com problemas reais corrigidos e testados: releitura através de links trocados depois da indexação, segredos adicionados depois da indexação (novo estado `blocked`) — [modelo de ameaças §3.5](threat-model.md#35-revisão-da-fase-7-auditoria).
+- [x] Recuperação: processo morto no meio de uma indexação de 4 000 arquivos deixa o banco íntegro e a reindexação assume na hora (lock de arquivo do SO), com resultado igual a um índice limpo.
+- [x] Desempenho medido com `scripts/bench.ps1` ([benchmarks.md](benchmarks.md)).
+- [x] Marca: ícone e banner da NEXUS no instalador, na barra lateral e no favicon; Visão geral com "Como usar" levando a cada seção.
+- [x] Instalador final com a CLI `nexus` embutida (`scripts/release.ps1`), instalado e desinstalado em silêncio; a tela Integrações encontra a CLI.
+- [x] CI com formatação, clippy, testes (Rust e frontend), E2E no Windows, auditoria de dependências (`cargo audit`, `pnpm audit`) e instalador sob demanda.
+- [x] Demonstração reproduzível (`scripts/demo.ps1`) sobre a fixture ou qualquer repositório.
+- [ ] **Pendente**: assinatura de código (certificado), atualização automática (chaves e endpoint), `cargo audit` local, licença de uso do ícone (ver [release.md](release.md)).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |
@@ -150,4 +161,4 @@ Auditoria de segurança, revisão do modelo de ameaças, testes de desempenho e 
 | Prompt injection em conteúdo indexado             | agente manipulado             | conteúdo rotulado como dado, cercas seguras, MCP somente leitura        |
 | Segredos indexados                                | vazamento                     | exclusão por nome + detecção por conteúdo; nunca logar conteúdo         |
 | E2E via CDP depende do WebView2                   | instabilidade                 | porta dedicada, timeouts explícitos, logs anexados                      |
-| Instalador sem assinatura                         | alerta do SmartScreen         | documentado; assinatura na Fase 7                                       |
+| Instalador sem assinatura                         | alerta do SmartScreen         | documentado; assinatura pendente (certificado)                          |

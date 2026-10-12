@@ -24,9 +24,24 @@ Comece pelo **Diagnóstico** (no app ou `nexus diagnostics`). Toda falha mostra 
 | Arquivo esperado não aparece                                                | `.gitignore`, `.nexusignore` ou exclusão padrão (`node_modules`, `target`, `dist`, `build`…) | Confira as regras; links e junctions nunca são seguidos                                                        |
 | Arquivo legítimo marcado como "Sensível"                                    | Nome ou conteúdo parecido com credencial (ex.: token no formato de chave AWS em testes)      | Mova o valor para fora do código ou monte-o em tempo de execução; a detecção é preventiva por design           |
 | Erro `unstable` no histórico                                                | O arquivo mudou durante a leitura (ex.: sendo salvo)                                         | Nada: ele é tentado de novo na próxima indexação                                                               |
-| "já existe uma indexação em andamento para este projeto"                    | O app e a CLI tentaram indexar o mesmo projeto                                               | Aguarde; jobs de processos encerrados são liberados após 2 minutos sem heartbeat                               |
+| "já existe uma indexação em andamento para este projeto"                    | O app e a CLI tentaram indexar o mesmo projeto                                               | Aguarde a indexação em curso terminar; se o outro processo morreu, a próxima indexação assume na hora          |
 | Alterações não aparecem sozinhas                                            | "Acompanhar alterações" desligado, ou pasta em rede/sincronizada que não emite eventos       | Ligue em Configurações; a verificação automática a cada 10 minutos e o botão "Atualizar índice" cobrem o resto |
 | Indexação deixa a máquina lenta                                             | Muitas threads                                                                               | Reduza "Threads de indexação" em Configurações ou pause o job                                                  |
+
+## Trechos bloqueados
+
+| Sintoma                                                                                         | Causa                                                                     | O que fazer                                                                                      |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Estado **Bloqueado** / "não pode ser exibido: o caminho agora é um link … para fora do projeto" | O arquivo ou uma pasta acima dele virou link/junction depois da indexação | Proteção esperada: o NEXUS não lê através de links. Desfaça o link ou reindexe                   |
+| "o arquivo passou a conter dados sensíveis (…); atualize o índice"                              | Um segredo foi adicionado ao arquivo depois da indexação                  | Remova o segredo; ao reindexar, o arquivo volta (ou fica registrado como sensível, sem conteúdo) |
+| Aviso "N arquivo(s) foram omitidos…" na busca ou risco equivalente no pack                      | Mesmos dois casos acima                                                   | Idem                                                                                             |
+
+## Instalador
+
+| Sintoma                                               | Causa                                     | O que fazer                                                                         |
+| ----------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| Integrações diz que a CLI não foi encontrada          | App executado fora da pasta de instalação | Instale pelo instalador (ele põe `nexus.exe` ao lado do app) ou compile `nexus-cli` |
+| `scripts/release.ps1` falha com `externalBin` ausente | `tauri build` rodado sem o script         | Use o script: ele compila a CLI e a copia para `src-tauri/binaries/` antes          |
 
 ## Isolar um problema
 

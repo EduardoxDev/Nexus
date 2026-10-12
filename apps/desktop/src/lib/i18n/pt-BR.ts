@@ -371,6 +371,9 @@ export const ptBR = {
     freshTooltip: "O arquivo no disco é idêntico ao indexado.",
     modifiedTooltip: "O arquivo mudou desde a indexação; as linhas podem não corresponder.",
     missingTooltip: "O arquivo não existe mais.",
+    blocked: "Bloqueado",
+    blockedTooltip:
+      "Virou link para fora do projeto ou passou a conter dados sensíveis depois da indexação. O conteúdo não é exibido; atualize o índice.",
   },
   packs: {
     newTitle: "Nova tarefa",

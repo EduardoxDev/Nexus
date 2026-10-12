@@ -91,6 +91,40 @@ fn is_reparse_point(_: &std::fs::Metadata) -> bool {
     false
 }
 
+/// Resultado de conferir um caminho do projeto antes de lê-lo.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProjectPath {
+    /// Arquivo comum dentro do projeto.
+    File(PathBuf),
+    /// Não existe.
+    Missing,
+    /// É um link (ou passa por um) ou resolve para fora do projeto: não é lido.
+    Outside,
+}
+
+/// Confere, **no momento da leitura**, que `rel` ainda é um arquivo comum dentro de `root`.
+/// A varredura não segue links, mas um arquivo indexado pode ser trocado depois por um link
+/// (ou uma pasta por uma junction) apontando para fora do projeto.
+pub fn check_project_path(root: &Path, rel: &str) -> Result<ProjectPath> {
+    let path = resolve_rel(root, rel)?;
+    let meta = match std::fs::symlink_metadata(&path) {
+        Ok(m) => m,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(ProjectPath::Missing),
+        Err(e) => return Err(Error::io(format!("inspecionar {rel}"), e)),
+    };
+    if meta.file_type().is_symlink() || is_reparse_point(&meta) {
+        return Ok(ProjectPath::Outside);
+    }
+    // Pastas intermediárias trocadas por links: o caminho canônico denuncia.
+    let (Ok(real), Ok(real_root)) = (dunce::canonicalize(&path), dunce::canonicalize(root)) else {
+        return Ok(ProjectPath::Missing);
+    };
+    if !real.starts_with(&real_root) {
+        return Ok(ProjectPath::Outside);
+    }
+    Ok(ProjectPath::File(path))
+}
+
 fn is_link(entry: &ignore::DirEntry) -> bool {
     if entry.path_is_symlink() {
         return true;

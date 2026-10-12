@@ -301,6 +301,9 @@ pub fn symbol_context(conn: &Connection, project: &Project, symbol: &str) -> Res
     for hit in crate::analysis::query::find_symbols(conn, project.id, symbol, MAX_DEFINITIONS)? {
         let file = evidence::indexed_file(conn, project.id, &hit.rel_path)?;
         let v = evidence::verify(root, &hit.rel_path, &file.content_hash)?;
+        if v.freshness == Freshness::Blocked {
+            continue;
+        }
         let end = hit
             .symbol
             .end_line
@@ -348,6 +351,9 @@ pub fn symbol_context(conn: &Connection, project: &Project, symbol: &str) -> Res
         if declares && definitions.len() < MAX_DEFINITIONS {
             let file = evidence::indexed_file(conn, project.id, &hit.rel_path)?;
             let v = evidence::verify(root, &hit.rel_path, &file.content_hash)?;
+            if v.freshness == Freshness::Blocked {
+                continue;
+            }
             found = v
                 .lines
                 .iter()

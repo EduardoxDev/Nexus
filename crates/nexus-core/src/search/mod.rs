@@ -536,9 +536,14 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
     let examine = ranked.len().min((limit as usize) * 3).max(limit as usize);
     let concept_refs: Vec<&Concept> = analysis.concepts.iter().collect();
     let mut hits: Vec<SearchHit> = Vec::new();
+    let mut blocked = 0;
     for c in ranked.iter_mut().take(examine) {
         let file = &files[c.file];
         let verified = verify(root, &file.rel_path, &file.hash)?;
+        if verified.freshness == Freshness::Blocked {
+            blocked += 1;
+            continue;
+        }
         if mode == SearchMode::Hybrid && !verified.lines.is_empty() {
             let norm = normalize(&verified.lines.join("\n"));
             let covered: Vec<String> = analysis
@@ -669,6 +674,11 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
         }
     }
     deduped.truncate(limit as usize);
+    if blocked > 0 {
+        warnings.push(format!(
+            "{blocked} arquivo(s) foram omitidos porque viraram link para fora do projeto ou passaram a conter dados sensíveis; atualize o índice."
+        ));
+    }
 
     if deduped.is_empty() {
         warnings.push(format!(

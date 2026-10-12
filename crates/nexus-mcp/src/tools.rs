@@ -113,7 +113,7 @@ fn project_prop() -> Value {
 }
 
 fn freshness_schema() -> Value {
-    json!({ "type": "string", "enum": ["fresh", "modified", "missing"] })
+    json!({ "type": "string", "enum": ["fresh", "modified", "missing", "blocked"] })
 }
 
 // ---- Argumentos --------------------------------------------------------------------------

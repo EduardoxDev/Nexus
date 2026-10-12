@@ -690,6 +690,7 @@ pub fn compile(
     let mut sources = Vec::new();
     let mut omitted = Vec::new();
     let mut stale = 0;
+    let mut blocked = 0;
     for d in drafts {
         if sources.len() as u32 >= max_files {
             omitted.push(d.rel_path);
@@ -699,6 +700,10 @@ pub fn compile(
             continue;
         };
         let verified = evidence::verify(root, &d.rel_path, &info.hash)?;
+        if verified.freshness == Freshness::Blocked {
+            blocked += 1;
+            continue;
+        }
         if verified.freshness == Freshness::Missing {
             stale += 1;
             continue;
@@ -729,6 +734,11 @@ pub fn compile(
     }
 
     let mut risks = Vec::new();
+    if blocked > 0 {
+        risks.push(format!(
+            "{blocked} arquivo(s) relevante(s) foram omitidos: viraram link para fora do projeto ou passaram a conter dados sensíveis depois da indexação."
+        ));
+    }
     if stale > 0 {
         risks.push(format!(
             "{stale} arquivo(s) mudaram desde a última indexação; atualize o índice para conferir as linhas."

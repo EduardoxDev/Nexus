@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::error::{Error, Result};
-use crate::scan::resolve_rel;
+use crate::scan::{ProjectPath, check_project_path};
 
 /// Estado de uma fonte em relação ao índice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -20,13 +20,28 @@ pub enum Freshness {
     Modified,
     /// O arquivo não existe mais.
     Missing,
+    /// O arquivo não pode ser exibido agora: virou link para fora do projeto ou passou a conter
+    /// dados sensíveis depois da indexação. Nenhum conteúdo é devolvido.
+    Blocked,
 }
 
 /// Arquivo indexado, lido e verificado.
 pub struct VerifiedFile {
     pub freshness: Freshness,
-    /// Linhas atuais do arquivo (vazio se ausente).
+    /// Linhas atuais do arquivo (vazio se ausente ou bloqueado).
     pub lines: Vec<String>,
+    /// Motivo do bloqueio (`freshness = blocked`), para mensagens ao usuário.
+    pub blocked_reason: Option<String>,
+}
+
+impl VerifiedFile {
+    fn empty(freshness: Freshness, reason: Option<String>) -> Self {
+        Self {
+            freshness,
+            lines: Vec::new(),
+            blocked_reason: reason,
+        }
+    }
 }
 
 /// Registro mínimo de um arquivo indexado.
@@ -62,16 +77,23 @@ pub fn indexed_file(conn: &Connection, project_id: i64, rel_path: &str) -> Resul
     .ok_or_else(|| Error::NotFound(format!("arquivo indexado \"{rel_path}\"")))
 }
 
-/// Lê o arquivo e compara com o hash indexado.
+/// Lê o arquivo e compara com o hash indexado. Links para fora do projeto e arquivos que
+/// passaram a conter segredos depois da indexação voltam como `blocked`, sem conteúdo.
 pub fn verify(root: &Path, rel_path: &str, content_hash: &str) -> Result<VerifiedFile> {
-    let path = resolve_rel(root, rel_path)?;
+    let path = match check_project_path(root, rel_path)? {
+        ProjectPath::File(p) => p,
+        ProjectPath::Missing => return Ok(VerifiedFile::empty(Freshness::Missing, None)),
+        ProjectPath::Outside => {
+            return Ok(VerifiedFile::empty(
+                Freshness::Blocked,
+                Some("o caminho agora é um link (ou passa por um) para fora do projeto".into()),
+            ));
+        }
+    };
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(VerifiedFile {
-                freshness: Freshness::Missing,
-                lines: Vec::new(),
-            });
+            return Ok(VerifiedFile::empty(Freshness::Missing, None));
         }
         Err(e) => return Err(Error::io(format!("ler {rel_path}"), e)),
     };
@@ -82,9 +104,22 @@ pub fn verify(root: &Path, rel_path: &str, content_hash: &str) -> Result<Verifie
     };
     let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
     let text = String::from_utf8_lossy(bytes);
+    // O conteúdo indexado foi verificado na indexação; o que mudou depois, não.
+    if freshness == Freshness::Modified
+        && let Some(m) = crate::sensitive::check_content(&text)
+    {
+        return Ok(VerifiedFile::empty(
+            Freshness::Blocked,
+            Some(format!(
+                "o arquivo passou a conter dados sensíveis ({}); atualize o índice",
+                m.reason
+            )),
+        ));
+    }
     Ok(VerifiedFile {
         freshness,
         lines: text.lines().map(str::to_owned).collect(),
+        blocked_reason: None,
     })
 }
 
@@ -129,6 +164,12 @@ pub fn file_context(
 ) -> Result<FileContext> {
     let file = indexed_file(conn, project_id, rel_path)?;
     let verified = verify(root, &file.rel_path, &file.content_hash)?;
+    if let Some(reason) = verified.blocked_reason {
+        return Err(Error::InvalidInput(format!(
+            "\"{}\" não pode ser exibido: {reason}",
+            file.rel_path
+        )));
+    }
     let start = start.unwrap_or(1).max(1);
     let end = end.unwrap_or(start + MAX_CONTEXT_LINES - 1);
     if end < start {

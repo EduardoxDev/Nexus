@@ -107,6 +107,9 @@ fn freshness_label(f: Freshness) -> &'static str {
         Freshness::Fresh => "inalterado desde a criação do pack",
         Freshness::Modified => "MODIFICADO desde a criação do pack — linhas podem não corresponder",
         Freshness::Missing => "AUSENTE — o arquivo não existe mais",
+        Freshness::Blocked => {
+            "BLOQUEADO — virou link para fora do projeto ou passou a conter dados sensíveis; conteúdo omitido"
+        }
     }
 }
 
@@ -242,7 +245,7 @@ fn section(out: &mut String, title: &str, items: &[&Included<'_>]) {
             "- Hash (blake3): `{}`\n",
             &s.content_hash[..16.min(s.content_hash.len())]
         );
-        if e.freshness != Freshness::Missing {
+        if !matches!(e.freshness, Freshness::Missing | Freshness::Blocked) {
             let fence = fence_for(&e.text);
             let lang = s.language.as_deref().unwrap_or("");
             let _ = writeln!(out, "{fence}{lang}\n{}\n{fence}\n", e.text);
@@ -354,6 +357,7 @@ pub fn to_markdown(pack: &ContextPack, options: &ExportOptions) -> Result<String
                 Freshness::Fresh => "atual",
                 Freshness::Modified => "modificado",
                 Freshness::Missing => "ausente",
+                Freshness::Blocked => "bloqueado",
             }
         );
     }

@@ -3,4 +3,4 @@
 /**
  * Estado de uma fonte em relação ao índice.
  */
-export type Freshness = "fresh" | "modified" | "missing";
+export type Freshness = "fresh" | "modified" | "missing" | "blocked";

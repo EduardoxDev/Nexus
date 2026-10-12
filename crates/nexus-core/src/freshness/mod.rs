@@ -498,7 +498,7 @@ fn check_docs(
         .take(MAX_DOCS)
     {
         let v = evidence::verify(root, &doc, &hash)?;
-        if v.freshness == Freshness::Missing {
+        if matches!(v.freshness, Freshness::Missing | Freshness::Blocked) {
             continue;
         }
         let text = v.lines.join("\n");

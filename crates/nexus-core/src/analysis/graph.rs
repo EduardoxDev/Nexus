@@ -185,10 +185,9 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
     for (path, _, _) in &files {
         let name = path.rsplit('/').next().unwrap_or(path);
         let dir = path.rsplit_once('/').map_or("", |(d, _)| d);
-        let read = || {
-            crate::scan::resolve_rel(root, path)
-                .ok()
-                .and_then(|p| std::fs::read_to_string(p).ok())
+        let read = || match crate::scan::check_project_path(root, path) {
+            Ok(crate::scan::ProjectPath::File(p)) => std::fs::read_to_string(p).ok(),
+            _ => None,
         };
         if name.starts_with("tsconfig") && name.ends_with(".json") {
             if let Some(cfg) = read().and_then(|t| TsConfig::parse(dir, &t)) {

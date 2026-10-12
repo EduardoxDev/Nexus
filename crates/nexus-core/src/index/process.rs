@@ -106,8 +106,16 @@ fn outcome(root: &Path, entry: &FileEntry, max_file_size: u64, language: Option<
         };
     }
 
-    let path = match crate::scan::resolve_rel(root, &entry.rel_path) {
-        Ok(p) => p,
+    let path = match crate::scan::check_project_path(root, &entry.rel_path) {
+        Ok(crate::scan::ProjectPath::File(p)) => p,
+        // Sumiu entre a varredura e a leitura: tenta de novo na próxima passada.
+        Ok(crate::scan::ProjectPath::Missing) => return Outcome::Unstable,
+        Ok(crate::scan::ProjectPath::Outside) => {
+            return Outcome::Failed {
+                code: "link_outside",
+                message: "virou link para fora do projeto durante a indexação; não foi lido".into(),
+            };
+        }
         Err(e) => {
             return Outcome::Failed {
                 code: "invalid_path",

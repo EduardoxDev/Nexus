@@ -113,6 +113,7 @@ fn freshness_label(f: Freshness) -> &'static str {
         Freshness::Fresh => "",
         Freshness::Modified => "  [modificado desde a indexação]",
         Freshness::Missing => "  [arquivo ausente]",
+        Freshness::Blocked => "  [bloqueado: link para fora do projeto ou dados sensíveis]",
     }
 }
 

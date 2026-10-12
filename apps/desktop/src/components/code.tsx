@@ -54,13 +54,19 @@ export function CodeBlock({ text, startLine, highlight = [], className, label }:
   );
 }
 
-const tone = { fresh: "success", modified: "warning", missing: "danger" } as const;
+const tone = {
+  fresh: "success",
+  modified: "warning",
+  missing: "danger",
+  blocked: "danger",
+} as const;
 
 export function FreshnessBadge({ freshness }: { freshness: Freshness }) {
   const tooltip = {
     fresh: t.freshness.freshTooltip,
     modified: t.freshness.modifiedTooltip,
     missing: t.freshness.missingTooltip,
+    blocked: t.freshness.blockedTooltip,
   }[freshness];
   return (
     <Tooltip content={tooltip}>

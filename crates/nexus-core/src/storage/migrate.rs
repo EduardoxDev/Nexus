@@ -43,6 +43,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "context_packs",
         sql: include_str!("migrations/0003_context_packs.sql"),
     },
+    Migration {
+        version: 4,
+        name: "memory_freshness",
+        sql: include_str!("migrations/0004_memory_freshness.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

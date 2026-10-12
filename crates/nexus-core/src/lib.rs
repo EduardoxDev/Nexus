@@ -5,9 +5,11 @@ pub mod classify;
 pub mod context;
 pub mod diagnostics;
 pub mod error;
+pub mod freshness;
 pub mod git;
 pub mod index;
 pub mod logging;
+pub mod memory;
 pub mod ops;
 pub mod paths;
 pub mod projects;
@@ -28,9 +30,14 @@ use serde_json::json;
 use crate::context::export::{ExportFormat, ExportOptions};
 use crate::context::{ContextPack, ContextPackRequest, ContextPackSummary};
 use crate::diagnostics::{DiagnosticsReport, IntegrityReport};
+use crate::freshness::{FreshnessIssue, FreshnessSummary, IssueQuery, ScanReport, ScanScope};
 use crate::index::{
     IndexError, IndexJob, IndexMode, IndexObserver, IndexOptions, IndexTrigger, JobControl,
     JobStatus,
+};
+use crate::memory::adr::ImportReport;
+use crate::memory::{
+    Actor, Memory, MemoryCounts, MemoryDetail, MemoryQuery, MemoryUpdate, NewMemory, Transition,
 };
 use crate::ops::{OperationQuery, OperationRecord};
 use crate::projects::{Project, ProjectOverview, ProjectSummary, SkippedFile};
@@ -308,6 +315,15 @@ impl Core {
         if let Err(e) = logged {
             tracing::warn!(error = %e, "falha ao registrar a operação de indexação");
         }
+        // O índice mudou: reavalia a atualidade (documentos, memória, arquivos). Uma falha aqui
+        // não invalida a indexação — fica registrada como operação com erro.
+        if let Ok(job) = &result
+            && job.status == JobStatus::Succeeded
+            && self.freshness_outdated(project_id).unwrap_or(true)
+            && let Err(e) = self.scan_freshness(project_id)
+        {
+            tracing::warn!(error = %e, project_id, "verificação de atualidade após indexação falhou");
+        }
         result.map_err(|e| Error::InOperation {
             op_id: op.id().to_owned(),
             source: Box::new(e),
@@ -385,6 +401,7 @@ impl Core {
                     "tokenBudget": plan.token_budget,
                 });
                 let pack = context::materialize(Path::new(&project.root_path), plan)?;
+                let pack = self.db.read(|c| context::attach_memory(c, pack))?;
                 Ok((pack, Some(detail)))
             },
         )
@@ -403,7 +420,8 @@ impl Core {
     pub fn context_pack(&self, id: &str) -> Result<ContextPack> {
         let plan = self.db.read(|c| context::load(c, id))?;
         let project = self.project(plan.project_id)?;
-        context::materialize(Path::new(&project.root_path), plan)
+        let pack = context::materialize(Path::new(&project.root_path), plan)?;
+        self.db.read(|c| context::attach_memory(c, pack))
     }
 
     pub fn delete_context_pack(&self, id: &str) -> Result<()> {
@@ -419,4 +437,217 @@ impl Core {
         let pack = self.context_pack(id)?;
         context::export::render(&pack, format, options)
     }
+
+    // ---- Memória --------------------------------------------------------------------------
+
+    pub fn create_memory(&self, req: &NewMemory, actor: Actor) -> Result<Memory> {
+        self.project(req.project_id)?;
+        let m = ops::run(
+            &self.db,
+            ops::kinds::MEMORY_CREATE,
+            Some(req.project_id),
+            |_| {
+                let m = self.db.write(|c| memory::create(c, req, actor))?;
+                let detail = memory_detail(&m, actor);
+                Ok((m, Some(detail)))
+            },
+        )?;
+        self.rescan_memories(m.project_id);
+        Ok(m)
+    }
+
+    pub fn update_memory(&self, id: &str, req: &MemoryUpdate, actor: Actor) -> Result<Memory> {
+        let project_id = self.db.read(|c| memory::get(c, id))?.project_id;
+        let m = ops::run(
+            &self.db,
+            ops::kinds::MEMORY_UPDATE,
+            Some(project_id),
+            |_| {
+                let m = self.db.write(|c| memory::update(c, id, req, actor))?;
+                let detail = memory_detail(&m, actor);
+                Ok((m, Some(detail)))
+            },
+        )?;
+        self.rescan_memories(project_id);
+        Ok(m)
+    }
+
+    /// Confirmar, arquivar ou restaurar (somente quem revisa).
+    pub fn transition_memory(
+        &self,
+        id: &str,
+        to: Transition,
+        expected_revision: Option<i64>,
+        note: Option<&str>,
+        actor: Actor,
+    ) -> Result<Memory> {
+        let project_id = self.db.read(|c| memory::get(c, id))?.project_id;
+        let m = ops::run(
+            &self.db,
+            ops::kinds::MEMORY_TRANSITION,
+            Some(project_id),
+            |_| {
+                let m = self
+                    .db
+                    .write(|c| memory::transition(c, id, to, expected_revision, note, actor))?;
+                let mut detail = memory_detail(&m, actor);
+                detail["transition"] = json!(to);
+                Ok((m, Some(detail)))
+            },
+        )?;
+        self.rescan_memories(project_id);
+        Ok(m)
+    }
+
+    /// Registra a versão atual dos arquivos referenciados (e corrige caminhos movidos).
+    pub fn review_memory_refs(
+        &self,
+        id: &str,
+        expected_revision: i64,
+        actor: Actor,
+    ) -> Result<Memory> {
+        let project_id = self.db.read(|c| memory::get(c, id))?.project_id;
+        let project = self.project(project_id)?;
+        let root = std::path::PathBuf::from(&project.root_path);
+        let m = ops::run(
+            &self.db,
+            ops::kinds::MEMORY_UPDATE,
+            Some(project_id),
+            |_| {
+                let m = self
+                    .db
+                    .write(|c| memory::review_refs(c, &root, id, expected_revision, actor))?;
+                let mut detail = memory_detail(&m, actor);
+                detail["refsReviewed"] = json!(true);
+                Ok((m, Some(detail)))
+            },
+        )?;
+        self.rescan_memories(project_id);
+        Ok(m)
+    }
+
+    pub fn memory(&self, id: &str) -> Result<MemoryDetail> {
+        self.db.read(|c| {
+            let m = memory::get(c, id)?;
+            let project = projects::require(c, m.project_id)?;
+            memory::detail(c, &project, id)
+        })
+    }
+
+    pub fn list_memories(&self, query: &MemoryQuery) -> Result<Vec<Memory>> {
+        self.project(query.project_id)?;
+        self.db.read(|c| memory::list(c, query))
+    }
+
+    pub fn memory_counts(&self, project_id: i64) -> Result<MemoryCounts> {
+        self.db.read(|c| memory::counts(c, project_id))
+    }
+
+    /// Importa os ADRs indexados do projeto como propostas.
+    pub fn import_adrs(&self, project_id: i64) -> Result<ImportReport> {
+        let project = self.project(project_id)?;
+        let root = std::path::PathBuf::from(&project.root_path);
+        let report = ops::run(
+            &self.db,
+            ops::kinds::MEMORY_IMPORT,
+            Some(project_id),
+            |_| {
+                let report = self
+                    .db
+                    .write(|c| memory::adr::import(c, &root, project_id))?;
+                let detail = json!({
+                    "scanned": report.scanned,
+                    "created": report.created,
+                    "updated": report.updated,
+                    "superseding": report.superseding,
+                    "unchanged": report.unchanged,
+                    "skippedInactive": report.skipped_inactive,
+                    "skippedStale": report.skipped_stale.len(),
+                });
+                Ok((report, Some(detail)))
+            },
+        )?;
+        self.rescan_memories(project_id);
+        Ok(report)
+    }
+
+    // ---- Atualidade -----------------------------------------------------------------------
+
+    /// Verificação completa de atualidade, registrada como operação.
+    pub fn scan_freshness(&self, project_id: i64) -> Result<ScanReport> {
+        let project = self.project(project_id)?;
+        ops::run(
+            &self.db,
+            ops::kinds::FRESHNESS_SCAN,
+            Some(project_id),
+            |_| {
+                let outcome = self
+                    .db
+                    .read(|c| freshness::scan(c, &project, ScanScope::FULL))?;
+                let report = self.db.write(|c| freshness::apply(c, outcome))?;
+                let detail = json!({
+                    "projectId": project_id,
+                    "detected": report.detected,
+                    "newIssues": report.new_issues,
+                    "resolved": report.resolved,
+                    "docsChecked": report.info.docs_checked,
+                    "memoriesChecked": report.info.memories_checked,
+                    "durationMs": report.info.duration_ms,
+                });
+                Ok((report, Some(detail)))
+            },
+        )
+    }
+
+    /// Reavalia só os alertas de memória (rápido; chamado depois de cada mudança na memória).
+    fn rescan_memories(&self, project_id: i64) {
+        let result = self.project(project_id).and_then(|project| {
+            let outcome = self
+                .db
+                .read(|c| freshness::scan(c, &project, ScanScope::MEMORIES))?;
+            self.db.write(|c| freshness::apply(c, outcome))
+        });
+        if let Err(e) = result {
+            tracing::warn!(error = %e, project_id, "reavaliação dos alertas de memória falhou");
+        }
+    }
+
+    fn freshness_outdated(&self, project_id: i64) -> Result<bool> {
+        let project = self.project(project_id)?;
+        let last = self.db.read(|c| freshness::last_scan(c, project_id))?;
+        Ok(last.is_none_or(|s| s.index_generation < project.index_generation))
+    }
+
+    pub fn freshness_issues(&self, query: &IssueQuery) -> Result<Vec<FreshnessIssue>> {
+        self.project(query.project_id)?;
+        self.db.read(|c| freshness::list(c, query))
+    }
+
+    pub fn freshness_summary(&self, project_id: i64) -> Result<FreshnessSummary> {
+        let project = self.project(project_id)?;
+        self.db.read(|c| freshness::summary(c, &project))
+    }
+
+    /// Dispensa (`true`) ou reabre (`false`) um alerta.
+    pub fn set_issue_dismissed(
+        &self,
+        issue_id: i64,
+        dismissed: bool,
+        note: Option<&str>,
+    ) -> Result<FreshnessIssue> {
+        self.db
+            .write(|c| freshness::set_dismissed(c, issue_id, dismissed, note))
+    }
+}
+
+/// Detalhe registrado nas operações de memória: identificadores e estado, nunca o texto.
+fn memory_detail(m: &Memory, actor: Actor) -> serde_json::Value {
+    json!({
+        "memoryId": m.id,
+        "projectId": m.project_id,
+        "kind": m.kind,
+        "status": m.status,
+        "revision": m.revision,
+        "actor": actor,
+    })
 }

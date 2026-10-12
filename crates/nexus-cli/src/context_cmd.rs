@@ -200,6 +200,7 @@ pub fn context(core: &Core, args: &ContextArgs, json: bool) -> Result<(), Error>
     let options = ExportOptions {
         excluded_paths: args.exclude.clone(),
         notes: args.notes.clone(),
+        ..Default::default()
     };
     let rendered = core.export_context_pack(&pack.plan.id, format, &options)?;
     match &args.output {

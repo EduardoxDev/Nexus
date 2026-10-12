@@ -15,13 +15,20 @@ use ts_rs::TS;
 
 use crate::classify::FileKind;
 use crate::error::{Error, Result};
+use crate::freshness::{self, FreshnessIssue};
+use crate::memory::{self, Memory, MemoryKind, MemoryStatus};
 use crate::projects::Project;
 use crate::search::evidence::{self, Freshness};
 use crate::search::query::{QueryAnalysis, normalize};
 use crate::search::{self, Reason, ReasonKind, SearchHit, SearchMode, SearchRequest};
 use crate::time_util::now_ms;
 
-pub const SCHEMA_VERSION: u32 = 1;
+/// 2: memórias confirmadas no plano; alertas de atualidade e contradições no pack materializado.
+pub const SCHEMA_VERSION: u32 = 2;
+/// Memórias confirmadas no máximo por pack.
+const MAX_MEMORIES: usize = 6;
+/// Fração do orçamento reservada, no máximo, para memórias.
+const MEMORY_BUDGET_SHARE: u32 = 4;
 const DEFAULT_BUDGET: u32 = 8_000;
 const MIN_BUDGET: u32 = 1_000;
 const MAX_BUDGET: u32 = 50_000;
@@ -124,6 +131,46 @@ pub struct ContextPackPlan {
     pub limitations: Vec<String>,
     pub token_budget: u32,
     pub estimated_tokens: u32,
+    /// Memórias confirmadas incluídas (referência: id + revisão). Packs v1 não têm.
+    #[serde(default)]
+    pub memories: Vec<PackMemoryRef>,
+}
+
+/// Memória confirmada incluída no pack, por referência.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PackMemoryRef {
+    pub memory_id: String,
+    /// Revisão incluída; outra revisão ao reabrir ⇒ a memória mudou desde a criação do pack.
+    pub revision: i64,
+    pub kind: MemoryKind,
+    pub title: String,
+    pub score: f64,
+    pub reasons: Vec<String>,
+    pub estimated_tokens: u32,
+}
+
+/// Estado de uma memória do pack ao reabrir.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum PackMemoryState {
+    /// Mesma revisão e ainda confirmada.
+    Unchanged,
+    /// Editada depois da criação do pack (o texto mostrado é o atual).
+    Revised,
+    /// Não está mais confirmada (arquivada ou substituída).
+    Withdrawn,
+    /// Não existe mais.
+    Missing,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PackMemory {
+    pub reference: PackMemoryRef,
+    pub state: PackMemoryState,
+    /// Versão atual (texto lido do banco agora).
+    pub current: Option<Memory>,
 }
 
 /// Versão serializável e estável da análise da tarefa.
@@ -181,6 +228,10 @@ pub struct ContextPack {
     /// Mesma ordem de `plan.sources`.
     pub excerpts: Vec<PackExcerpt>,
     pub stale_sources: u32,
+    /// Mesma ordem de `plan.memories`.
+    pub memories: Vec<PackMemory>,
+    /// Alertas de atualidade abertos ligados às fontes ou memórias do pack (inclui contradições).
+    pub issues: Vec<FreshnessIssue>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, TS)]
@@ -553,10 +604,39 @@ pub fn compile(
             .then(a.rel_path.cmp(&b.rel_path))
     });
 
+    // Memória confirmada: entra primeiro (é curta e foi revisada pelo usuário), limitada a uma
+    // fração do orçamento. Propostas nunca entram.
+    let draft_paths: Vec<String> = drafts.iter().map(|d| d.rel_path.clone()).collect();
+    let mut memories = Vec::new();
+    let mut used: u32 = 0;
+    if has_evidence || !analysis.is_empty() {
+        for (m, score, reasons) in memory::relevant_confirmed(
+            conn,
+            project.id,
+            &analysis.all_terms(),
+            &draft_paths,
+            MAX_MEMORIES,
+        )? {
+            let tokens = estimate_tokens(&m.title) + estimate_tokens(&m.body) + 12;
+            if used + tokens > budget / MEMORY_BUDGET_SHARE {
+                continue;
+            }
+            used += tokens;
+            memories.push(PackMemoryRef {
+                memory_id: m.id,
+                revision: m.revision,
+                kind: m.kind,
+                title: m.title,
+                score,
+                reasons,
+                estimated_tokens: tokens,
+            });
+        }
+    }
+
     // Orçamento: lê cada fonte, estima tokens, inclui enquanto couber.
     let mut sources = Vec::new();
     let mut omitted = Vec::new();
-    let mut used: u32 = 0;
     let mut stale = 0;
     for d in drafts {
         if sources.len() as u32 >= max_files {
@@ -631,7 +711,8 @@ pub fn compile(
 
     let mut limitations = vec![
         "Recuperação por texto, caminho, nomes de arquivo e heurísticas — sem análise semântica nem grafo de dependências (previsto para a Fase 6).".to_owned(),
-        "Memória do projeto e detecção de contradições ainda não estão disponíveis (Fase 4); decisões listadas são documentos encontrados, não decisões confirmadas.".to_owned(),
+        "Só memórias confirmadas pelo usuário entram no pack; propostas (ex.: ADRs importados ainda não revisados) ficam de fora. Documentos de decisão listados como fontes são arquivos encontrados, não decisões confirmadas.".to_owned(),
+        "Contradições são detectadas por heurística (memórias parecidas com textos diferentes, decisões cuja origem mudou ou foi substituída) e exigem revisão humana.".to_owned(),
         "Tokens estimados por caracteres ÷ 4; o número real depende do modelo.".to_owned(),
     ];
     if sources.is_empty() {
@@ -654,7 +735,13 @@ pub fn compile(
         ));
     }
 
-    let summary = summarize(&task, &sources, &omitted);
+    let mut summary = summarize(&task, &sources, &omitted);
+    if !memories.is_empty() {
+        summary.push_str(&format!(
+            " {} memória(s) confirmada(s) do projeto.",
+            memories.len()
+        ));
+    }
     let plan = ContextPackPlan {
         schema_version: SCHEMA_VERSION,
         id: crate::ops::new_op_id(),
@@ -673,6 +760,7 @@ pub fn compile(
         limitations,
         token_budget: budget,
         estimated_tokens: used,
+        memories,
     };
     Ok(plan)
 }
@@ -751,7 +839,47 @@ pub fn materialize(root: &Path, plan: ContextPackPlan) -> Result<ContextPack> {
         plan,
         excerpts,
         stale_sources: stale,
+        memories: Vec::new(),
+        issues: Vec::new(),
     })
+}
+
+/// Completa o pack com o estado atual das memórias incluídas e os alertas abertos ligados a ele.
+pub fn attach_memory(conn: &Connection, mut pack: ContextPack) -> Result<ContextPack> {
+    let mut memories = Vec::with_capacity(pack.plan.memories.len());
+    for r in &pack.plan.memories {
+        let current = match memory::get(conn, &r.memory_id) {
+            Ok(m) => Some(m),
+            Err(Error::NotFound(_)) => None,
+            Err(e) => return Err(e),
+        };
+        let state = match &current {
+            None => PackMemoryState::Missing,
+            Some(m) if m.status != MemoryStatus::Confirmed => PackMemoryState::Withdrawn,
+            Some(m) if m.revision != r.revision => PackMemoryState::Revised,
+            Some(_) => PackMemoryState::Unchanged,
+        };
+        memories.push(PackMemory {
+            reference: r.clone(),
+            state,
+            current,
+        });
+    }
+    let paths: Vec<String> = pack
+        .plan
+        .sources
+        .iter()
+        .map(|s| s.rel_path.clone())
+        .collect();
+    let ids: Vec<String> = pack
+        .plan
+        .memories
+        .iter()
+        .map(|m| m.memory_id.clone())
+        .collect();
+    pack.issues = freshness::related(conn, pack.plan.project_id, &paths, &ids)?;
+    pack.memories = memories;
+    Ok(pack)
 }
 
 pub fn save(conn: &mut Connection, plan: &ContextPackPlan) -> Result<()> {

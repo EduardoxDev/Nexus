@@ -332,6 +332,7 @@ fn markdown_export_neutralizes_injected_fences_and_respects_edits() {
             &ExportOptions {
                 excluded_paths: vec!["CONTRIBUTING.md".into()],
                 notes: Some("Prioridade: manter compatibilidade com clientes antigos.".into()),
+                ..Default::default()
             },
         )
         .unwrap();
@@ -354,7 +355,7 @@ fn markdown_export_neutralizes_injected_fences_and_respects_edits() {
         .unwrap();
     let v: serde_json::Value = serde_json::from_str(&json).unwrap();
     assert_eq!(v["format"], "nexus.context-pack");
-    assert_eq!(v["schemaVersion"], 1);
+    assert_eq!(v["schemaVersion"], 2);
     assert_eq!(
         v["excerpts"].as_array().unwrap().len(),
         v["plan"]["sources"].as_array().unwrap().len()

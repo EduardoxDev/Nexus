@@ -12,14 +12,24 @@ use std::path::PathBuf;
 use nexus_core::classify::FileKind;
 use nexus_core::context::export::{ExportFormat, ExportOptions};
 use nexus_core::context::{
-    ContextPack, ContextPackPlan, ContextPackRequest, ContextPackSummary, PackExcerpt, PackSource,
-    QueryAnalysisSnapshot, SourceRole,
+    ContextPack, ContextPackPlan, ContextPackRequest, ContextPackSummary, PackExcerpt, PackMemory,
+    PackMemoryRef, PackMemoryState, PackSource, QueryAnalysisSnapshot, SourceRole,
 };
 use nexus_core::diagnostics::{
     AppInfo, BackupInfo, DiagnosticsReport, FileStat, IntegrityReport, StartupStatus,
 };
+use nexus_core::freshness::{
+    FreshnessIssue, FreshnessSummary, IssueKind, IssueQuery, IssueSource, IssueStatus, KindCount,
+    ScanInfo, ScanReport, Severity,
+};
 use nexus_core::index::{
     IndexError, IndexJob, IndexMode, IndexTrigger, IndexingQueue, JobPhase, JobStatus,
+};
+use nexus_core::memory::adr::ImportReport;
+use nexus_core::memory::{
+    Actor, Memory, MemoryCounts, MemoryDetail, MemoryKind, MemoryOrigin, MemoryQuery, MemoryRef,
+    MemoryRefInput, MemoryRevision, MemoryStatus, MemoryUpdate, NewMemory, RefCheck, RefState,
+    RevisionChange, Transition,
 };
 use nexus_core::ops::{OperationQuery, OperationRecord, OperationStatus};
 use nexus_core::projects::{
@@ -107,6 +117,37 @@ fn generate() -> BTreeMap<String, String> {
     render::<QueryAnalysisSnapshot>(&cfg, &mut files);
     render::<ExportFormat>(&cfg, &mut files);
     render::<ExportOptions>(&cfg, &mut files);
+    render::<PackMemoryRef>(&cfg, &mut files);
+    render::<PackMemoryState>(&cfg, &mut files);
+    render::<PackMemory>(&cfg, &mut files);
+    render::<MemoryKind>(&cfg, &mut files);
+    render::<MemoryStatus>(&cfg, &mut files);
+    render::<MemoryOrigin>(&cfg, &mut files);
+    render::<Actor>(&cfg, &mut files);
+    render::<RevisionChange>(&cfg, &mut files);
+    render::<MemoryRef>(&cfg, &mut files);
+    render::<MemoryRefInput>(&cfg, &mut files);
+    render::<Memory>(&cfg, &mut files);
+    render::<MemoryRevision>(&cfg, &mut files);
+    render::<RefState>(&cfg, &mut files);
+    render::<RefCheck>(&cfg, &mut files);
+    render::<MemoryDetail>(&cfg, &mut files);
+    render::<NewMemory>(&cfg, &mut files);
+    render::<MemoryUpdate>(&cfg, &mut files);
+    render::<Transition>(&cfg, &mut files);
+    render::<MemoryQuery>(&cfg, &mut files);
+    render::<MemoryCounts>(&cfg, &mut files);
+    render::<ImportReport>(&cfg, &mut files);
+    render::<IssueKind>(&cfg, &mut files);
+    render::<Severity>(&cfg, &mut files);
+    render::<IssueStatus>(&cfg, &mut files);
+    render::<IssueSource>(&cfg, &mut files);
+    render::<FreshnessIssue>(&cfg, &mut files);
+    render::<IssueQuery>(&cfg, &mut files);
+    render::<ScanInfo>(&cfg, &mut files);
+    render::<KindCount>(&cfg, &mut files);
+    render::<ScanReport>(&cfg, &mut files);
+    render::<FreshnessSummary>(&cfg, &mut files);
 
     let mut index = String::from("// Gerado por crates/nexus-core/tests/bindings.rs. Não edite.\n");
     for name in files.keys() {

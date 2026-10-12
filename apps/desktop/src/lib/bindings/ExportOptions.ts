@@ -9,6 +9,10 @@ export type ExportOptions = {
  */
 excludedPaths: Array<string>, 
 /**
+ * Memórias (IDs) a omitir.
+ */
+excludedMemories?: Array<string>, 
+/**
  * Notas livres do usuário (incluídas como texto do usuário, não do repositório).
  */
 notes?: string, };

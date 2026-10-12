@@ -30,6 +30,11 @@ pub mod kinds {
     pub const INDEX_RUN: &str = "index.run";
     pub const SEARCH: &str = "search.query";
     pub const CONTEXT_COMPILE: &str = "context.compile";
+    pub const MEMORY_CREATE: &str = "memory.create";
+    pub const MEMORY_UPDATE: &str = "memory.update";
+    pub const MEMORY_TRANSITION: &str = "memory.transition";
+    pub const MEMORY_IMPORT: &str = "memory.import_adrs";
+    pub const FRESHNESS_SCAN: &str = "freshness.scan";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

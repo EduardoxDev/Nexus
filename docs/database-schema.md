@@ -6,13 +6,13 @@ Pragmas aplicados em toda conexão: `journal_mode=WAL`, `foreign_keys=ON`, `sync
 
 ## Migrations
 
-| Versão | Nome               | Fase            | Tabelas                                                                                              |
-| ------ | ------------------ | --------------- | ---------------------------------------------------------------------------------------------------- |
-| 1      | `foundation`       | 1               | `settings`, `operations`                                                                             |
-| 2      | `projects_index`   | 2               | `projects`, `contents`, `files`, `chunks`, `chunks_fts`, `indexing_jobs`, `index_errors`             |
-| 3      | `context_packs`    | 3               | `context_packs`, `context_sources`                                                                   |
-| 4      | `memory_freshness` | 4               | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`, `freshness_scans` |
-| 5      | `analysis`         | 6 _(planejada)_ | `symbols`, `symbols_fts`, `symbol_removals`, `edges`                                                 |
+| Versão | Nome               | Fase | Tabelas                                                                                              |
+| ------ | ------------------ | ---- | ---------------------------------------------------------------------------------------------------- |
+| 1      | `foundation`       | 1    | `settings`, `operations`                                                                             |
+| 2      | `projects_index`   | 2    | `projects`, `contents`, `files`, `chunks`, `chunks_fts`, `indexing_jobs`, `index_errors`             |
+| 3      | `context_packs`    | 3    | `context_packs`, `context_sources`                                                                   |
+| 4      | `memory_freshness` | 4    | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`, `freshness_scans` |
+| 5      | `analysis`         | 6    | `symbols`, `imports`, `edges`, `graph_state`                                                         |
 
 Regras (ADR-0007):
 
@@ -108,6 +108,17 @@ Os trechos são lidos do disco ao abrir/exportar e comparados com o hash da cria
 | `freshness_scans`  | última verificação completa por projeto: data, geração do índice, duração, contagens e identificadores citados vistos no código (para detectar remoções)                                                                               |
 
 Memórias e alertas são apagados em cascata com o projeto. `supersedes`/`superseded_by` usam `ON DELETE SET NULL`.
+
+## Versão 5 — `analysis`
+
+| Tabela        | Conteúdo                                                                                                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `symbols`     | declarações por **conteúdo** (hash): nome, `name_norm` (minúsculas, sem `_`/`$`), tipo, linha, fim do corpo, exportado, contêiner. Cascata com `contents`                    |
+| `imports`     | imports por conteúdo: linha, especificador como escrito, tipo (`import`, `reexport`, `require`, `dynamic`, `module`). Cascata com `contents`                                 |
+| `edges`       | grafo por **caminho**: origem, linha, especificador, tipo, `to_path` (arquivo do projeto) ou `external` (pacote/crate); ambos nulos = não resolvido. Recalculado por geração |
+| `graph_state` | última montagem do grafo por projeto: geração, data, duração e contagens                                                                                                     |
+
+As tabelas `symbols_fts` e `symbol_removals`, previstas no plano inicial, não foram criadas (ADR-0007): a busca por nome usa o índice `symbols(project_id, name_norm)`, e símbolos removidos citados em documentos são detectados pela verificação de atualidade. Com `INDEXER_VERSION` = 2, conteúdos indexados antes da Fase 6 são reanalisados na próxima indexação.
 
 ## Retenção
 

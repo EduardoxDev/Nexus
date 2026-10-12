@@ -102,14 +102,14 @@ Detalhes e justificativas em [ADR-0009](decisions/ADR-0009-indexacao-incremental
 
 ### Cobertura dos analisadores (honesta)
 
-| Recurso                                                           | Como                                         | Limitação                                                        |
-| ----------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
-| Linguagem                                                         | extensão / nome do arquivo (~60 linguagens)  | não lê shebang nem conteúdo                                      |
-| Tipo (código, teste, doc, config, manifesto, lockfile, CI, dados) | convenções de caminho e nome                 | heurística; pastas fora do padrão podem ser mal classificadas    |
-| Busca textual                                                     | FTS5 + subpalavras de identificadores        | consulta ainda não exposta na interface (Fase 3)                 |
-| Símbolos, imports, grafo                                          | —                                            | _(planejado — Fases 3/6)_                                        |
-| Git                                                               | leitura de `.git/HEAD`, refs e `packed-refs` | não lê histórico de commits                                      |
-| "Mais alterados"                                                  | mudanças de hash observadas pelo NEXUS       | não usa `git log`; começa a contar quando o projeto é adicionado |
+| Recurso                                                           | Como                                                   | Limitação                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| Linguagem                                                         | extensão / nome do arquivo (~60 linguagens)            | não lê shebang nem conteúdo                                      |
+| Tipo (código, teste, doc, config, manifesto, lockfile, CI, dados) | convenções de caminho e nome                           | heurística; pastas fora do padrão podem ser mal classificadas    |
+| Busca textual                                                     | FTS5 + subpalavras de identificadores                  | —                                                                |
+| Símbolos, imports, grafo                                          | análise léxica: TS/TSX/JS/JSX, Python, Rust (seção 14) | demais linguagens: só regex de declarações e busca textual       |
+| Git                                                               | leitura de `.git/HEAD`, refs e `packed-refs`           | não lê histórico de commits                                      |
+| "Mais alterados"                                                  | mudanças de hash observadas pelo NEXUS                 | não usa `git log`; começa a contar quando o projeto é adicionado |
 
 ## 10. Pipeline de contexto
 
@@ -191,3 +191,19 @@ cliente MCP (Claude Code…) ──stdio──▶ nexus mcp serve ──▶ nexu
 - Ferramentas declaradas numa tabela estática (`tools::TOOLS`) em ordem fixa: nome, título, descrição (em inglês, para os modelos), anotações (`readOnlyHint`, `idempotentHint`, `destructiveHint: false`, `openWorldHint: false`), `inputSchema` fechado e `outputSchema`. Cada handler valida argumentos (`Args`), resolve o projeto e devolve um objeto JSON montado explicitamente para seguir o esquema.
 - Novas funções do core para o MCP: `related::related_files` (testes por nome, mesma pasta, manifesto, citações do nome do módulo no FTS, memórias que referenciam o arquivo) e `related::symbol_context` (declaração por regex nos melhores resultados da busca + arquivos que citam o nome).
 - A tela **Integrações** do desktop monta o comando do Claude Code a partir da CLI encontrada ao lado do executável e do diretório de dados em uso, lista as ferramentas e mostra as operações `mcp.*` ao vivo.
+
+## 14. Análise de código e grafo (Fase 6)
+
+Decisões em [ADR-0012](decisions/ADR-0012-analise-lexica-e-grafo.md); medições em [evaluation.md](evaluation.md#análise-de-código-fase-6) e [benchmarks.md](benchmarks.md).
+
+```
+conteúdo (hash) ─▶ lexer (mascara comentários/strings) ─▶ analisador da linguagem ─▶ symbols + imports (por conteúdo)
+                                                                                          │
+          geração do índice mudou ─▶ resolução de todos os imports (caminhos do projeto, tsconfig, Cargo.toml) ─▶ edges (por caminho)
+```
+
+- `analysis::lexer`: mascara comentários e conteúdo de strings preservando o comprimento em bytes (offsets e linhas continuam válidos). Trata `//`, `/* */` (aninhado em Rust), `#`, strings simples, de crase (multilinha), triplas (Python), brutas `r#"…"#` e a diferença entre `'a'` e `'a` em Rust.
+- Analisadores (`typescript`, `python`, `rust_lang`): pilha de blocos por chaves (ou por indentação, em Python). Declarações contam só no nível do arquivo, em namespaces/`mod` inline e como métodos de classe/`impl`/trait (com o contêiner). Corpos de função são ignorados. Cada símbolo tem tipo, linha, fim do corpo e visibilidade.
+- `analysis::resolve`: TS/JS (relativos com extensões e `index.*`, `.js`→`.ts`, `paths`/`baseUrl` do tsconfig mais próximo, pacotes `@escopo/nome`); Python (relativos por pacote, absolutos pela raiz, por `src/` ou por sufixo único); Rust (`mod x;`, `crate::`, `self::`, `super::` corrigido para módulos inline, nome do próprio crate pelo `Cargo.toml`, módulo local, crates externos).
+- `analysis::graph`: grava a análise junto com os chunks (`ensure_content`), reconstrói as arestas na finalização do job quando a geração muda e responde imports, importadores e grau de entrada.
+- Usos: motivos de declaração com tipo e linha na busca; centralidade (≤ 0,05) para código importado por mais de um arquivo; expansão 1-hop nos packs; `get_symbol_context`/`get_related_files` (MCP) e `nexus symbol`/`nexus deps` a partir da tabela de símbolos e do grafo; painel "Análise de código" e dependências navegáveis na prévia da Busca.

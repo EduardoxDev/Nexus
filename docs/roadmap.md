@@ -10,7 +10,7 @@ Cada fase termina com aplicação executável e testes aprovados. Critérios de 
 | 3    | Busca e Context Packs        | concluída |
 | 4    | Memória e atualidade         | concluída |
 | 5    | MCP e CLI                    | concluída |
-| 6    | Inteligência avançada        | planejada |
+| 6    | Inteligência avançada        | concluída |
 | 7    | Hardening e release          | planejada |
 
 ## Fase 0 — Reconhecimento e arquitetura
@@ -121,6 +121,17 @@ Limitações: `get_symbol_context` e `get_related_files` são heurísticos (sem 
 ## Fase 6 — Inteligência avançada
 
 Analisadores por linguagem com cobertura declarada (tree-sitter apenas se a avaliação justificar), grafo de dependências incremental com evidência por aresta, melhorias de ranking validadas contra a baseline da Fase 3, benchmarks reproduzíveis (indexação inicial/incremental, latência de busca e de pack, memória, CPU) com resultados reais.
+
+Critérios de aceitação (verificados em 2026-10-12):
+
+- [x] Analisadores léxicos para TS/TSX/JS/JSX, Python e Rust atrás do trait `Analyzer`, com cobertura declarada em código e na interface.
+- [x] Precisão medida: gabarito conferido à mão nas fixtures (49 arquivos) com 100% em declarações e imports; no repositório do NEXUS, revocação 727/727 contra uma busca independente, amostra de 39/39 declarações e de 29/29 arestas (26/30 antes de corrigir um erro real encontrado pela amostra). Tree-sitter não se justificou ([ADR-0012](decisions/ADR-0012-analise-lexica-e-grafo.md)).
+- [x] Grafo com evidência por aresta (linha e especificador); 0 imports internos não resolvidos no repositório do NEXUS; atualização ao criar, remover ou renomear arquivos testada (`graph_follows_added_removed_and_renamed_files`).
+- [x] Ranking validado contra a baseline da Fase 3, com o conjunto reservado medido uma única vez no fim: busca híbrida Recall@5 0,918 → 0,936 (principal) e MRR 0,833 → 0,875 (reservado), sem regressões ([evaluation.md](evaluation.md)).
+- [x] Benchmarks reproduzíveis (`scripts/bench.ps1`) com tempo de parede, CPU e pico de memória por etapa, além do custo de CPU isolado da análise ([benchmarks.md](benchmarks.md)).
+- [x] MCP (`get_symbol_context`, `get_related_files`), CLI (`nexus symbol`, `nexus deps`) e desktop (painel Análise de código, dependências na prévia) usando a análise; testes de componente, CLI, MCP e E2E (12/12).
+
+Limitações: resolução refeita para o projeto inteiro a cada geração (~0,25 s em 10 000 arquivos); sem análise de tipos nem de chamadas; linguagens além de TS/JS, Python e Rust ficam na regex e na busca textual; o tempo de parede da indexação nesta máquina é dominado por disco/antivírus e variou até 9× para o mesmo commit.
 
 ## Fase 7 — Hardening e release
 

@@ -101,7 +101,8 @@ fn hits_carry_reasons_lines_and_freshness() {
         session
             .reasons
             .iter()
-            .any(|x| x.label == "Declara `validateSession`"),
+            // Da análise por linguagem: tipo e linha exatos da declaração.
+            .any(|x| x.label == "Declara `validateSession` (função, linha 25)"),
         "{:?}",
         session.reasons
     );

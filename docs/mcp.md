@@ -49,21 +49,21 @@ Não implementados (não são necessários para ferramentas somente leitura): re
 
 Todas recebem `project` (id, nome ou caminho), opcional quando há um único projeto. Cada uma tem `inputSchema` (sem propriedades extras) e `outputSchema`; o resultado traz `structuredContent` e o mesmo JSON em texto.
 
-| Ferramenta              | Faz                                                                                                        | Grava?                                    |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `list_projects`         | projetos autorizados e estado do índice                                                                    | não                                       |
-| `get_project_overview`  | linguagens, tipos, pastas, manifestos, CI, mais alterados, memória e alertas                               | não                                       |
-| `search_project`        | busca híbrida com motivos, trechos verificados e atualidade                                                | não                                       |
-| `get_file_context`      | até 400 linhas de um arquivo **indexado**                                                                  | não                                       |
-| `get_symbol_context`    | declarações (heurística por regex) e arquivos que citam um identificador                                   | não                                       |
-| `get_related_files`     | testes, arquivo testado, mesma pasta, manifesto, quem cita o módulo, memórias que o referenciam            | não                                       |
-| `get_project_memory`    | memória confirmada (propostas só com `includeProposals`)                                                   | não                                       |
-| `get_project_decisions` | decisões confirmadas, separadas de propostas e documentos de decisão não revisados                         | não                                       |
-| `build_context_pack`    | Context Pack para uma tarefa, exportado em Markdown ou JSON                                                | só o pack (referências) no banco do NEXUS |
-| `get_stale_context`     | alertas de atualidade e contradições abertos                                                               | não                                       |
-| `get_index_status`      | contagens, geração, job em execução e último job                                                           | não                                       |
-| `refresh_project_index` | atualização incremental + verificação de atualidade; 1 vez a cada 30 s por projeto, até 120 s por execução | índice do NEXUS                           |
-| `get_context_sources`   | fontes de um pack, verificadas de novo contra o disco agora                                                | não                                       |
+| Ferramenta              | Faz                                                                                                                                                          | Grava?                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| `list_projects`         | projetos autorizados e estado do índice                                                                                                                      | não                                       |
+| `get_project_overview`  | linguagens, tipos, pastas, manifestos, CI, mais alterados, memória e alertas                                                                                 | não                                       |
+| `search_project`        | busca híbrida com motivos, trechos verificados e atualidade                                                                                                  | não                                       |
+| `get_file_context`      | até 400 linhas de um arquivo **indexado**                                                                                                                    | não                                       |
+| `get_symbol_context`    | declarações com tipo, contêiner e corpo (análise léxica de TS/JS, Python e Rust; regex nas demais) e arquivos que importam a definição ou citam o nome       | não                                       |
+| `get_related_files`     | o que o arquivo importa e quem o importa (com a linha), testes que o importam ou têm nome correspondente, mesma pasta, manifesto, memórias que o referenciam | não                                       |
+| `get_project_memory`    | memória confirmada (propostas só com `includeProposals`)                                                                                                     | não                                       |
+| `get_project_decisions` | decisões confirmadas, separadas de propostas e documentos de decisão não revisados                                                                           | não                                       |
+| `build_context_pack`    | Context Pack para uma tarefa, exportado em Markdown ou JSON                                                                                                  | só o pack (referências) no banco do NEXUS |
+| `get_stale_context`     | alertas de atualidade e contradições abertos                                                                                                                 | não                                       |
+| `get_index_status`      | contagens, geração, job em execução e último job                                                                                                             | não                                       |
+| `refresh_project_index` | atualização incremental + verificação de atualidade; 1 vez a cada 30 s por projeto, até 120 s por execução                                                   | índice do NEXUS                           |
+| `get_context_sources`   | fontes de um pack, verificadas de novo contra o disco agora                                                                                                  | não                                       |
 
 `nexus mcp tools` lista as ferramentas; `nexus mcp tools --json` imprime as definições completas.
 

@@ -72,6 +72,36 @@ Nesta mesma execução: busca p50 48,6 ms · p95 54,0 ms; Context Pack 99–152 
 
 Reproduzir: `NEXUS_FRESHNESS_REPO=<pasta> cargo test -p nexus-core --test freshness -- --ignored --nocapture`.
 
+## Benchmarks reproduzíveis (Fase 6)
+
+`powershell -ExecutionPolicy Bypass -File scripts/bench.ps1 -Files 10000 -Runs 5` compila a CLI em release, gera um repositório TypeScript sintético e determinístico (`crates/nexus-core/examples/synthetic_repo.rs`: 100 módulos por pacote, cada um importando o anterior e um utilitário comum) e mede cada etapa no **processo real da CLI**: tempo de parede, CPU (usuário + sistema) e pico do working set, amostrado a cada 10 ms (processos curtos podem ter o pico subestimado). A sessão MCP é conferida: o script falha se a busca não devolver resultado.
+
+Execução de 2026-10-12, Intel Core i3-10100F (4 núcleos/8 threads), 8 GiB, Windows 11:
+
+| Etapa                                                   | Amostras | Parede (ms, mediana) | CPU (ms, mediana) | Pico de memória (MiB) |
+| ------------------------------------------------------- | -------- | -------------------- | ----------------- | --------------------- |
+| Indexação inicial (10 000 arquivos)                     | 1        | 6 823                | 7 625             | 38,4                  |
+| Incremental sem mudanças                                | 5        | 469                  | 422               | 21,2                  |
+| Incremental com 1 arquivo alterado                      | 5        | 997                  | 953               | 35,2                  |
+| Reindexação completa (`--full`, conteúdo reaproveitado) | 1        | 1 499                | 2 516             | 25,3                  |
+| Busca (processo completo da CLI)                        | 20       | 118                  | 94                | 20,6                  |
+| Context Pack (compilar + exportar)                      | 5        | 288                  | 266               | 20,5                  |
+| `nexus symbol`                                          | 5        | 61                   | 31                | 15,1                  |
+| `nexus deps <arquivo>`                                  | 5        | 62                   | 47                | 15,0                  |
+| Sessão MCP com 1 busca                                  | 5        | 122                  | 94                | 20,7                  |
+
+Grafo: 19 997 arestas, todas internas e resolvidas, montado em 257 ms. Banco: 23,1 MiB.
+
+Os tempos da CLI incluem iniciar o processo e abrir o banco (~40–60 ms).
+
+### Custo da análise de código
+
+Medido em memória, numa thread, sem disco (`tests/scale.rs`, release): analisar os 10 000 arquivos sintéticos (30 000 declarações) levou **96–99 ms**, contra **199–203 ms** para dividir em chunks e montar o texto do FTS. A análise custa cerca de metade do que o indexador já fazia por arquivo. A reconstrução do grafo (~250 ms) e a verificação de atualidade (~320 ms) rodam na finalização de cada indexação com mudanças, o que explica o "1 arquivo alterado" perto de 0,9–1 s.
+
+### Variação do tempo de parede
+
+Nesta máquina, o tempo de parede da indexação inicial é dominado por E/S. O antivírus examina arquivos recém-criados em `%TEMP%`. No mesmo dia, a indexação inicial do teste de escala variou de 5,8 a 8,7 s com o código da Fase 6, e o **commit da Fase 5** levou 32 s numa execução (3,6 s na véspera). Por isso a comparação entre fases usa o custo de CPU isolado acima, não o tempo de parede.
+
 ## Pendentes
 
-Consumo de memória e uso de CPU durante a indexação (Fase 6).
+Medições em Linux/macOS e com repositórios reais grandes (> 100 mil arquivos); resolução incremental do grafo por arquivo.

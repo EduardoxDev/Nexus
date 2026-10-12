@@ -54,6 +54,47 @@ Cada tarefa lista as fontes que uma pessoa que conhece o projeto consideraria ne
 
 Em escala (10 000 arquivos sintéticos, ver [benchmarks.md](benchmarks.md)): busca p50 37 ms / p95 44 ms; Context Pack 77–113 ms.
 
+## Fase 6 — ranking com o grafo (2026-10-12, `--release`)
+
+Três mudanças, medidas uma de cada vez **só no conjunto principal**. O conjunto reservado foi medido uma única vez, no fim, sem ajuste depois.
+
+| Mudança                                                               | Busca híbrida (principal)                          | Context Pack (principal)           |
+| --------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
+| Baseline (= Fase 3)                                                   | R@5 0,918 · P@5 0,336 · R@10 0,961 · MRR 0,958     | R@5 0,897 · R@10 0,952 · MRR 0,964 |
+| 1. Declarações da análise (tipo e linha nos motivos)                  | igual                                              | igual                              |
+| 2. Centralidade no grafo (peso ≤ 0,05, fixado antes de medir)         | **R@5 0,936** · P@5 0,343 · R@10 0,961 · MRR 0,958 | R@10 **0,961** · P@10 0,189        |
+| 3. Expansão 1-hop nos packs (testes que importam, até 4 dependências) | igual                                              | igual                              |
+
+Resultado final:
+
+| Conjunto       | Estratégia             | Recall@5 | Precision@5 | Recall@10 | Precision@10 | MRR                   |
+| -------------- | ---------------------- | -------- | ----------- | --------- | ------------ | --------------------- |
+| Principal (28) | Busca híbrida          | 0,936    | 0,343       | 0,961     | 0,182        | 0,958                 |
+| Principal (28) | Recuperação contextual | 0,897    | 0,329       | 0,961     | 0,189        | 0,964                 |
+| Reservado (12) | Busca híbrida          | 1,000    | 0,250       | 1,000     | 0,125        | **0,875** (era 0,833) |
+| Reservado (12) | Recuperação contextual | 1,000    | 0,250       | 1,000     | 0,125        | 0,958                 |
+
+Referências válidas: 659/659 (principal) e 282/282 (reservado). Latência na fixture: busca p50 2,8 ms; pack p50 7,0 ms.
+
+As mudanças 1 e 3 são neutras nas métricas. Foram mantidas porque deixam os motivos e as fontes mais precisos (tipo e linha da declaração; "Importado por X na linha N"), sem custo mensurável no ranking.
+
+## Análise de código (Fase 6)
+
+`cargo test -p nexus-core --test analysis -- --nocapture` compara os analisadores com `tests/evaluation/analysis.json`, um gabarito escrito lendo cada arquivo das 4 fixtures, **antes** de olhar a saída dos analisadores, e restrito à cobertura declarada.
+
+| Linguagem             | Declarações (precisão / revocação) | Imports com destino (precisão / revocação) |
+| --------------------- | ---------------------------------- | ------------------------------------------ |
+| TypeScript/JavaScript | 1,000 / 1,000 (76)                 | 1,000 / 1,000 (73)                         |
+| Python                | 1,000 / 1,000 (14)                 | 1,000 / 1,000 (7)                          |
+| Rust                  | 1,000 / 1,000 (8)                  | 1,000 / 1,000 (8)                          |
+
+As fixtures são pequenas e limpas, então esse resultado é otimista. Medição no repositório do NEXUS (215 arquivos analisados, 1 309 arestas internas), com `NEXUS_ANALYSIS_REPO=<pasta> cargo test -p nexus-core --test analysis -- --ignored --nocapture`:
+
+- **Revocação contra uma busca independente** (regex de declarações exportadas/públicas de nível superior, fora de strings; `mod x;` excluído por ser import): 727/727.
+- **Amostra de declarações** (1 a cada 7 arquivos), conferida à mão: 39/39 com nome, tipo, linha e contêiner corretos.
+- **Amostra de arestas resolvidas** (1 a cada 45), conferida à mão: **26/30 na primeira medição**. As 4 erradas eram `use super::*` dentro de `mod tests { … }` inline, apontando para o módulo pai em vez do próprio arquivo. Depois da correção: 29/29, e 35 arestas erradas sumiram do grafo.
+- **Imports sem destino**: 3 na primeira medição (`use std::…` em um crate só com `main.rs`, cuja raiz não era achada). Depois da correção: 0.
+
 ## Histórico honesto das medições
 
 1. **Primeira medição** (antes de qualquer ajuste): busca híbrida Recall@5 0,846, MRR 0,866; contextual Recall@5 0,799, MRR 0,773.

@@ -52,14 +52,15 @@ fn ten_thousand_files_incremental_touches_exactly_one() {
         t.elapsed()
     );
     let t = Instant::now();
+    // O tamanho total é usado na saída, então o trabalho não pode ser eliminado pelo compilador.
+    let mut fts_bytes = 0usize;
     for text in &texts {
-        let _ = nexus_core::chunk::chunk_lines(text)
-            .iter()
-            .map(|c| nexus_core::chunk::fts_body(&c.text))
-            .count();
+        for c in nexus_core::chunk::chunk_lines(text) {
+            fts_bytes += nexus_core::chunk::fts_body(&c.text).len();
+        }
     }
     eprintln!(
-        "chunking + texto do FTS em memória (referência): {:?}",
+        "chunking + texto do FTS em memória (referência): {:?} ({fts_bytes} bytes)",
         t.elapsed()
     );
 

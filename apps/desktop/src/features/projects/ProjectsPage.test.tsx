@@ -198,6 +198,57 @@ describe("Projetos", () => {
     await waitFor(() => expect(within(main).queryByRole("button", { name: "Pausar" })).toBeNull());
   });
 
+  it("avisa o fim da indexação pedida pelo usuário e as falhas, mas não as automáticas", async () => {
+    resetIndexing();
+    const user = userEvent.setup();
+    projectsIpc([summary()]);
+    renderApp();
+    await openProjects(user);
+    await screen.findByRole("heading", { name: "shopfront", level: 2 });
+    const region = screen.getByRole("region", { name: "Notificações" });
+
+    // Atualização automática (monitor de arquivos): silenciosa.
+    await act(async () => {
+      await emit(
+        "nexus://job-finished",
+        job({ id: "auto", trigger: "watcher", status: "succeeded", phase: "done" }),
+      );
+    });
+    expect(within(region).queryByRole("status")).toBeNull();
+
+    await act(async () => {
+      await emit(
+        "nexus://job-finished",
+        job({ status: "succeeded", phase: "done", processed: 10, unchanged: 3, failed: 1 }),
+      );
+    });
+    const ok = await within(region).findByRole("status");
+    expect(ok).toHaveTextContent("shopfront indexado");
+    expect(ok).toHaveTextContent("10 arquivos processados · 3 inalterados · 1 com erro");
+
+    await act(async () => {
+      await emit(
+        "nexus://job-finished",
+        job({ id: "job-2", status: "failed", phase: "done", errorMessage: "disco cheio" }),
+      );
+    });
+    const alert = await within(region).findByRole("alert");
+    expect(alert).toHaveTextContent("Falha ao indexar shopfront");
+    expect(alert).toHaveTextContent("disco cheio");
+
+    // A ação do aviso de sucesso leva à busca.
+    await user.click(within(ok).getByRole("button", { name: "Buscar agora" }));
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" });
+    await waitFor(() =>
+      expect(within(nav).getByRole("button", { name: /Busca/ })).toHaveAttribute(
+        "aria-current",
+        "page",
+      ),
+    );
+    await user.click(within(alert).getByRole("button", { name: "Fechar notificação" }));
+    await waitFor(() => expect(within(region).queryByRole("alert")).toBeNull());
+  });
+
   it("só remove do índice após confirmação explícita", async () => {
     resetIndexing();
     const user = userEvent.setup();

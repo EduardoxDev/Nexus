@@ -1,5 +1,12 @@
+# Fins de linha normalizados no repositório (LF); scripts do Windows mantêm CRLF no checkout.
 * text=auto eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binários
 *.png binary
 *.ico binary
 *.icns binary
+*.webp binary
 *.db binary

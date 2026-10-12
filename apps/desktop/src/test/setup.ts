@@ -3,6 +3,7 @@ import { clearMocks } from "@tauri-apps/api/mocks";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
+import { resetToasts } from "@/stores/toast";
 import { resetUi } from "@/stores/ui";
 
 // jsdom não implementa estas APIs usadas por Radix/cmdk/motion.
@@ -38,4 +39,5 @@ afterEach(() => {
   cleanup();
   clearMocks();
   resetUi();
+  resetToasts();
 });

@@ -6,6 +6,7 @@ import { Header } from "@/app/shell/Header";
 import { Sidebar } from "@/app/shell/Sidebar";
 import { StatusBar } from "@/app/shell/StatusBar";
 import { useGlobalShortcuts } from "@/app/useGlobalShortcuts";
+import { Toaster } from "@/components/Toaster";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { OverviewPage } from "@/features/overview/OverviewPage";
 import { FreshnessPage } from "@/features/freshness/FreshnessPage";
@@ -94,6 +95,7 @@ export function AppShell({ settings }: { settings: Settings }) {
       </div>
       <CommandPalette />
       <ShortcutsDialog />
+      <Toaster />
     </MotionConfig>
   );
 }

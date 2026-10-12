@@ -74,7 +74,7 @@ jobs:
         run: pnpm build
 
   audit:
-    name: Auditoria de dependências
+    name: Cadeia de suprimentos
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -83,10 +83,10 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: cargo audit (RustSec)
-        run: |
-          cargo install cargo-audit --locked
-          cargo audit
+      - name: cargo deny (RustSec, licenças, origens; ver deny.toml)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories licenses bans sources
       - name: pnpm audit
         working-directory: apps/desktop
         run: |

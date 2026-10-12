@@ -44,6 +44,20 @@ export const ptBR = {
     back: "Voltar",
     forward: "Avançar",
   },
+  toast: {
+    region: "Notificações",
+    close: "Fechar notificação",
+    indexed: (name: string) => `${name} indexado`,
+    indexedBody: (processed: number, unchanged: number, failed: number) =>
+      [
+        processed === 1 ? "1 arquivo processado" : `${processed} arquivos processados`,
+        `${unchanged} inalterados`,
+        ...(failed > 0 ? [failed === 1 ? "1 com erro" : `${failed} com erro`] : []),
+      ].join(" · "),
+    indexFailed: (name: string) => `Falha ao indexar ${name}`,
+    search: "Buscar agora",
+    details: "Ver projeto",
+  },
   header: {
     openPalette: "Abrir paleta de comandos",
     paletteHint: "Comandos",

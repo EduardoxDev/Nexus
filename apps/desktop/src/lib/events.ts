@@ -3,10 +3,35 @@ import { useQueryClient } from "@tanstack/react-query";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
-import type { IndexingQueue, IndexJob } from "@/lib/bindings";
+import type { IndexingQueue, IndexJob, ProjectSummary } from "@/lib/bindings";
+import { t } from "@/lib/i18n/pt-BR";
 import { call } from "@/lib/ipc";
 import { freshnessKeys, memoryKeys, projectKeys, queryKeys } from "@/lib/queries";
 import { useIndexing } from "@/stores/indexing";
+import { useToasts } from "@/stores/toast";
+
+/**
+ * Avisa o fim de uma indexação: falhas sempre; sucesso só quando o usuário pediu (as
+ * atualizações automáticas do monitor de arquivos e da reconciliação ficam em silêncio).
+ */
+export function notifyJobFinished(job: IndexJob, projectName: string): void {
+  const { push } = useToasts.getState();
+  if (job.status === "failed") {
+    push({
+      tone: "danger",
+      title: t.toast.indexFailed(projectName),
+      ...(job.errorMessage ? { body: job.errorMessage } : {}),
+      action: { label: t.toast.details, route: "projects", projectId: job.projectId },
+    });
+  } else if (job.status === "succeeded" && (job.trigger === "user" || job.trigger === "resume")) {
+    push({
+      tone: "success",
+      title: t.toast.indexed(projectName),
+      body: t.toast.indexedBody(job.processed, job.unchanged, job.failed),
+      action: { label: t.toast.search, route: "search", projectId: job.projectId },
+    });
+  }
+}
 
 export const EVENTS = {
   progress: "nexus://job-progress",
@@ -29,6 +54,11 @@ export function useIndexingEvents(): void {
         }),
         listen<IndexJob>(EVENTS.finished, (e) => {
           applyFinished(e.payload);
+          const projects = client.getQueryData<ProjectSummary[]>(projectKeys.list);
+          const name =
+            projects?.find((p) => p.project.id === e.payload.projectId)?.project.name ??
+            `#${e.payload.projectId}`;
+          notifyJobFinished(e.payload, name);
           void client.invalidateQueries({ queryKey: projectKeys.all });
           void client.invalidateQueries({ queryKey: queryKeys.operationsAll });
           void client.invalidateQueries({ queryKey: queryKeys.diagnostics });

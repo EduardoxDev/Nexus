@@ -29,7 +29,7 @@ O ícone e o banner vieram do usuário em 2026-10-12. O ícone foi extraído de 
 
 > **Pendência de licença:** a imagem de origem do ícone tem a assinatura de um designer ("design30club", t.me/beslanalaudinov). Antes de distribuir ou publicar o instalador, confirme que há direito de uso (licença ou autorização do autor) ou substitua o ícone.
 
-No CI, o job `bundle` (disparo manual com `bundle: true`) gera o mesmo instalador **não assinado** como artefato.
+No CI, o job `bundle` (disparo manual com `bundle: true`) gera o mesmo instalador **não assinado** como artefato. Uma tag `v*` dispara `.github/workflows/release.yml`: testes, instalador com a CLI, `SHA256SUMS.txt` e um **rascunho** de release (nada é publicado sem revisão).
 
 ## Checklist de release (a cumprir)
 
@@ -37,6 +37,7 @@ No CI, o job `bundle` (disparo manual com `bundle: true`) gera o mesmo instalado
 2. Bateria completa verde (ver [testing.md](testing.md)), incluindo E2E no Windows.
 3. Revisar o [modelo de ameaças](threat-model.md) e `cargo audit` / `pnpm audit` (no CI, job `audit`).
 4. Confirmar a licença do ícone (seção Marca).
+   Se o ícone for trocado, regenere os tamanhos com `pnpm tauri icon assets/brand/nexus-icon-1024.png -o src-tauri/icons` (apague `android/` e `ios/`).
 5. Gerar o instalador em ambiente limpo (CI) a partir de uma tag.
 6. **Assinar** o instalador e o executável — _pendente_: requer certificado de assinatura de código (OV/EV ou Azure Trusted Signing) e configuração de `bundle.windows.signCommand`/`certificateThumbprint`.
 7. Publicar notas de versão com mudanças de schema (migrations) e limitações conhecidas.

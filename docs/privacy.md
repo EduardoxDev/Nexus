@@ -9,13 +9,13 @@
 
 ## O que fica guardado localmente
 
-| Item              | Onde                                          | Conteúdo                                                                                                 |
-| ----------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Banco             | `%LOCALAPPDATA%\Nexus\nexus.db`               | configurações, histórico de operações (metadados), índice dos projetos autorizados e memória do projeto  |
-| Logs              | `%LOCALAPPDATA%\Nexus\logs\`                  | eventos estruturados (tipos, durações, códigos de erro, caminhos). **Nunca** conteúdo de arquivos        |
-| Backups           | `%LOCALAPPDATA%\Nexus\backups\`               | cópias do banco feitas antes de migrações                                                                |
-| Estado da janela  | `%APPDATA%\dev.nexus.desktop\`                | posição e tamanho da janela                                                                              |
-| Cache do WebView2 | `%LOCALAPPDATA%\dev.nexus.desktop\EBWebView\` | dados internos do motor de renderização                                                                  |
+| Item              | Onde                                          | Conteúdo                                                                                                |
+| ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Banco             | `%LOCALAPPDATA%\Nexus\nexus.db`               | configurações, histórico de operações (metadados), índice dos projetos autorizados e memória do projeto |
+| Logs              | `%LOCALAPPDATA%\Nexus\logs\`                  | eventos estruturados (tipos, durações, códigos de erro, caminhos). **Nunca** conteúdo de arquivos       |
+| Backups           | `%LOCALAPPDATA%\Nexus\backups\`               | cópias do banco feitas antes de migrações                                                               |
+| Estado da janela  | `%APPDATA%\dev.nexus.desktop\`                | posição e tamanho da janela                                                                             |
+| Cache do WebView2 | `%LOCALAPPDATA%\dev.nexus.desktop\EBWebView\` | dados internos do motor de renderização                                                                 |
 
 ## O que o índice de um projeto contém
 

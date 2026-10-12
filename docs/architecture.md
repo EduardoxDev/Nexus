@@ -161,16 +161,16 @@ Decisões em [ADR-0011](decisions/ADR-0011-memoria-revisada-e-alertas-estaveis.m
 
 **Atualidade** (`freshness`): verificações em três escopos — documentos (Markdown indexado, exceto changelogs e ADRs inativos), memória e arquivos.
 
-| Alerta                  | Detecção                                                                                       | Severidade | Requer revisão          |
-| ----------------------- | ---------------------------------------------------------------------------------------------- | ---------- | ----------------------- |
-| `missing_path`          | link relativo ou código inline com cara de caminho que não existe (índice, pastas, disco, sufixo) | aviso (link) / info (inline) | não (link) / sim (inline) |
-| `missing_symbol`        | identificador composto citado em código inline que existia no código e sumiu                   | aviso      | não                     |
-| `memory_ref_changed`    | hash do arquivo referenciado mudou                                                             | info       | sim                     |
-| `memory_ref_missing`    | arquivo referenciado sumiu (com sugestão quando o mesmo conteúdo está em outro caminho)        | aviso      | não se movido; senão sim |
-| `memory_source_changed` | o texto da decisão no ADR de origem difere da memória (contradição se confirmada)              | aviso      | sim                     |
-| `superseded_source`     | ADR de origem marcado como substituído/rejeitado com memória ainda confirmada (contradição)    | aviso      | sim                     |
-| `duplicate_memory`      | títulos iguais/parecidos ou textos com Jaccard ≥ 0,8; contradição se ambas confirmadas, mesmo tipo e textos diferentes (< 0,5) | info / aviso | sim |
-| `files_changed`         | tamanho/mtime no disco diferente do indexado, ou arquivo apagado (um alerta por geração)       | info       | não                     |
+| Alerta                  | Detecção                                                                                                                       | Severidade                   | Requer revisão            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- | ------------------------- |
+| `missing_path`          | link relativo ou código inline com cara de caminho que não existe (índice, pastas, disco, sufixo)                              | aviso (link) / info (inline) | não (link) / sim (inline) |
+| `missing_symbol`        | identificador composto citado em código inline que existia no código e sumiu                                                   | aviso                        | não                       |
+| `memory_ref_changed`    | hash do arquivo referenciado mudou                                                                                             | info                         | sim                       |
+| `memory_ref_missing`    | arquivo referenciado sumiu (com sugestão quando o mesmo conteúdo está em outro caminho)                                        | aviso                        | não se movido; senão sim  |
+| `memory_source_changed` | o texto da decisão no ADR de origem difere da memória (contradição se confirmada)                                              | aviso                        | sim                       |
+| `superseded_source`     | ADR de origem marcado como substituído/rejeitado com memória ainda confirmada (contradição)                                    | aviso                        | sim                       |
+| `duplicate_memory`      | títulos iguais/parecidos ou textos com Jaccard ≥ 0,8; contradição se ambas confirmadas, mesmo tipo e textos diferentes (< 0,5) | info / aviso                 | sim                       |
+| `files_changed`         | tamanho/mtime no disco diferente do indexado, ou arquivo apagado (um alerta por geração)                                       | info                         | não                       |
 
 Cada alerta tem impressão digital estável; a gravação faz upsert, reabre resolvidos que voltaram, resolve os que sumiram do escopo verificado e preserva dispensados. Roda após cada indexação que muda o índice (`Core::index_project`), sob demanda (`scan`) e, só para memória, após cada mudança na memória.
 

@@ -145,7 +145,7 @@ static DECLARATION: LazyLock<Option<Regex>> = LazyLock::new(|| {
 });
 
 /// Nome declarado na linha, se ela parece uma declaração.
-fn declared_name(line: &str) -> Option<&str> {
+pub(crate) fn declared_name(line: &str) -> Option<&str> {
     DECLARATION
         .as_ref()?
         .captures(line)

@@ -421,3 +421,71 @@ fn memory_and_freshness_commands() {
             .any(|i| i["status"] == "dismissed")
     );
 }
+
+#[test]
+fn mcp_serve_speaks_json_rpc_over_stdio() {
+    use std::io::Write as _;
+
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path().join("data");
+    let repo = dir.path().join("acme");
+    saas_copy(&repo);
+    nexus(&data)
+        .args(["projects", "add", "--index"])
+        .arg(&repo)
+        .assert()
+        .success();
+
+    let bin = assert_cmd::cargo::cargo_bin("nexus");
+    let mut child = std::process::Command::new(bin)
+        .env_remove("NEXUS_DATA_DIR")
+        .arg("--data-dir")
+        .arg(&data)
+        .args(["mcp", "serve"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    let requests = [
+        r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"teste","version":"0"}}}"#,
+        r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
+        r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#,
+        r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_project","arguments":{"query":"cálculo de frete","limit":3}}}"#,
+        r#"{"jsonrpc":"2.0","id":4,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}"#,
+    ];
+    {
+        let mut stdin = child.stdin.take().unwrap();
+        for r in requests {
+            writeln!(stdin, "{r}").unwrap();
+        }
+    } // fecha o stdin: o servidor termina
+    let out = child.wait_with_output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    // stderr limpo: logs vão para arquivo.
+    assert!(
+        out.stderr.is_empty(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let lines: Vec<Value> = String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(lines.len(), 4, "a notificação não tem resposta");
+    assert_eq!(lines[0]["result"]["protocolVersion"], "2025-11-25");
+    assert_eq!(lines[1]["result"]["tools"].as_array().unwrap().len(), 13);
+    assert_eq!(
+        lines[2]["result"]["structuredContent"]["hits"][0]["relPath"],
+        "src/checkout/shipping.ts"
+    );
+    assert_eq!(lines[3]["result"]["supportedVersions"][0], "2026-07-28");
+
+    let tools = json_out(nexus(&data).args(["mcp", "tools", "--json"]));
+    assert_eq!(tools.as_array().unwrap().len(), 13);
+}

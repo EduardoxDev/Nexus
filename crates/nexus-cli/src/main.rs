@@ -76,6 +76,20 @@ enum Command {
     /// Alertas de atualidade: caminhos e símbolos citados que sumiram, memória desatualizada,
     /// contradições e arquivos alterados desde a indexação.
     Freshness(memory_cmd::FreshnessArgs),
+    /// Servidor MCP para agentes (Claude Code e outros).
+    Mcp {
+        #[command(subcommand)]
+        action: McpAction,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum McpAction {
+    /// Atende o protocolo MCP em stdio (stdin/stdout). Use como comando de um cliente MCP:
+    /// `claude mcp add nexus -- nexus mcp serve`.
+    Serve,
+    /// Lista as ferramentas expostas pelo servidor MCP.
+    Tools,
 }
 
 #[derive(Debug, Subcommand)]
@@ -197,6 +211,19 @@ fn run(cli: Cli) -> Result<(), Error> {
         Command::Context(args) => context_cmd::context(&core, &args, cli.global.json),
         Command::Memory(args) => memory_cmd::memory(&core, &args, cli.global.json),
         Command::Freshness(args) => memory_cmd::freshness(&core, &args, cli.global.json),
+        Command::Mcp { action } => match action {
+            McpAction::Serve => {
+                let stdin = std::io::stdin();
+                let stdout = std::io::stdout();
+                nexus_mcp::Server::new(&core)
+                    .serve(stdin.lock(), stdout.lock())
+                    .map_err(|e| Error::io("servidor MCP (stdio)", e))
+            }
+            McpAction::Tools => {
+                let tools: Vec<serde_json::Value> = nexus_mcp::tools::definitions();
+                output::print(&tools, cli.global.json, human_tools)
+            }
+        },
     }
 }
 
@@ -229,4 +256,30 @@ pub struct DiagnosticsOutput {
     pub app: AppInfo,
     pub diagnostics: nexus_core::diagnostics::DiagnosticsReport,
     pub integrity: Option<nexus_core::diagnostics::IntegrityReport>,
+}
+
+fn human_tools(tools: &Vec<serde_json::Value>) -> String {
+    use std::fmt::Write as _;
+    let mut s = String::new();
+    for t in tools {
+        let read_only = t["annotations"]["readOnlyHint"].as_bool().unwrap_or(false);
+        let _ = writeln!(
+            s,
+            "{:<24} {}{}",
+            t["name"].as_str().unwrap_or(""),
+            t["title"].as_str().unwrap_or(""),
+            if read_only {
+                ""
+            } else {
+                "  (grava dados locais do NEXUS)"
+            }
+        );
+    }
+    let _ = writeln!(
+        s,
+        "\nProtocolo: {} (e {} via initialize).",
+        nexus_mcp::protocol::MODERN_VERSION,
+        nexus_mcp::protocol::LEGACY_VERSIONS.join(", ")
+    );
+    s
 }

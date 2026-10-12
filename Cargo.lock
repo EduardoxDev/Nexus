@@ -2427,6 +2427,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "nexus-core",
+ "nexus-mcp",
  "serde",
  "serde_json",
  "tempfile",
@@ -2469,6 +2470,17 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-single-instance",
  "tauri-plugin-window-state",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-mcp"
+version = "0.1.0"
+dependencies = [
+ "nexus-core",
+ "serde",
+ "serde_json",
  "tempfile",
  "tracing",
 ]

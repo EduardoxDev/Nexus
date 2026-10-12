@@ -35,6 +35,8 @@ pub mod kinds {
     pub const MEMORY_TRANSITION: &str = "memory.transition";
     pub const MEMORY_IMPORT: &str = "memory.import_adrs";
     pub const FRESHNESS_SCAN: &str = "freshness.scan";
+    pub const MCP_SESSION: &str = "mcp.session";
+    pub const MCP_TOOL: &str = "mcp.tool";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

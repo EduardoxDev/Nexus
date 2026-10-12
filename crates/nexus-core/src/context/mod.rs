@@ -336,14 +336,18 @@ fn file_info(conn: &Connection, project_id: i64, rel_path: &str) -> Result<Optio
         .optional()?)
 }
 
-fn stem(rel_path: &str) -> String {
+pub(crate) fn stem(rel_path: &str) -> String {
     let name = rel_path.rsplit('/').next().unwrap_or(rel_path);
     let base = name.split('.').next().unwrap_or(name);
     normalize(base.trim_start_matches("test_").trim_end_matches("_test"))
 }
 
 /// Testes cujo nome corresponde ao arquivo (`payment.ts` ↔ `payment.test.ts`, `service.py` ↔ `test_service.py`).
-fn test_counterparts(conn: &Connection, project_id: i64, rel_path: &str) -> Result<Vec<String>> {
+pub(crate) fn test_counterparts(
+    conn: &Connection,
+    project_id: i64,
+    rel_path: &str,
+) -> Result<Vec<String>> {
     let s = stem(rel_path);
     if s.chars().count() < 4 || matches!(s.as_str(), "index" | "main" | "init" | "lib" | "mod") {
         return Ok(Vec::new());
@@ -365,7 +369,11 @@ fn test_counterparts(conn: &Connection, project_id: i64, rel_path: &str) -> Resu
 }
 
 /// Manifesto mais próximo de cada arquivo (mesma pasta ou ancestral), mais o da raiz.
-fn nearest_manifests(conn: &Connection, project_id: i64, paths: &[String]) -> Result<Vec<String>> {
+pub(crate) fn nearest_manifests(
+    conn: &Connection,
+    project_id: i64,
+    paths: &[String],
+) -> Result<Vec<String>> {
     let mut stmt = conn.prepare(
         "SELECT rel_path FROM files WHERE project_id = ?1 AND status = 'indexed' AND kind = 'manifest'",
     )?;

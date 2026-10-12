@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/nexus-core", "crates/nexus-cli", "apps/desktop/src-tauri"]
+members = ["crates/nexus-core", "crates/nexus-mcp", "crates/nexus-cli", "apps/desktop/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,6 +12,7 @@ authors = ["NEXUS contributors"]
 
 [workspace.dependencies]
 nexus-core = { path = "crates/nexus-core" }
+nexus-mcp = { path = "crates/nexus-mcp" }
 
 rusqlite = { version = "0.40", features = ["bundled", "backup"] }
 blake3 = "1.8"

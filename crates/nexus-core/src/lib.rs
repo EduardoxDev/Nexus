@@ -13,6 +13,7 @@ pub mod memory;
 pub mod ops;
 pub mod paths;
 pub mod projects;
+pub mod related;
 pub mod scan;
 pub mod search;
 pub mod sensitive;
@@ -381,6 +382,20 @@ impl Core {
         let root = std::path::PathBuf::from(&project.root_path);
         self.db
             .read(|c| search::evidence::file_context(c, &root, project_id, rel_path, start, end))
+    }
+
+    /// Arquivos relacionados por heurística (testes, pasta, manifesto, citações) e memórias.
+    pub fn related_files(&self, project_id: i64, rel_path: &str) -> Result<related::RelatedFiles> {
+        let project = self.project(project_id)?;
+        self.db
+            .read(|c| related::related_files(c, &project, rel_path))
+    }
+
+    /// Declarações e usos prováveis de um identificador.
+    pub fn symbol_context(&self, project_id: i64, symbol: &str) -> Result<related::SymbolContext> {
+        let project = self.project(project_id)?;
+        self.db
+            .read(|c| related::symbol_context(c, &project, symbol))
     }
 
     /// Compila, persiste (só referências) e devolve o pack materializado.

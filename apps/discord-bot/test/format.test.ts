@@ -49,6 +49,27 @@ describe("busca", () => {
     expect(out.trimEnd().endsWith("…(trecho cortado)")).toBe(true);
   });
 
+  it("user text cannot become a link or break the message", () => {
+    // Só um "[" sem barra invertida antes vira link mascarado no Discord.
+    const LINK = new RegExp(String.raw`(^|[^\\])\[Clique aqui\]\(`);
+    const query = "[Clique aqui](https://phish.example) ```";
+    const empty = formatSearch(query, result([]));
+    const found = formatSearch(query, result([hit()]));
+    for (const out of [empty, found]) {
+      expect(out).not.toMatch(LINK);
+      expect(out.split("```").length % 2).toBe(1);
+    }
+    const pack = formatPack(query, {
+      packId: "p",
+      summary: "s",
+      estimatedTokens: 1,
+      tokenBudget: 8000,
+      export: "",
+      sources: [],
+    });
+    expect(pack.content).not.toMatch(LINK);
+  });
+
   it("marks stale results", () => {
     expect(formatSearch("a", result([hit({ freshness: "modified" })]))).toContain(
       "(alterado desde a indexação)",

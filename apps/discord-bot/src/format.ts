@@ -2,6 +2,8 @@
  * Mensagens do Discord a partir das saídas da NEXUS. Sempre citam arquivo e linhas, nunca passam
  * do limite do Discord e não deixam o conteúdo do repositório quebrar a formatação.
  */
+import { escapeMarkdown } from "discord.js";
+
 import type { PackResult, ProjectStatus, SearchHit, SearchResult } from "./nexus/types.ts";
 
 export const MAX_MESSAGE = 2000;
@@ -30,6 +32,11 @@ const FENCE: Record<string, string> = {
 /** Impede que crases do código fechem o bloco: insere um espaço de largura zero. */
 export function escapeCode(s: string): string {
   return s.replaceAll("```", "``​`");
+}
+
+/** Texto digitado pelo usuário: sem links mascarados, negrito, blocos de código etc. */
+export function userText(s: string): string {
+  return escapeMarkdown(s, { maskedLink: true });
 }
 
 const cite = (path: string, start: number, end: number) => `\`${path}:${start}-${end}\``;
@@ -64,9 +71,9 @@ function hitBlock(hit: SearchHit, budget: number): string {
 export function formatSearch(query: string, r: SearchResult, max = 3): string {
   const hits = r.hits.slice(0, max);
   if (hits.length === 0) {
-    return `Não encontrei nada sobre "${query}" em **${r.project.name}**.`;
+    return `Não encontrei nada sobre "${userText(query)}" em **${r.project.name}**.`;
   }
-  const header = `🔎 **${r.project.name}** — "${query}"\n`;
+  const header = `🔎 **${r.project.name}** — "${userText(query)}"\n`;
   const footer = r.warnings.length > 0 ? `-# ⚠️ ${r.warnings.join(" ")}`.slice(0, 300) : "";
   const budget = Math.floor((MAX_MESSAGE - header.length - footer.length - 2) / hits.length);
   const body = hits.map((h) => hitBlock(h, budget)).join("\n");
@@ -79,7 +86,7 @@ export function formatPack(
   p: PackResult,
 ): { content: string; file: { name: string; data: Buffer } } {
   const lines = [
-    `📦 **Context Pack** — ${task}`,
+    `📦 **Context Pack** — ${userText(task)}`,
     `${p.summary}`,
     `~${p.estimatedTokens} de ${p.tokenBudget} tokens estimados`,
     "",

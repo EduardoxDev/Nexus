@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node src/index.ts",
-    "deploy": "node src/deploy.ts",
+    "register": "node src/register.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

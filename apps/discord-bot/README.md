@@ -38,7 +38,7 @@ Sem `projeto`, o bot usa o projeto da equipe em canais da equipe e o público no
 5. Registrar os comandos e iniciar:
 
    ```bash
-   corepack pnpm --filter @nexus/discord-bot deploy
+   corepack pnpm --filter @nexus/discord-bot register
    corepack pnpm --filter @nexus/discord-bot start
    ```
 

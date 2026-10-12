@@ -61,10 +61,46 @@ describe.skipIf(!existsSync(CLI))("McpClient contra nexus mcp serve", () => {
     ).rejects.toBeInstanceOf(McpToolError);
   });
 
+  it("restarts reliably right after a kill (no fight for the database lock)", async () => {
+    for (let n = 0; n < 25; n++) {
+      client.__killForTests();
+      const r = await client.callTool<{ projects: unknown[] }>("list_projects", {});
+      expect(r.projects.length).toBe(1);
+    }
+  });
+
   it("restarts after the server exits", async () => {
     client.__killForTests();
     const r = await client.callTool<{ projects: unknown[] }>("list_projects", {});
     expect(r.projects.length).toBe(1);
+  });
+});
+
+/** Servidor MCP falso: responde ao handshake e devolve as variáveis de ambiente que recebeu. */
+const ENV_SERVER = `
+const rl = require("node:readline").createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const m = JSON.parse(line);
+  if (m.id === undefined) return;
+  const result = m.method === "initialize"
+    ? { protocolVersion: "2025-11-25", capabilities: {}, serverInfo: { name: "fake", version: "0" } }
+    : { structuredContent: { keys: Object.keys(process.env) } };
+  process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: m.id, result }) + String.fromCharCode(10));
+});
+`;
+
+describe("McpClient e o ambiente do processo", () => {
+  it("never passes Discord secrets to the NEXUS process", async () => {
+    process.env.DISCORD_TOKEN = "segredo-de-teste";
+    try {
+      const fake = new McpClient({ command: process.execPath, args: ["-e", ENV_SERVER] });
+      const r = await fake.callTool<{ keys: string[] }>("x", {});
+      await fake.close();
+      expect(r.keys).not.toContain("DISCORD_TOKEN");
+      expect(r.keys.length).toBeGreaterThan(0);
+    } finally {
+      delete process.env.DISCORD_TOKEN;
+    }
   });
 });
 

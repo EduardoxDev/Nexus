@@ -51,6 +51,8 @@ export class McpClient {
   private readonly opts: Required<McpClientOptions>;
   private child: ChildProcessWithoutNullStreams | null = null;
   private ready: Promise<void> | null = null;
+  /** Saída do último processo descartado: o próximo só inicia depois (o banco fica travado). */
+  private lastExit: Promise<void> = Promise.resolve();
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
 
@@ -89,17 +91,43 @@ export class McpClient {
     this.child?.kill();
   }
 
+  /** Encerra um processo e guarda a promessa da saída dele para o próximo início esperar. */
+  private discard(child: ChildProcessWithoutNullStreams): void {
+    if (this.child === child) {
+      this.child = null;
+      this.ready = null;
+    }
+    if (child.exitCode === null && child.signalCode === null) {
+      this.lastExit = new Promise((resolve) => {
+        child.once("exit", () => resolve());
+        child.once("error", () => resolve());
+      });
+      child.kill();
+    }
+  }
+
   private start(): Promise<void> {
     // Um processo morto ou marcado para morrer conta como ausente, mesmo antes do evento `exit`.
     const alive = this.child && !this.child.killed && this.child.exitCode === null;
     if (alive && this.ready) return this.ready;
-    if (this.child) {
-      this.child.kill();
-      this.child = null;
-      this.ready = null;
-    }
+    if (this.child) this.discard(this.child);
+    const previous = this.lastExit;
+    this.ready = previous.then(() => this.spawnAndInit());
+    const ready = this.ready;
+    ready.catch(() => {
+      if (this.ready === ready) this.ready = null;
+    });
+    return ready;
+  }
+
+  private spawnAndInit(): Promise<void> {
+    // Segredos do bot (token do Discord etc.) não vão para o processo da NEXUS.
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith("DISCORD_")),
+    );
     const child = spawn(this.opts.command, this.opts.args, {
       stdio: ["pipe", "pipe", "pipe"],
+      env,
     });
     this.child = child;
     // O stderr do servidor tem logs de diagnóstico; o bot não os repassa.
@@ -115,20 +143,14 @@ export class McpClient {
     child.on("exit", onGone);
     child.on("error", onGone);
 
-    this.ready = this.request("initialize", {
+    const init = this.request("initialize", {
       protocolVersion: PROTOCOL_VERSION,
       capabilities: {},
       clientInfo: CLIENT_INFO,
     }).then(() => this.notify("notifications/initialized"));
     // Uma falha na inicialização não deixa o cliente preso: a próxima chamada tenta de novo.
-    this.ready.catch(() => {
-      if (this.child === child) {
-        this.child = null;
-        this.ready = null;
-        child.kill();
-      }
-    });
-    return this.ready;
+    init.catch(() => this.discard(child));
+    return init;
   }
 
   private request(method: string, params: unknown): Promise<unknown> {
@@ -139,12 +161,8 @@ export class McpClient {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new McpUnavailableError(`a NEXUS não respondeu em ${this.opts.timeoutMs} ms`));
-        // Um servidor travado é descartado; a próxima chamada inicia outro.
-        if (this.child === child) {
-          this.child = null;
-          this.ready = null;
-          child.kill();
-        }
+        // Um servidor travado é descartado; a próxima chamada inicia outro depois que ele sair.
+        this.discard(child);
       }, this.opts.timeoutMs);
       this.pending.set(id, { child, resolve, reject, timer });
       child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);

@@ -73,6 +73,26 @@ jobs:
       - name: Build
         run: pnpm build
 
+  audit:
+    name: Auditoria de dependências
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: cargo audit (RustSec)
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+      - name: pnpm audit
+        working-directory: apps/desktop
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --prod
+
   e2e-windows:
     name: E2E (WebView2)
     runs-on: windows-latest
@@ -116,9 +136,9 @@ jobs:
           cache: pnpm
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
-      - name: tauri build
-        working-directory: apps/desktop
-        run: pnpm tauri build
+      - name: Instalador com a CLI embutida
+        shell: pwsh
+        run: ./scripts/release.ps1
       - uses: actions/upload-artifact@v7
         with:
           name: nexus-windows-nsis-unsigned

@@ -32,3 +32,6 @@ apps/desktop/src-tauri/gen/
 .idea/
 .DS_Store
 Thumbs.db
+
+# CLI copiada para o instalador (scripts/release.ps1)
+apps/desktop/src-tauri/binaries/

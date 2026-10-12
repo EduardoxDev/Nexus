@@ -1,0 +1,24 @@
+{
+  "name": "@nexus/discord-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bot do Discord da NEXUS: busca e Context Packs da NEXUS pelo MCP, com acesso por canal.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/index.ts",
+    "deploy": "node src/deploy.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "discord.js": "14.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

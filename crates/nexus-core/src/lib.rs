@@ -281,6 +281,9 @@ impl Core {
         observer: &dyn IndexObserver,
     ) -> Result<IndexJob> {
         let project = self.project(project_id)?;
+        // Lock de processo: o sistema operacional o libera se o processo morrer, então um job
+        // "em andamento" no banco cujo lock está livre é órfão de uma queda.
+        let _process_lock = self.acquire_index_lock(project_id)?;
         let op = ops::start(&self.db, ops::kinds::INDEX_RUN, Some(project_id))?;
         let result = index::run(
             &self.db,
@@ -331,6 +334,40 @@ impl Core {
             op_id: op.id().to_owned(),
             source: Box::new(e),
         })
+    }
+
+    fn acquire_index_lock(&self, project_id: i64) -> Result<std::fs::File> {
+        let path = self.paths.locks().join(format!("index-{project_id}.lock"));
+        std::fs::create_dir_all(self.paths.locks())
+            .map_err(|e| Error::io("criar a pasta de locks", e))?;
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(&path)
+            .map_err(|e| Error::io(format!("abrir {}", path.display()), e))?;
+        match file.try_lock() {
+            Ok(()) => {}
+            Err(std::fs::TryLockError::WouldBlock) => {
+                return Err(Error::Conflict(
+                    "já existe uma indexação em andamento para este projeto".into(),
+                ));
+            }
+            Err(std::fs::TryLockError::Error(e)) => {
+                return Err(Error::io(format!("travar {}", path.display()), e));
+            }
+        }
+        let orphaned = self
+            .db
+            .write(|c| index::job::interrupt_orphaned(c, project_id, time_util::now_ms()))?;
+        if orphaned > 0 {
+            tracing::warn!(
+                project_id,
+                orphaned,
+                "job de indexação de um processo encerrado marcado como interrompido"
+            );
+        }
+        Ok(file)
     }
 
     pub fn list_jobs(&self, project_id: i64, limit: u32) -> Result<Vec<IndexJob>> {

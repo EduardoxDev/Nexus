@@ -521,3 +521,88 @@ fn symbol_and_deps_commands() {
     assert!(text.contains("typescript"), "{text}");
     nexus(&data).args(["deps", "../fora.ts"]).assert().code(2);
 }
+
+/// Fase 7 — recuperação: o processo da CLI é morto (TerminateProcess, sem chance de limpar) no
+/// meio de uma indexação grande. O banco precisa continuar íntegro, o job órfão é reconhecido e
+/// a próxima indexação chega ao mesmo estado de uma indexação limpa.
+#[test]
+fn killing_the_process_mid_index_leaves_a_consistent_database() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = dir.path().join("grande");
+    for i in 0..4000_usize {
+        let pkg = repo.join(format!("pkg{:02}", i / 100));
+        std::fs::create_dir_all(&pkg).unwrap();
+        std::fs::write(
+            pkg.join(format!("m{i}.ts")),
+            format!(
+                "import {{ x }} from \"./m{}\";\nexport function computeTotal{i}(v: number) {{ return v * {i}; }}\n{}",
+                i.saturating_sub(1),
+                "// preenchimento\n".repeat(40)
+            ),
+        )
+        .unwrap();
+    }
+    let crashed = dir.path().join("data-crash");
+    nexus(&crashed)
+        .args(["projects", "add"])
+        .arg(&repo)
+        .assert()
+        .success();
+
+    let bin = assert_cmd::cargo::cargo_bin("nexus");
+    let mut child = std::process::Command::new(&bin)
+        .env_remove("NEXUS_DATA_DIR")
+        .arg("--data-dir")
+        .arg(&crashed)
+        .args(["index", "grande"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    // Espera o job começar a gravar lotes e mata o processo.
+    let started = std::time::Instant::now();
+    loop {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let status = json_out(nexus(&crashed).args(["status", "--json"]));
+        let indexed = status[0]["counts"]["indexed"].as_i64().unwrap_or(0);
+        if indexed > 0 || started.elapsed().as_secs() > 60 {
+            break;
+        }
+    }
+    child.kill().unwrap();
+    child.wait().unwrap();
+
+    // Banco íntegro depois da queda.
+    let diag = json_out(nexus(&crashed).args(["diagnostics", "--check", "--json"]));
+    assert_eq!(diag["integrity"]["ok"], true, "{diag}");
+    let partial = json_out(nexus(&crashed).args(["status", "--json"]));
+    let partial_indexed = partial[0]["counts"]["indexed"].as_i64().unwrap();
+    assert!(
+        partial_indexed < 4000,
+        "o processo foi morto antes do fim ({partial_indexed})"
+    );
+
+    // A próxima indexação retoma (o job do processo morto é substituído) e completa.
+    nexus(&crashed).args(["index", "grande"]).assert().success();
+    let after = json_out(nexus(&crashed).args(["status", "--json"]));
+
+    // Referência: indexação limpa do mesmo repositório.
+    let clean = dir.path().join("data-limpo");
+    nexus(&clean)
+        .args(["projects", "add", "--index"])
+        .arg(&repo)
+        .assert()
+        .success();
+    let reference = json_out(nexus(&clean).args(["status", "--json"]));
+    assert_eq!(after[0]["counts"], reference[0]["counts"]);
+    assert_eq!(after[0]["counts"]["indexed"], 4000);
+    let deps_after = json_out(nexus(&crashed).args(["deps", "--json"]));
+    let deps_ref = json_out(nexus(&clean).args(["deps", "--json"]));
+    assert_eq!(deps_after["graph"]["edges"], deps_ref["graph"]["edges"]);
+    assert_eq!(
+        deps_after["graph"]["resolved"],
+        deps_ref["graph"]["resolved"]
+    );
+    let hits = json_out(nexus(&crashed).args(["symbol", "computeTotal3999", "--json"]));
+    assert_eq!(hits[0]["relPath"], "pkg39/m3999.ts");
+}

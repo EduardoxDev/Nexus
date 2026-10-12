@@ -57,9 +57,14 @@ impl DataPaths {
         self.root.join("backups")
     }
 
+    /// Locks de processo (um arquivo por projeto em indexação).
+    pub fn locks(&self) -> PathBuf {
+        self.root.join("locks")
+    }
+
     /// Cria os diretórios necessários.
     pub fn ensure(&self) -> Result<()> {
-        for dir in [self.root.clone(), self.logs(), self.backups()] {
+        for dir in [self.root.clone(), self.logs(), self.backups(), self.locks()] {
             std::fs::create_dir_all(&dir)
                 .map_err(|e| Error::io(format!("criar {}", dir.display()), e))?;
         }

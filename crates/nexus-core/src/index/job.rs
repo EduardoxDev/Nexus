@@ -160,6 +160,26 @@ fn row_to_job(r: &rusqlite::Row<'_>) -> rusqlite::Result<IndexJob> {
     })
 }
 
+/// Marca como `interrupted` os jobs ativos de um projeto cujo processo dono comprovadamente
+/// terminou (o lock de arquivo dele foi liberado pelo sistema operacional). A operação
+/// `index.run` correspondente (mesmo ID) também é encerrada.
+pub fn interrupt_orphaned(conn: &Connection, project_id: i64, now: i64) -> Result<usize> {
+    conn.execute(
+        "UPDATE operations SET status = 'interrupted', finished_at = ?1,
+             error_message = 'O processo terminou antes de concluir a indexação.'
+         WHERE status = 'running' AND id IN (
+             SELECT id FROM indexing_jobs WHERE project_id = ?2 AND status IN ('running', 'paused'))",
+        params![now, project_id],
+    )?;
+    Ok(conn.execute(
+        "UPDATE indexing_jobs
+         SET status = 'interrupted', phase = 'done', finished_at = ?1,
+             error_message = 'O processo terminou antes de concluir a indexação.'
+         WHERE project_id = ?2 AND status IN ('running', 'paused')",
+        params![now, project_id],
+    )?)
+}
+
 /// Marca como `interrupted` jobs ativos sem heartbeat recente (de qualquer projeto ou de um só).
 pub fn recover_stale(conn: &Connection, project_id: Option<i64>, now: i64) -> Result<usize> {
     Ok(conn.execute(

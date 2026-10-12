@@ -456,6 +456,20 @@ fn concurrent_job_for_same_project_is_rejected() {
             Ok(())
         })
         .unwrap();
+    // O "outro processo" está vivo: segura o lock de indexação do projeto.
+    std::fs::create_dir_all(env.core.paths().locks()).unwrap();
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(
+            env.core
+                .paths()
+                .locks()
+                .join(format!("index-{}.lock", env.project_id)),
+        )
+        .unwrap();
+    lock.try_lock().unwrap();
     let err = env
         .core
         .index_project(
@@ -466,6 +480,15 @@ fn concurrent_job_for_same_project_is_rejected() {
         )
         .unwrap_err();
     assert_eq!(err.code(), ErrorCode::Conflict);
+
+    // O processo morre (o sistema libera o lock): a próxima indexação assume na hora,
+    // sem esperar o heartbeat envelhecer.
+    drop(lock);
+    let job = index(&env, IndexMode::Incremental);
+    assert_eq!(job.status, JobStatus::Succeeded);
+    let jobs = env.core.list_jobs(env.project_id, 10).unwrap();
+    let orphan = jobs.iter().find(|j| j.id == "outro-processo").unwrap();
+    assert_eq!(orphan.status, JobStatus::Interrupted);
 }
 
 #[test]

@@ -623,6 +623,8 @@ fn get_symbol_context_out() -> Value {
                 "text": t("string"),
                 "freshness": freshness_schema(),
                 "contentHash": t("string"),
+                "kind": nullable("string"),
+                "container": nullable("string"),
             }), &["relPath", "line", "startLine", "endLine", "text", "freshness", "contentHash"])),
             "references": array(t("string")),
             "limitations": array(t("string")),
@@ -658,7 +660,7 @@ fn get_related_files_out() -> Value {
             "relPath": t("string"),
             "related": array(object(json!({
                 "relPath": t("string"),
-                "relation": { "type": "string", "enum": ["test", "tested_file", "same_directory", "manifest", "mentions_this"] },
+                "relation": { "type": "string", "enum": ["test", "tested_file", "same_directory", "manifest", "mentions_this", "imports", "imported_by"] },
                 "reason": t("string"),
             }), &["relPath", "relation", "reason"])),
             "memories": array(object(json!({ "memoryId": t("string"), "title": t("string"), "status": t("string") }), &["memoryId", "title", "status"])),
@@ -1254,7 +1256,7 @@ pub static TOOLS: &[Tool] = &[
     Tool {
         name: "get_symbol_context",
         title: "Find a symbol's declaration",
-        description: "Find where an identifier (function, class, struct, const…) is declared and which files mention it. Heuristic (declaration regex + full-text index); no per-language analysis yet.",
+        description: "Find where an identifier (function, method, class, struct, interface, const…) is declared — with kind, container and full body for TS/JS, Python and Rust (lexical analysis), regex elsewhere — and which files import the definition or mention the name.",
         read_only: true,
         idempotent: true,
         input: || {
@@ -1272,7 +1274,7 @@ pub static TOOLS: &[Tool] = &[
     Tool {
         name: "get_related_files",
         title: "Related files",
-        description: "Files related to a given file: matching tests (or the tested file), same directory, nearest manifest, files that mention the module name, and memories that reference it. Heuristic; no import graph yet.",
+        description: "Files related to a given file: what it imports and who imports it (dependency graph with the import line as evidence; TS/JS, Python, Rust), tests that import it or match its name, same directory, nearest manifest, and memories that reference it.",
         read_only: true,
         idempotent: true,
         input: || {

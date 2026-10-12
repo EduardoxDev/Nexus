@@ -450,7 +450,20 @@ fn every_tool_output_matches_its_output_schema() {
         rel.iter()
             .any(|r| r["relPath"] == "tests/auth/session.test.ts" && r["relation"] == "test")
     );
-    assert!(rel.iter().any(|r| r["relation"] == "mentions_this"));
+    // Grafo: o que session.ts importa e quem a importa, com a linha como evidência.
+    assert!(rel.iter().any(|r| r["relPath"] == "src/db/client.ts"
+        && r["relation"] == "imports"
+        && r["reason"].as_str().unwrap().contains("linha 4")));
+    assert!(
+        rel.iter()
+            .any(|r| r["relPath"] == "src/server/routes/auth.routes.ts"
+                && r["relation"] == "imported_by")
+    );
+    assert!(
+        rel.iter().all(|r| r["relation"] != "mentions_this"),
+        "com grafo, a citação textual não é usada"
+    );
+    assert_eq!(def["kind"], "function");
     let mem = call(&mut s, 302, "get_project_memory", json!({}));
     let confirmed = mem["structuredContent"]["memories"].as_array().unwrap();
     assert_eq!(confirmed.len(), 1, "por padrão só confirmadas");

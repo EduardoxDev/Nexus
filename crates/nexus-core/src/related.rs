@@ -36,8 +36,12 @@ pub enum Relation {
     SameDirectory,
     /// Manifesto de dependências mais próximo.
     Manifest,
-    /// O arquivo cita o nome do módulo pedido.
+    /// O arquivo cita o nome do módulo pedido (só para arquivos sem análise de imports).
     MentionsThis,
+    /// O arquivo pedido importa este (grafo).
+    Imports,
+    /// Este arquivo importa o pedido (grafo).
+    ImportedBy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -170,11 +174,43 @@ pub fn related_files(conn: &Connection, project: &Project, rel_path: &str) -> Re
         );
     }
 
+    // Grafo de imports, com a evidência (linha e especificador) de cada aresta.
+    let analyzed = crate::analysis::analyzer_for(file.language.as_deref()).is_some();
+    for e in crate::analysis::graph::imports_of(conn, project.id, &rel_path)? {
+        if let Some(to) = e.to_path {
+            push(
+                &mut related,
+                to,
+                Relation::Imports,
+                format!("Importado na linha {} (`{}`)", e.line, e.specifier),
+            );
+        }
+    }
+    for e in crate::analysis::graph::importers_of(conn, project.id, &rel_path)? {
+        let is_test = all
+            .iter()
+            .any(|(p, k)| *p == e.from_path && *k == FileKind::Test);
+        push(
+            &mut related,
+            e.from_path.clone(),
+            if is_test {
+                Relation::Test
+            } else {
+                Relation::ImportedBy
+            },
+            format!(
+                "Importa este arquivo na linha {} (`{}`)",
+                e.line, e.specifier
+            ),
+        );
+    }
+
     let generic = matches!(
         s.as_str(),
         "index" | "main" | "init" | "lib" | "mod" | "app"
     );
-    if s.chars().count() >= 4 && !generic {
+    // Citação textual do nome do módulo: só quando não há grafo para a linguagem.
+    if !analyzed && s.chars().count() >= 4 && !generic {
         let module = rel_path
             .rsplit('/')
             .next()
@@ -213,7 +249,7 @@ pub fn related_files(conn: &Connection, project: &Project, rel_path: &str) -> Re
         related,
         memories,
         limitations: vec![
-            "Relações por nome de arquivo, pasta, manifesto e citação textual do nome do módulo; sem grafo de imports (previsto para a Fase 6).".into(),
+            "Imports resolvidos por análise léxica (TS/JS, Python, Rust); para outras linguagens, relações por nome, pasta, manifesto e citação textual do módulo.".into(),
         ],
     })
 }
@@ -235,6 +271,10 @@ pub struct SymbolDefinition {
     pub text: String,
     pub freshness: Freshness,
     pub content_hash: String,
+    /// Tipo da declaração (quando vem da análise por linguagem).
+    pub kind: Option<crate::analysis::SymbolKind>,
+    /// Classe/impl/trait que contém o método.
+    pub container: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -255,6 +295,36 @@ pub fn symbol_context(conn: &Connection, project: &Project, symbol: &str) -> Res
         ));
     }
     let root = Path::new(&project.root_path);
+    let mut definitions = Vec::new();
+    let mut references = Vec::new();
+    // 1. Declarações conhecidas pela análise (nome, tipo, linha e fim do corpo).
+    for hit in crate::analysis::query::find_symbols(conn, project.id, symbol, MAX_DEFINITIONS)? {
+        let file = evidence::indexed_file(conn, project.id, &hit.rel_path)?;
+        let v = evidence::verify(root, &hit.rel_path, &file.content_hash)?;
+        let end = hit
+            .symbol
+            .end_line
+            .min(hit.symbol.line + DEFINITION_LINES - 1)
+            .max(hit.symbol.line);
+        let (s, e, text) = evidence::slice(&v.lines, (hit.symbol.line - 2).max(1), end);
+        for imp in crate::analysis::graph::importers_of(conn, project.id, &hit.rel_path)? {
+            if references.len() < MAX_REFERENCES && !references.contains(&imp.from_path) {
+                references.push(imp.from_path);
+            }
+        }
+        definitions.push(SymbolDefinition {
+            rel_path: hit.rel_path,
+            language: hit.language,
+            line: hit.symbol.line,
+            start_line: s,
+            end_line: e,
+            text,
+            freshness: v.freshness,
+            content_hash: file.content_hash,
+            kind: Some(hit.symbol.kind),
+            container: hit.symbol.container,
+        });
+    }
     let response = search::search(
         conn,
         project,
@@ -265,9 +335,14 @@ pub fn symbol_context(conn: &Connection, project: &Project, symbol: &str) -> Res
             ..Default::default()
         },
     )?;
-    let mut definitions = Vec::new();
-    let mut references = Vec::new();
+    // 2. Linguagens sem analisador: declaração por expressão regular nos melhores resultados.
     for hit in &response.hits {
+        if definitions
+            .iter()
+            .any(|d: &SymbolDefinition| d.rel_path == hit.rel_path)
+        {
+            continue;
+        }
         let declares = hit.reasons.iter().any(|r| r.kind == ReasonKind::Definition);
         let mut found = None;
         if declares && definitions.len() < MAX_DEFINITIONS {
@@ -292,9 +367,13 @@ pub fn symbol_context(conn: &Connection, project: &Project, symbol: &str) -> Res
                     text,
                     freshness: v.freshness,
                     content_hash: file.content_hash,
+                    kind: None,
+                    container: None,
                 });
             }
-            None if references.len() < MAX_REFERENCES => references.push(hit.rel_path.clone()),
+            None if references.len() < MAX_REFERENCES && !references.contains(&hit.rel_path) => {
+                references.push(hit.rel_path.clone());
+            }
             None => {}
         }
     }
@@ -308,7 +387,7 @@ pub fn symbol_context(conn: &Connection, project: &Project, symbol: &str) -> Res
         }
     }
     let mut limitations = vec![
-        "Declarações encontradas por expressão regular (fn, function, def, class, struct, const…); sem análise por linguagem nem resolução de imports (Fase 6).".to_owned(),
+        "Declarações da análise léxica (TS/JS, Python, Rust; tipo e linha exatos) ou, nas demais linguagens, por expressão regular; usos = arquivos que importam a definição ou citam o nome. Sem resolução de tipos.".to_owned(),
     ];
     if definitions.is_empty() {
         limitations.insert(

@@ -1,6 +1,7 @@
 //! `nexus` — CLI do NEXUS. Adaptador fino sobre `nexus-core`: valida argumentos, chama o core e
 //! formata a saída (humana ou `--json`).
 
+mod code_cmd;
 mod context_cmd;
 mod memory_cmd;
 mod output;
@@ -76,6 +77,10 @@ enum Command {
     /// Alertas de atualidade: caminhos e símbolos citados que sumiram, memória desatualizada,
     /// contradições e arquivos alterados desde a indexação.
     Freshness(memory_cmd::FreshnessArgs),
+    /// Onde um símbolo é declarado (TS/JS, Python, Rust).
+    Symbol(code_cmd::SymbolArgs),
+    /// Dependências de um arquivo (o que importa e quem o importa) ou visão geral do grafo.
+    Deps(code_cmd::DepsArgs),
     /// Servidor MCP para agentes (Claude Code e outros).
     Mcp {
         #[command(subcommand)]
@@ -211,6 +216,8 @@ fn run(cli: Cli) -> Result<(), Error> {
         Command::Context(args) => context_cmd::context(&core, &args, cli.global.json),
         Command::Memory(args) => memory_cmd::memory(&core, &args, cli.global.json),
         Command::Freshness(args) => memory_cmd::freshness(&core, &args, cli.global.json),
+        Command::Symbol(args) => code_cmd::symbol(&core, &args, cli.global.json),
+        Command::Deps(args) => code_cmd::deps(&core, &args, cli.global.json),
         Command::Mcp { action } => match action {
             McpAction::Serve => {
                 let stdin = std::io::stdin();

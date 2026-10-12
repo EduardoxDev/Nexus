@@ -9,6 +9,11 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use nexus_core::analysis::graph::{Edge, GraphStats};
+use nexus_core::analysis::query::{
+    AnalysisOverview, CountItem, FileAnalysisView, LanguageAnalysis, SymbolHit,
+};
+use nexus_core::analysis::{Coverage, Symbol, SymbolKind};
 use nexus_core::classify::FileKind;
 use nexus_core::context::export::{ExportFormat, ExportOptions};
 use nexus_core::context::{
@@ -36,6 +41,9 @@ use nexus_core::ops::{OperationQuery, OperationRecord, OperationStatus};
 use nexus_core::projects::{
     ChangedFile, DirStat, FileCounts, KindStat, LanguageStat, Project, ProjectOverview,
     ProjectSummary, SkippedFile, StatusStat,
+};
+use nexus_core::related::{
+    RelatedFile, RelatedFiles, RelatedMemory, Relation, SymbolContext, SymbolDefinition,
 };
 use nexus_core::search::evidence::{FileContext, Freshness};
 use nexus_core::search::query::{Concept, Intent, QueryAnalysis};
@@ -151,6 +159,22 @@ fn generate() -> BTreeMap<String, String> {
     render::<FreshnessSummary>(&cfg, &mut files);
     render::<McpToolInfo>(&cfg, &mut files);
     render::<IntegrationInfo>(&cfg, &mut files);
+    render::<SymbolKind>(&cfg, &mut files);
+    render::<Symbol>(&cfg, &mut files);
+    render::<Edge>(&cfg, &mut files);
+    render::<GraphStats>(&cfg, &mut files);
+    render::<FileAnalysisView>(&cfg, &mut files);
+    render::<SymbolHit>(&cfg, &mut files);
+    render::<LanguageAnalysis>(&cfg, &mut files);
+    render::<CountItem>(&cfg, &mut files);
+    render::<AnalysisOverview>(&cfg, &mut files);
+    render::<Coverage>(&cfg, &mut files);
+    render::<Relation>(&cfg, &mut files);
+    render::<RelatedFile>(&cfg, &mut files);
+    render::<RelatedMemory>(&cfg, &mut files);
+    render::<RelatedFiles>(&cfg, &mut files);
+    render::<SymbolDefinition>(&cfg, &mut files);
+    render::<SymbolContext>(&cfg, &mut files);
 
     let mut index = String::from("// Gerado por crates/nexus-core/tests/bindings.rs. Não edite.\n");
     for name in files.keys() {

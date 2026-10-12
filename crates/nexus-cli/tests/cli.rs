@@ -17,8 +17,8 @@ fn init_creates_database_and_reports_json() {
     let data = dir.path().join("data");
     let out = nexus(&data).args(["init", "--json"]).assert().success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["schemaVersion"], 4);
-    assert_eq!(v["appliedMigrations"], serde_json::json!([1, 2, 3, 4]));
+    assert_eq!(v["schemaVersion"], 5);
+    assert_eq!(v["appliedMigrations"], serde_json::json!([1, 2, 3, 4, 5]));
     assert!(data.join("nexus.db").is_file());
 
     // Segunda execução: nada pendente.
@@ -33,7 +33,7 @@ fn init_human_output_is_portuguese() {
     let out = nexus(&dir.path().join("d")).arg("init").assert().success();
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     assert!(stdout.contains("NEXUS pronto."), "{stdout}");
-    assert!(stdout.contains("Schema:         v4"), "{stdout}");
+    assert!(stdout.contains("Schema:         v5"), "{stdout}");
 }
 
 #[test]
@@ -45,11 +45,11 @@ fn diagnostics_json_has_expected_shape() {
         .assert()
         .success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["diagnostics"]["schemaVersion"], 4);
+    assert_eq!(v["diagnostics"]["schemaVersion"], 5);
     assert_eq!(v["diagnostics"]["fts5Available"], true);
     assert_eq!(v["integrity"]["ok"], true);
     assert!(v["app"]["coreVersion"].is_string());
-    assert!(v["diagnostics"]["migrations"].as_array().unwrap().len() == 4);
+    assert!(v["diagnostics"]["migrations"].as_array().unwrap().len() == 5);
 }
 
 #[test]
@@ -488,4 +488,36 @@ fn mcp_serve_speaks_json_rpc_over_stdio() {
 
     let tools = json_out(nexus(&data).args(["mcp", "tools", "--json"]));
     assert_eq!(tools.as_array().unwrap().len(), 13);
+}
+
+#[test]
+fn symbol_and_deps_commands() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path().join("data");
+    let repo = dir.path().join("acme");
+    saas_copy(&repo);
+    nexus(&data)
+        .args(["projects", "add", "--index"])
+        .arg(&repo)
+        .assert()
+        .success();
+    let hits = json_out(nexus(&data).args(["symbol", "create_session", "--json"]));
+    assert_eq!(hits[0]["relPath"], "src/auth/session.ts");
+    assert_eq!(hits[0]["symbol"]["kind"], "function");
+    assert_eq!(hits[0]["symbol"]["line"], 13);
+
+    let deps = json_out(nexus(&data).args(["deps", "src/checkout/checkout.ts", "--json"]));
+    assert_eq!(deps["imports"].as_array().unwrap().len(), 6);
+    assert!(
+        deps["importedBy"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["fromPath"] == "tests/checkout/checkout.test.ts")
+    );
+    let human = nexus(&data).args(["deps"]).assert().success();
+    let text = String::from_utf8(human.get_output().stdout.clone()).unwrap();
+    assert!(text.contains("Grafo:"), "{text}");
+    assert!(text.contains("typescript"), "{text}");
+    nexus(&data).args(["deps", "../fora.ts"]).assert().code(2);
 }

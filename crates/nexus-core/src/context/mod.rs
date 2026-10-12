@@ -40,6 +40,8 @@ const EXCERPT_LINES: i64 = 50;
 const PACKS_KEPT_PER_PROJECT: i64 = 100;
 /// Máximo de documentos genéricos (não decisões/convenções) por pack.
 const MAX_GENERIC_DOCS: usize = 2;
+/// Dependências diretas (pelo grafo) acrescentadas no máximo por pack.
+const MAX_GRAPH_DEPENDENCIES: usize = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -552,6 +554,48 @@ pub fn compile(
         }
     }
 
+    // Expansão 1-hop pelo grafo: testes que importam os arquivos principais e dependências
+    // diretas (internas) deles. Cada fonte diz de qual import veio.
+    let mut added_deps = 0;
+    for primary in &primaries {
+        for edge in crate::analysis::graph::importers_of(conn, project.id, primary)? {
+            let is_test = file_info(conn, project.id, &edge.from_path)?
+                .is_some_and(|i| i.kind == FileKind::Test);
+            if is_test && seen.insert(edge.from_path.clone()) {
+                drafts.push(Draft {
+                    rel_path: edge.from_path.clone(),
+                    role: SourceRole::Test,
+                    start: 1,
+                    end: EXCERPT_LINES,
+                    score: 0.0,
+                    reasons: vec![format!("Teste que importa {primary} (linha {})", edge.line)],
+                });
+            }
+        }
+        for edge in crate::analysis::graph::imports_of(conn, project.id, primary)? {
+            if added_deps >= MAX_GRAPH_DEPENDENCIES {
+                break;
+            }
+            let Some(to) = edge.to_path else { continue };
+            let is_code =
+                file_info(conn, project.id, &to)?.is_some_and(|i| i.kind == FileKind::Code);
+            if is_code && seen.insert(to.clone()) {
+                added_deps += 1;
+                drafts.push(Draft {
+                    rel_path: to,
+                    role: SourceRole::Related,
+                    start: 1,
+                    end: EXCERPT_LINES,
+                    score: 0.0,
+                    reasons: vec![format!(
+                        "Importado por {primary} (linha {}: `{}`)",
+                        edge.line, edge.specifier
+                    )],
+                });
+            }
+        }
+    }
+
     // Guia de contribuição/convenções do projeto, mesmo sem correspondência textual —
     // mas só quando há evidência para a tarefa (sem fontes, o pack não inventa contexto).
     let has_evidence = !drafts.is_empty();
@@ -718,7 +762,7 @@ pub fn compile(
     }
 
     let mut limitations = vec![
-        "Recuperação por texto, caminho, nomes de arquivo e heurísticas — sem análise semântica nem grafo de dependências (previsto para a Fase 6).".to_owned(),
+        "Recuperação por texto, caminho, declarações e grafo de imports (análise léxica de TS/JS, Python e Rust); sem análise semântica nem de tipos.".to_owned(),
         "Só memórias confirmadas pelo usuário entram no pack; propostas (ex.: ADRs importados ainda não revisados) ficam de fora. Documentos de decisão listados como fontes são arquivos encontrados, não decisões confirmadas.".to_owned(),
         "Contradições são detectadas por heurística (memórias parecidas com textos diferentes, decisões cuja origem mudou ou foi substituída) e exigem revisão humana.".to_owned(),
         "Tokens estimados por caracteres ÷ 4; o número real depende do modelo.".to_owned(),

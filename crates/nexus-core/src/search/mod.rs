@@ -29,6 +29,8 @@ const DEFAULT_LIMIT: u32 = 10;
 const MAX_QUERY_CHARS: usize = 500;
 /// Linhas máximas de um trecho de resultado.
 const SNIPPET_LINES: i64 = 14;
+/// Peso máximo da centralidade no grafo (avaliado em docs/evaluation.md).
+const CENTRALITY_WEIGHT: f64 = 0.05;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
@@ -72,6 +74,8 @@ pub enum ReasonKind {
     Coverage,
     FileKind,
     Recency,
+    /// Arquivo importado por muitos outros (grau de entrada no grafo).
+    Centrality,
 }
 
 /// Um componente da pontuação, explicado.
@@ -500,6 +504,27 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
             SearchMode::Hybrid => prescore(c, file, max_rank, &analysis, now_ns),
         }
     }
+    if mode == SearchMode::Hybrid {
+        // Centralidade: módulos dos quais muitos dependem ganham um pouco (log, até 0,05).
+        let degrees = crate::analysis::graph::in_degrees(conn, project.id)?;
+        let max_degree = degrees.values().copied().max().unwrap_or(0);
+        if max_degree > 1 {
+            for c in &mut ranked {
+                let file = &files[c.file];
+                let d = degrees.get(&file.rel_path).copied().unwrap_or(0);
+                if file.kind == FileKind::Code && d > 1 && c.score > 0.0 {
+                    let w =
+                        CENTRALITY_WEIGHT * ((1 + d) as f64).ln() / ((1 + max_degree) as f64).ln();
+                    c.score += w;
+                    c.reasons.push(Reason {
+                        kind: ReasonKind::Centrality,
+                        label: format!("Importado por {d} arquivos do projeto"),
+                        weight: w,
+                    });
+                }
+            }
+        }
+    }
     ranked.sort_by(|a, b| {
         b.score
             .total_cmp(&a.score)
@@ -538,11 +563,25 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
             // A declaração mais específica vence: nome igual ao termo > contém o termo >
             // uma das palavras do identificador é uma variante (`saveOrder` → save, order).
             // Substrings soltas não contam (`AUTHORIZE_URL` não declara nada sobre "auth").
-            let declared: Option<String> = verified
-                .lines
+            // Declarações: da análise por linguagem (nome, tipo e linha exatos) quando o arquivo
+            // foi analisado; senão, a expressão regular sobre as linhas.
+            let analyzed = crate::analysis::query::symbols_of(conn, project.id, &file.rel_path)?;
+            let names: Vec<(String, Option<(crate::analysis::SymbolKind, i64)>)> =
+                if analyzed.is_empty() {
+                    verified
+                        .lines
+                        .iter()
+                        .filter_map(|l| declared_name(l).map(|n| (n.to_owned(), None)))
+                        .collect()
+                } else {
+                    analyzed
+                        .iter()
+                        .map(|s| (s.name.clone(), Some((s.kind, s.line))))
+                        .collect()
+                };
+            let declared: Option<(String, Option<(crate::analysis::SymbolKind, i64)>)> = names
                 .iter()
-                .filter_map(|l| {
-                    let name = declared_name(l)?;
+                .filter_map(|(name, at)| {
                     let n = normalize(name);
                     let words = crate::chunk::split_identifier(name);
                     let ranks: Vec<u8> = analysis
@@ -566,15 +605,20 @@ pub fn search(conn: &Connection, project: &Project, req: &SearchRequest) -> Resu
                         .collect();
                     let rank = *ranks.iter().min()?;
                     // Empate: vence a declaração que cobre mais conceitos (`validateSession`).
-                    Some((rank, std::cmp::Reverse(ranks.len()), name.to_owned()))
+                    Some((rank, std::cmp::Reverse(ranks.len()), name.clone(), *at))
                 })
-                .min_by_key(|(rank, coverage, _)| (*rank, *coverage))
-                .map(|(_, _, name)| name);
-            if let Some(name) = declared {
+                .min_by_key(|(rank, coverage, _, _)| (*rank, *coverage))
+                .map(|(_, _, name, at)| (name, at));
+            if let Some((name, at)) = declared {
                 c.score += 0.10;
                 c.reasons.push(Reason {
                     kind: ReasonKind::Definition,
-                    label: format!("Declara `{name}`"),
+                    label: match at {
+                        Some((kind, line)) => {
+                            format!("Declara `{name}` ({}, linha {line})", kind.label())
+                        }
+                        None => format!("Declara `{name}`"),
+                    },
                     weight: 0.10,
                 });
             }

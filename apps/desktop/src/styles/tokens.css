@@ -1,29 +1,33 @@
 /*
  * Design tokens do NEXUS.
- * Tema escuro (grafite) é o padrão; tema claro completo. Acento violeta usado só para foco,
- * ação primária e seleção. Contraste verificado em src/styles/tokens.test.ts.
+ * Tema escuro (grafite azulado) é o padrão; tema claro completo. O azul da marca é usado só
+ * para foco, ação primária, seleção e destaques de identidade. Superfícies em camadas:
+ * canvas (bg) < barra lateral < cartões (surface-1) < controles (surface-2/3).
+ * Contraste verificado em src/styles/tokens.test.ts.
  */
 
 :root,
 .light {
   color-scheme: light;
-  --bg: oklch(0.985 0.002 270);
+  --bg: oklch(0.978 0.004 265);
+  --surface-sidebar: oklch(0.966 0.006 265);
   --surface-1: oklch(1 0 0);
-  --surface-2: oklch(0.967 0.003 270);
-  --surface-3: oklch(0.94 0.004 270);
-  --border: oklch(0.9 0.005 270);
-  --border-strong: oklch(0.82 0.008 270);
+  --surface-2: oklch(0.97 0.004 265);
+  --surface-3: oklch(0.938 0.006 265);
+  --border: oklch(0.912 0.007 265);
+  --border-strong: oklch(0.84 0.01 265);
 
-  --fg: oklch(0.22 0.01 270);
-  --fg-muted: oklch(0.42 0.012 270);
-  --fg-subtle: oklch(0.5 0.012 270);
+  --fg: oklch(0.2 0.018 265);
+  --fg-muted: oklch(0.43 0.016 265);
+  --fg-subtle: oklch(0.49 0.014 265);
 
-  --accent: oklch(0.52 0.2 268);
-  --accent-hover: oklch(0.47 0.2 268);
+  --accent: oklch(0.52 0.21 266);
+  --accent-hover: oklch(0.47 0.21 266);
   --accent-fg: oklch(0.99 0 0);
-  --accent-text: oklch(0.48 0.2 268);
-  --accent-subtle: oklch(0.95 0.03 268);
-  --focus-ring: oklch(0.6 0.19 268);
+  --accent-text: oklch(0.48 0.21 266);
+  --accent-subtle: oklch(0.95 0.03 266);
+  --accent-glow: oklch(0.62 0.2 266 / 0.16);
+  --focus-ring: oklch(0.6 0.19 266);
 
   --success: oklch(0.5 0.13 155);
   --warning: oklch(0.53 0.13 70);
@@ -34,29 +38,35 @@
   --danger-subtle: oklch(0.96 0.03 25);
   --info-subtle: oklch(0.96 0.025 240);
 
+  --shadow-card: 0 1px 2px oklch(0.25 0.03 265 / 0.06), 0 1px 1px oklch(0.25 0.03 265 / 0.03);
+  --shadow-raised:
+    0 6px 16px -4px oklch(0.25 0.03 265 / 0.12), 0 1px 2px oklch(0.25 0.03 265 / 0.06);
+  --highlight-top: inset 0 1px 0 oklch(1 0 0 / 0.18);
   --shadow-overlay:
     0 12px 32px -8px oklch(0.2 0.02 270 / 0.22), 0 2px 6px oklch(0.2 0.02 270 / 0.1);
 }
 
 .dark {
   color-scheme: dark;
-  --bg: oklch(0.175 0.006 270);
-  --surface-1: oklch(0.2 0.006 270);
-  --surface-2: oklch(0.228 0.007 270);
-  --surface-3: oklch(0.262 0.008 270);
-  --border: oklch(0.29 0.008 270);
-  --border-strong: oklch(0.36 0.01 270);
+  --bg: oklch(0.158 0.008 265);
+  --surface-sidebar: oklch(0.172 0.009 265);
+  --surface-1: oklch(0.196 0.01 265);
+  --surface-2: oklch(0.226 0.011 265);
+  --surface-3: oklch(0.262 0.012 265);
+  --border: oklch(0.276 0.011 265);
+  --border-strong: oklch(0.355 0.013 265);
 
-  --fg: oklch(0.95 0.003 270);
-  --fg-muted: oklch(0.76 0.008 270);
-  --fg-subtle: oklch(0.65 0.01 270);
+  --fg: oklch(0.96 0.004 265);
+  --fg-muted: oklch(0.77 0.01 265);
+  --fg-subtle: oklch(0.66 0.012 265);
 
-  --accent: oklch(0.56 0.19 268);
-  --accent-hover: oklch(0.61 0.18 268);
+  --accent: oklch(0.56 0.2 266);
+  --accent-hover: oklch(0.61 0.19 266);
   --accent-fg: oklch(0.99 0 0);
-  --accent-text: oklch(0.78 0.12 268);
-  --accent-subtle: oklch(0.27 0.05 268);
-  --focus-ring: oklch(0.7 0.16 268);
+  --accent-text: oklch(0.79 0.12 266);
+  --accent-subtle: oklch(0.27 0.06 266);
+  --accent-glow: oklch(0.56 0.2 266 / 0.22);
+  --focus-ring: oklch(0.7 0.16 266);
 
   --success: oklch(0.76 0.14 155);
   --warning: oklch(0.82 0.13 80);
@@ -67,6 +77,9 @@
   --danger-subtle: oklch(0.27 0.05 25);
   --info-subtle: oklch(0.26 0.035 235);
 
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.32), 0 0 0 0.5px oklch(0 0 0 / 0.2);
+  --shadow-raised: 0 10px 24px -6px oklch(0 0 0 / 0.5), 0 2px 4px oklch(0 0 0 / 0.3);
+  --highlight-top: inset 0 1px 0 oklch(1 0 0 / 0.045);
   --shadow-overlay: 0 16px 40px -8px oklch(0 0 0 / 0.55), 0 2px 8px oklch(0 0 0 / 0.35);
 }
 
@@ -74,13 +87,16 @@
   --font-sans:
     "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
     sans-serif;
+  --font-display:
+    "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --font-mono:
     "Cascadia Mono", "Cascadia Code", Consolas, "JetBrains Mono", "SF Mono", ui-monospace, monospace;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --duration-fast: 120ms;
   --duration-base: 180ms;
-  --sidebar-width: 232px;
-  --sidebar-width-collapsed: 56px;
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 60px;
 }

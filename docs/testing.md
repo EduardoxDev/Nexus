@@ -47,6 +47,15 @@ O Playwright conecta via `chromium.connectOverCDP` ao WebView2 real (sem navegad
 
 Limitação: o E2E depende do WebView2 e roda apenas no Windows; no Linux os testes são ignorados.
 
+## Capturas do README
+
+`e2e-screens/capture.spec.ts` abre o mesmo executável do E2E sobre uma cópia da fixture `saas-app`, preparada pela CLI (projeto indexado, ADRs importados, uma decisão confirmada), e grava as imagens de `docs/assets/` em 1440×900 nos temas escuro e claro. Não faz parte da suíte de testes:
+
+```bash
+corepack pnpm --filter @nexus/desktop e2e:build
+corepack pnpm --filter @nexus/desktop screens        # NEXUS_SCREENS_DIR muda a pasta de saída
+```
+
 ## Resultados registrados
 
 Execução local em 2026-10-12 (Fase 7): `cargo test --workspace` 208 testes, 0 falhas (+3 ignorados); clippy `-D warnings` sem avisos; Vitest 74/74; Playwright E2E 12/12; `scripts/demo.ps1` completo; instalador de release instalado e desinstalado em silêncio, com `nexus.exe` ao lado do app e sem resíduos. Inclui a queda real no meio da indexação (`killing_the_process_mid_index_leaves_a_consistent_database`: 4 000 arquivos, processo morto, `integrity_check` ok, reindexação igual a um índice limpo).

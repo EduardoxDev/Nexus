@@ -21,7 +21,7 @@ export function Header({ resolvedTheme, onToggleTheme }: HeaderProps) {
   const current = routeDef(route);
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-3">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur">
       <div className="flex items-center gap-0.5">
         <Tooltip content={`${t.nav.back} (Alt+←)`}>
           <Button
@@ -79,7 +79,7 @@ export function Header({ resolvedTheme, onToggleTheme }: HeaderProps) {
         type="button"
         onClick={() => setPaletteOpen(true)}
         aria-label={t.header.openPalette}
-        className="flex h-8 w-64 items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 text-sm text-fg-subtle transition-colors hover:border-border-strong hover:text-fg-muted"
+        className="flex h-9 w-72 items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-sm text-fg-subtle shadow-card transition-colors hover:border-border-strong hover:text-fg-muted"
       >
         <Search className="size-4" aria-hidden="true" />
         <span className="flex-1 text-left">{t.header.paletteHint}</span>

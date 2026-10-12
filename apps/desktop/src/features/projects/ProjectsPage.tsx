@@ -62,10 +62,12 @@ export function ProjectsPage() {
     <div className="flex h-full min-h-0">
       <aside
         aria-label={t.projects.listLabel}
-        className="flex w-72 shrink-0 flex-col border-r border-border bg-surface-1"
+        className="flex w-72 shrink-0 flex-col border-r border-border bg-surface-sidebar"
       >
         <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
-          <h1 className="text-base font-semibold">{t.nav.projects.label}</h1>
+          <h1 className="font-display text-lg font-semibold tracking-tight">
+            {t.nav.projects.label}
+          </h1>
           {projects.data && projects.data.length > 0 && (
             <Button
               size="sm"

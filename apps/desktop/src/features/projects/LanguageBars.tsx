@@ -28,9 +28,12 @@ export function LanguageBars({ languages }: { languages: LanguageStat[] }) {
                 <span className="font-mono">{formatBytes(l.bytes)}</span> · {detail}
               </span>
             </div>
-            <div className="mt-1 h-2 w-full" aria-hidden="true">
+            <div
+              className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-3"
+              aria-hidden="true"
+            >
               <div
-                className="h-2 rounded-r-[4px] bg-accent transition-opacity group-hover:opacity-80"
+                className="h-1.5 rounded-full bg-linear-to-r from-accent to-accent-hover transition-opacity group-hover:opacity-80"
                 style={{ width: `${Math.max(1, (l.bytes / max) * 100)}%` }}
               />
             </div>

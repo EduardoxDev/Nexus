@@ -1,4 +1,4 @@
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
 
 import { ROUTES, type RouteDef } from "@/app/routes";
 import logoUrl from "@/assets/nexus-icon-128.png";
@@ -20,25 +20,38 @@ export function Sidebar({ collapsed, onToggleCollapsed }: SidebarProps) {
     <nav
       aria-label="Navegação principal"
       className={cn(
-        "flex h-full shrink-0 flex-col border-r border-border bg-surface-1 transition-[width] duration-[var(--duration-base)]",
+        "flex h-full shrink-0 flex-col border-r border-border bg-surface-sidebar transition-[width] duration-[var(--duration-base)]",
         collapsed ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width)]",
       )}
     >
       <div
-        className={cn("flex h-12 items-center gap-2.5 px-4", collapsed && "justify-center px-0")}
+        className={cn("flex h-14 items-center gap-2.5 px-4", collapsed && "justify-center px-0")}
       >
         <Logo />
         {!collapsed && (
-          <span className="text-sm font-semibold tracking-[0.12em] text-fg">{t.app.name}</span>
+          <div className="min-w-0 leading-tight">
+            <p className="font-display text-sm font-bold tracking-[0.14em] text-fg">{t.app.name}</p>
+            <p className="truncate text-[11px] text-fg-subtle">{t.app.edition}</p>
+          </div>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-2 py-2">
+      <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-2.5 py-3">
         <NavGroup label={t.nav.sectionWorkspace} routes={workspace} collapsed={collapsed} />
         <NavGroup label={t.nav.sectionSystem} routes={system} collapsed={collapsed} />
       </div>
 
-      <div className={cn("border-t border-border p-2", collapsed && "flex justify-center")}>
+      {!collapsed && (
+        <div className="mx-2.5 mb-2 flex items-start gap-2.5 rounded-lg border border-border bg-surface-1 px-3 py-2.5 [box-shadow:var(--shadow-card)]">
+          <ShieldCheck className="mt-px size-4 shrink-0 text-success" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-fg">{t.nav.privacyTitle}</p>
+            <p className="text-[11px] leading-4 text-fg-subtle">{t.nav.privacyBody}</p>
+          </div>
+        </div>
+      )}
+
+      <div className={cn("border-t border-border p-2.5", collapsed && "flex justify-center")}>
         <Tooltip content={collapsed ? t.nav.expand : t.nav.collapse} side="right">
           <button
             type="button"
@@ -70,7 +83,11 @@ function NavGroup({
 }) {
   return (
     <div>
-      {!collapsed && <p className="px-2 pb-1 text-xs font-medium text-fg-subtle">{label}</p>}
+      {!collapsed && (
+        <p className="px-2.5 pb-1.5 text-[11px] font-semibold tracking-[0.08em] text-fg-subtle uppercase">
+          {label}
+        </p>
+      )}
       <ul className="flex flex-col gap-0.5">
         {routes.map((route) => (
           <li key={route.id}>
@@ -97,10 +114,10 @@ function NavItem({ route, collapsed }: { route: RouteDef; collapsed: boolean }) 
       aria-disabled={disabled || undefined}
       aria-label={collapsed ? route.label : undefined}
       className={cn(
-        "group relative flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors",
+        "group relative flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm transition-colors",
         collapsed && "justify-center px-0",
         active
-          ? "bg-accent-subtle font-medium text-fg"
+          ? "bg-surface-1 font-medium text-fg [box-shadow:var(--shadow-card)] ring-1 ring-border"
           : "text-fg-muted hover:bg-surface-2 hover:text-fg",
         disabled && "cursor-default text-fg-subtle hover:bg-transparent hover:text-fg-subtle",
       )}
@@ -108,7 +125,7 @@ function NavItem({ route, collapsed }: { route: RouteDef; collapsed: boolean }) 
       {active && (
         <span
           aria-hidden="true"
-          className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-accent"
+          className="absolute top-2 bottom-2 -left-2.5 w-[3px] rounded-r-full bg-accent"
         />
       )}
       <Icon
@@ -149,6 +166,12 @@ function NavItem({ route, collapsed }: { route: RouteDef; collapsed: boolean }) 
 
 function Logo() {
   return (
-    <img src={logoUrl} alt="" aria-hidden="true" className="size-6 shrink-0" draggable={false} />
+    <img
+      src={logoUrl}
+      alt=""
+      aria-hidden="true"
+      className="size-8 shrink-0 rounded-[9px] shadow-card"
+      draggable={false}
+    />
   );
 }

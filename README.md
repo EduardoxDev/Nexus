@@ -8,20 +8,26 @@ O NEXUS é um aplicativo desktop (Windows primeiro) que indexa os projetos que v
 
 > **Estado atual: Fases 0–7 concluídas.** Indexação incremental sem segredos nem binários, busca explicável em português ou inglês, Context Packs verificados por hash, memória do projeto confirmada por você, alertas de atualidade e contradições, análise de código (TS/JS, Python, Rust) com grafo de dependências, CLI e servidor MCP para agentes. **Pendentes:** assinatura de código e atualização automática — veja o [roadmap](docs/roadmap.md).
 
+![Visão geral do NEXUS: indicadores, projetos, operações e sistema](docs/assets/visao-geral-escuro.png)
+
 ![Busca com motivos de relevância e prévia verificada](docs/assets/busca-com-previa.png)
 
-![Context Pack com decisões, convenções e fontes](docs/assets/context-pack.png)
-
-![Visão geral do NEXUS no tema escuro](docs/assets/visao-geral-escuro.png)
+![Context Pack com arquivos, testes, decisões e fontes](docs/assets/context-pack.png)
 
 <table>
 <tr>
-<td><img src="docs/assets/visao-geral-claro.png" alt="Tema claro"></td>
-<td><img src="docs/assets/paleta-de-comandos.png" alt="Paleta de comandos (Ctrl+K)"></td>
+<td><img src="docs/assets/projeto.png" alt="Projeto indexado com estatísticas e linguagens"></td>
+<td><img src="docs/assets/memoria.png" alt="Memória do projeto com histórico de revisões"></td>
+</tr>
+<tr>
+<td><img src="docs/assets/integracoes.png" alt="Integrações: comando do Claude Code e configuração MCP"></td>
+<td><img src="docs/assets/paleta-de-comandos.png" alt="Paleta de comandos (Ctrl+K) no tema claro"></td>
 </tr>
 </table>
 
-_Capturas reais do executável, feitas via CDP sobre a fixture `tests/fixtures/saas-app`._
+![Visão geral no tema claro](docs/assets/visao-geral-claro.png)
+
+_Capturas reais do executável sobre a fixture `tests/fixtures/saas-app`, geradas por `corepack pnpm --filter @nexus/desktop screens` (Playwright via CDP; veja [testes](docs/testing.md#capturas-do-readme))._
 
 ## O que já funciona
 

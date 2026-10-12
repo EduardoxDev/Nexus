@@ -144,7 +144,7 @@ function EditorForm({
   };
 
   const field =
-    "rounded-md border border-border bg-surface-2 px-2 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none";
+    "rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg placeholder:text-fg-subtle";
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <DialogTitle className="pr-6 text-lg font-semibold">

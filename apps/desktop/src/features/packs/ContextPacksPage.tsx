@@ -84,10 +84,12 @@ export function ContextPacksPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      <aside className="flex w-80 shrink-0 flex-col border-r border-border bg-surface-1">
+      <aside className="flex w-80 shrink-0 flex-col border-r border-border bg-surface-sidebar">
         <form onSubmit={onSubmit} className="flex flex-col gap-3 border-b border-border p-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-base font-semibold">{t.packs.newTitle}</h1>
+            <h1 className="font-display text-lg font-semibold tracking-tight">
+              {t.packs.newTitle}
+            </h1>
           </div>
           <ProjectPicker />
           <label className="flex flex-col gap-1 text-xs text-fg-muted">
@@ -98,7 +100,7 @@ export function ContextPacksPage() {
               placeholder={t.packs.taskPlaceholder}
               maxLength={2000}
               rows={4}
-              className="resize-y rounded-md border border-border bg-surface-2 p-2 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+              className="resize-y rounded-lg border border-border bg-surface-1 shadow-card p-2 text-sm text-fg placeholder:text-fg-subtle"
             />
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -107,7 +109,7 @@ export function ContextPacksPage() {
               <select
                 value={budget}
                 onChange={(e) => setBudget(Number(e.target.value))}
-                className="h-8 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg"
+                className="h-9 rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg"
               >
                 {BUDGETS.map((b) => (
                   <option key={b} value={b}>
@@ -121,7 +123,7 @@ export function ContextPacksPage() {
               <select
                 value={maxFiles}
                 onChange={(e) => setMaxFiles(Number(e.target.value))}
-                className="h-8 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg"
+                className="h-9 rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg"
               >
                 {[6, 12, 20, 30].map((n) => (
                   <option key={n} value={n}>
@@ -453,7 +455,7 @@ function PackContent({ pack, onDeleted }: { pack: ContextPack; onDeleted: () => 
           maxLength={10000}
           rows={3}
           aria-label={t.packs.notes}
-          className="w-full resize-y rounded-md border border-border bg-surface-2 p-2 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+          className="w-full resize-y rounded-lg border border-border bg-surface-1 shadow-card p-2 text-sm text-fg placeholder:text-fg-subtle"
         />
       </Panel>
     </div>

@@ -53,7 +53,7 @@ export function FreshnessPage() {
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 px-6 py-5">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight">{s.title}</h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">{s.title}</h1>
             <p className="mt-0.5 text-sm text-fg-muted">{t.nav.freshness.description}</p>
             <p className="mt-1 text-xs text-fg-muted">
               {last
@@ -248,7 +248,7 @@ export function IssueCard({
               aria-label={s.dismissNote}
               maxLength={1000}
               autoFocus
-              className="h-7 w-64 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg focus:border-accent focus:outline-none"
+              className="h-9 w-64 rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg"
             />
             <Button size="sm" type="submit" disabled={dismiss.isPending}>
               {s.dismiss}

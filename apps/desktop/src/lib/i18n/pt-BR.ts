@@ -7,6 +7,7 @@ export const ptBR = {
     name: "NEXUS",
     tagline: "Camada de contexto local para engenharia de software",
     slogan: "Conectando ideias, criando o amanhã.",
+    edition: "Contexto local para IA",
   },
   nav: {
     overview: { label: "Visão geral", description: "Estado do sistema e próximos passos." },
@@ -36,6 +37,8 @@ export const ptBR = {
     phaseBadge: (phase: number) => `Fase ${phase}`,
     phaseTooltip: (phase: number) =>
       `Ainda não implementado. Previsto para a Fase ${phase} do roadmap.`,
+    privacyTitle: "100% local",
+    privacyBody: "Código, consultas e memória não saem desta máquina.",
     collapse: "Recolher barra lateral",
     expand: "Expandir barra lateral",
     back: "Voltar",
@@ -129,6 +132,33 @@ export const ptBR = {
       n === 1
         ? "1 operação interrompida anteriormente foi marcada como interrompida."
         : `${n} operações interrompidas anteriormente foram marcadas como interrompidas.`,
+    heroSearch: "Nova busca",
+    heroPack: "Compilar Context Pack",
+    heroAddProject: "Adicionar projeto",
+    heroLocal: "Somente local · sem telemetria",
+    projectReady: "Indexado",
+    projectIndexing: "Indexando",
+    projectMissing: "Pasta ausente",
+    kpiTitle: "Indicadores",
+    kpiProjects: "Projetos",
+    kpiProjectsHint: (indexing: number) =>
+      indexing > 0 ? `${indexing} indexando agora` : "Pastas autorizadas",
+    kpiFiles: "Arquivos indexados",
+    kpiFilesHint: (bytes: string, lines: string) => `${bytes} · ${lines} linhas`,
+    kpiMemory: "Memórias confirmadas",
+    kpiMemoryHint: (proposed: number) =>
+      proposed === 0
+        ? "Nenhuma proposta pendente"
+        : proposed === 1
+          ? "1 proposta aguardando revisão"
+          : `${proposed} propostas aguardando revisão`,
+    kpiAlerts: "Alertas abertos",
+    kpiAlertsHint: (contradictions: number) =>
+      contradictions === 0
+        ? "Sem contradições"
+        : contradictions === 1
+          ? "1 contradição a revisar"
+          : `${contradictions} contradições a revisar`,
     stepsTitle: "Como usar o NEXUS",
     stepsDescription: "Do projeto autorizado ao contexto entregue a você e aos agentes.",
     steps: [

@@ -62,7 +62,9 @@ export function SearchPage() {
         <div className="border-b border-border px-6 pt-5 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">{t.nav.search.label}</h1>
+              <h1 className="font-display text-2xl font-semibold tracking-tight">
+                {t.nav.search.label}
+              </h1>
               <p className="mt-0.5 text-sm text-fg-muted">{t.nav.search.description}</p>
             </div>
             <ProjectPicker />
@@ -70,7 +72,7 @@ export function SearchPage() {
           <form onSubmit={onSubmit} role="search" className="mt-4 flex gap-2">
             <div className="relative flex-1">
               <SearchIcon
-                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-fg-subtle"
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle"
                 aria-hidden="true"
               />
               <input
@@ -81,12 +83,13 @@ export function SearchPage() {
                 placeholder={t.searchPage.placeholder}
                 aria-label={t.searchPage.placeholder}
                 maxLength={500}
-                className="h-9 w-full rounded-md border border-border bg-surface-2 pr-3 pl-8 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+                className="h-10 w-full rounded-lg border border-border bg-surface-1 pr-3 pl-9 text-sm text-fg shadow-card placeholder:text-fg-subtle"
               />
             </div>
             <Button
               type="submit"
               variant="primary"
+              size="lg"
               disabled={projectId === null || search.isFetching}
             >
               {search.isFetching ? t.searchPage.searching : t.searchPage.submit}

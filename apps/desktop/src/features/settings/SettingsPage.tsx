@@ -65,7 +65,7 @@ function NativeSelect({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
-      className="h-8 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg hover:border-border-strong disabled:opacity-50"
+      className="h-9 rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg hover:border-border-strong disabled:opacity-50"
     >
       {all.map((o) => (
         <option key={o.value} value={o.value}>

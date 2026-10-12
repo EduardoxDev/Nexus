@@ -1,4 +1,5 @@
 import {
+  FolderGit2,
   FolderOpen,
   Pause,
   Play,
@@ -74,15 +75,25 @@ function ProjectDetailView({ overview }: { overview: ProjectOverview }) {
   const controlError = control.start.error ?? control.pause.error ?? control.cancel.error;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-5 px-6 py-5">
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-8 pt-7 pb-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="truncate text-xl font-semibold tracking-tight">{project.name}</h2>
-          <div className="mt-0.5 flex items-center gap-1">
-            <code className="selectable truncate font-mono text-xs text-fg-muted">
-              {project.rootPath}
-            </code>
-            <CopyButton value={project.rootPath} />
+        <div className="flex min-w-0 items-center gap-4">
+          <span
+            className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent-subtle text-accent-text ring-1 ring-accent/20"
+            aria-hidden="true"
+          >
+            <FolderGit2 className="size-6" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-2xl font-semibold tracking-tight">
+              {project.name}
+            </h2>
+            <div className="mt-0.5 flex items-center gap-1">
+              <code className="selectable truncate font-mono text-xs text-fg-muted">
+                {project.rootPath}
+              </code>
+              <CopyButton value={project.rootPath} />
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -181,7 +192,7 @@ function ProjectDetailView({ overview }: { overview: ProjectOverview }) {
         </p>
       )}
 
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border [box-shadow:var(--shadow-card)] lg:grid-cols-4">
         <Stat label={t.projects.stats.indexed} value={formatInteger(counts.indexed)} />
         <Stat label={t.projects.stats.skipped} value={formatInteger(counts.skipped)} />
         <Stat
@@ -287,12 +298,18 @@ function Stat({
   title?: string | undefined;
 }) {
   return (
-    <div className="bg-surface-1 px-4 py-3" title={title}>
-      <dt className="text-xs text-fg-muted">{label}</dt>
+    <div className="bg-surface-1 px-5 py-3.5" title={title}>
+      <dt className="text-[11px] font-semibold tracking-[0.06em] text-fg-subtle uppercase">
+        {label}
+      </dt>
       <dd
         className={
           (tone === "danger" ? "text-danger " : "text-fg ") +
-          (mono ? "mt-0.5 truncate font-mono text-sm" : "mt-0.5 truncate text-lg font-semibold")
+          (mono
+            ? "mt-1 truncate font-mono text-sm"
+            : /^[\d.,\s]+[A-Za-z]*$/.test(value)
+              ? "mt-1 truncate font-display text-xl font-semibold tabular-nums"
+              : "mt-1 truncate font-display text-lg font-semibold")
         }
       >
         {value}

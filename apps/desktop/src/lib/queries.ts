@@ -1,5 +1,5 @@
 /** Hooks TanStack Query sobre os comandos do core. Chaves centralizadas para invalidação. */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type {
   ContextPackRequest,
@@ -363,6 +363,30 @@ export function useFreshnessSummary(projectId: number | null) {
     queryFn: () => call("get_freshness_summary", { projectId: projectId ?? -1 }),
     enabled: projectId !== null,
   });
+}
+
+/** Totais de memória e de alertas somados sobre os projetos indicados (Visão geral). */
+export function useWorkspaceTotals(projectIds: number[]) {
+  const memory = useQueries({
+    queries: projectIds.map((projectId) => ({
+      queryKey: memoryKeys.counts(projectId),
+      queryFn: () => call("get_memory_counts", { projectId }),
+    })),
+  });
+  const freshness = useQueries({
+    queries: projectIds.map((projectId) => ({
+      queryKey: freshnessKeys.summary(projectId),
+      queryFn: () => call("get_freshness_summary", { projectId }),
+    })),
+  });
+  const ready = memory.every((q) => q.data) && freshness.every((q) => q.data);
+  if (!ready) return null;
+  return {
+    confirmed: memory.reduce((n, q) => n + (q.data?.confirmed ?? 0), 0),
+    proposed: memory.reduce((n, q) => n + (q.data?.proposed ?? 0), 0),
+    openIssues: freshness.reduce((n, q) => n + (q.data?.open ?? 0), 0),
+    contradictions: freshness.reduce((n, q) => n + (q.data?.contradictions ?? 0), 0),
+  };
 }
 
 export function useFreshnessMutations() {

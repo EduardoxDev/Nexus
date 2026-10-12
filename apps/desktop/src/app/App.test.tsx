@@ -81,6 +81,72 @@ describe("shell do app", () => {
     );
   });
 
+  it("indicadores da Visão geral somam os dados reais de todos os projetos", async () => {
+    const user = userEvent.setup();
+    const project = (id: number, name: string) => ({
+      project: {
+        id,
+        name,
+        rootPath: `C:\\repos\\${name}`,
+        createdAt: 0,
+        lastOpenedAt: 0,
+        lastIndexedAt: Date.now() - 60_000,
+        indexGeneration: 1,
+        headRef: null,
+        headCommit: null,
+      },
+      rootExists: true,
+      counts: {
+        total: 14,
+        indexed: 13,
+        skipped: 1,
+        failed: 0,
+        indexedBytes: 2048,
+        indexedLines: 100,
+      },
+      activeJob: null,
+      lastJob: null,
+    });
+    setupIpc({
+      list_projects: () => [project(1, "loja"), project(2, "api")],
+      get_memory_counts: (args) =>
+        args.projectId === 1
+          ? { proposed: 1, confirmed: 2, archived: 0, superseded: 0 }
+          : { proposed: 0, confirmed: 3, archived: 4, superseded: 0 },
+      get_freshness_summary: (args) => ({
+        projectId: args.projectId as number,
+        lastScan: null,
+        scanOutdated: false,
+        open: args.projectId === 1 ? 3 : 1,
+        warnings: 0,
+        needsReview: 0,
+        contradictions: args.projectId === 1 ? 1 : 0,
+        dismissed: 0,
+        byKind: [],
+      }),
+    });
+    renderApp();
+
+    const region = await screen.findByRole("region", { name: "Indicadores" });
+    const kpi = (name: RegExp) => within(region).getByRole("button", { name });
+    await waitFor(() => expect(kpi(/^Projetos/)).toHaveTextContent("2"));
+    expect(kpi(/^Arquivos indexados/)).toHaveTextContent("26");
+    expect(kpi(/^Arquivos indexados/)).toHaveTextContent("200 linhas");
+    await waitFor(() => expect(kpi(/^Memórias confirmadas/)).toHaveTextContent("5"));
+    expect(kpi(/^Memórias confirmadas/)).toHaveTextContent("1 proposta aguardando revisão");
+    expect(kpi(/^Alertas abertos/)).toHaveTextContent("4");
+    expect(kpi(/^Alertas abertos/)).toHaveTextContent("1 contradição a revisar");
+
+    await user.click(kpi(/^Alertas abertos/));
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" });
+    await waitFor(() =>
+      expect(within(nav).getByRole("button", { name: /Atualidade/ })).toHaveAttribute(
+        "aria-current",
+        "page",
+      ),
+    );
+  });
+
   it("navega para o Diagnóstico e mostra migrations reais do contrato", async () => {
     const user = userEvent.setup();
     setupIpc();

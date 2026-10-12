@@ -92,9 +92,9 @@ export function MemoryPage() {
   const report = importAdrs.data;
   return (
     <div className="flex h-full min-h-0">
-      <aside className="flex w-80 shrink-0 flex-col border-r border-border bg-surface-1">
+      <aside className="flex w-80 shrink-0 flex-col border-r border-border bg-surface-sidebar">
         <div className="flex flex-col gap-3 border-b border-border p-3">
-          <h1 className="text-base font-semibold">{t.memory.title}</h1>
+          <h1 className="font-display text-lg font-semibold tracking-tight">{t.memory.title}</h1>
           <ProjectPicker />
           <div className="flex gap-2">
             <Button
@@ -137,13 +137,13 @@ export function MemoryPage() {
             onChange={(e) => setText(e.target.value)}
             placeholder={t.memory.searchPlaceholder}
             aria-label={t.memory.searchPlaceholder}
-            className="h-8 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
+            className="h-9 rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg placeholder:text-fg-subtle"
           />
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value as MemoryKind | "all")}
             aria-label={t.memory.editor.kind}
-            className="h-8 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg"
+            className="h-9 rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg"
           >
             <option value="all">{t.memory.allKinds}</option>
             {MEMORY_KINDS.map((k) => (

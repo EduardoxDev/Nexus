@@ -6,6 +6,7 @@
 
 @theme inline {
   --color-bg: var(--bg);
+  --color-surface-sidebar: var(--surface-sidebar);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -19,6 +20,7 @@
   --color-accent-fg: var(--accent-fg);
   --color-accent-text: var(--accent-text);
   --color-accent-subtle: var(--accent-subtle);
+  --color-accent-glow: var(--accent-glow);
   --color-focus: var(--focus-ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
@@ -30,13 +32,17 @@
   --color-info-subtle: var(--info-subtle);
 
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
   --font-mono: var(--font-mono);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 
   --shadow-overlay: var(--shadow-overlay);
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
 
   /* Escala tipográfica: 12 / 13 (corpo) / 14 / 16 / 20 / 24 */
   --text-xs: 12px;
@@ -51,6 +57,8 @@
   --text-xl--line-height: 28px;
   --text-2xl: 24px;
   --text-2xl--line-height: 32px;
+  --text-3xl: 28px;
+  --text-3xl--line-height: 36px;
 }
 
 @keyframes nexus-indeterminate {
@@ -81,6 +89,7 @@
     font-size: 13px;
     line-height: 20px;
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv11", "ss01";
     overflow: hidden;
     user-select: none;
   }
@@ -127,5 +136,44 @@
   [data-reduced-motion="true"] *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+@layer base {
+  /* Campos: seta própria nos selects e halo do acento no foco (no lugar do contorno). */
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238a90a0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+    padding-right: 28px !important;
+  }
+
+  input:not([type="checkbox"], [type="radio"]):focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  /* Tabelas: cabeçalho em versalete discreto, linhas com realce ao passar o mouse. */
+  thead th {
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-subtle);
+  }
+  tbody tr {
+    transition: background-color var(--duration-fast);
+  }
+  tbody tr:hover {
+    background: color-mix(in oklch, var(--surface-2) 60%, transparent);
+  }
+
+  .font-display {
+    letter-spacing: -0.015em;
   }
 }

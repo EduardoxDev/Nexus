@@ -25,7 +25,7 @@ export function ProjectPicker() {
       <select
         value={selected ?? ""}
         onChange={(e) => selectProject(Number(e.target.value))}
-        className="h-8 max-w-56 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg hover:border-border-strong"
+        className="h-9 max-w-56 rounded-lg border border-border bg-surface-1 shadow-card px-2.5 text-sm text-fg hover:border-border-strong"
       >
         {projects.data.map((p) => (
           <option key={p.project.id} value={p.project.id}>

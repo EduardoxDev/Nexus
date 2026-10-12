@@ -52,7 +52,7 @@ export function StatusBar() {
   }
 
   return (
-    <footer className="flex h-7 shrink-0 items-center gap-4 border-t border-border bg-surface-1 px-3 text-xs text-fg-muted">
+    <footer className="flex h-7 shrink-0 items-center gap-4 border-t border-border bg-surface-sidebar px-4 text-xs text-fg-muted">
       <span className="flex items-center gap-1.5">
         <StatusDot tone={db.tone} />
         {db.label}

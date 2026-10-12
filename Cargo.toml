@@ -38,7 +38,7 @@ tauri = { version = "2.12", features = [] }
 tauri-build = { version = "2.7", features = [] }
 tauri-plugin-dialog = "2.8"
 tauri-plugin-single-instance = "2.5"
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_System_LibraryLoader", "Win32_UI_WindowsAndMessaging"] }
 tauri-plugin-window-state = "2.5"
 
 tempfile = "3.27"

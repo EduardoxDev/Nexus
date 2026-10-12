@@ -17,7 +17,7 @@ Resumo; o detalhamento, com ameaças e testes, está no [modelo de ameaças](doc
 - **Projetos autorizados**: só pastas escolhidas pelo usuário; links e junctions nunca são seguidos, nem na indexação nem nas releituras; segredos e arquivos sensíveis não têm conteúdo indexado nem exibido, inclusive quando aparecem depois da indexação.
 - **Agentes (MCP)**: escopo restrito aos projetos autorizados, sem escrita em arquivos de projeto, conteúdo devolvido marcado como dado (não instrução), auditoria de cada chamada sem registrar argumentos.
 - **Cadeia de suprimentos**: `Cargo.lock` e `pnpm-lock.yaml` versionados; CI com `cargo deny` (RustSec, licenças, origens), `pnpm audit`, CodeQL e Dependabot.
-- **Código nativo**: `unsafe` proibido em todo o workspace, com uma única exceção documentada (cor da barra de título via DWM, `apps/desktop/src-tauri/src/chrome.rs`).
+- **Código nativo**: `unsafe` proibido em todo o workspace, com uma única exceção documentada: a moldura da janela (cor da barra de título via DWM e ícone da barra de tarefas), isolada em `apps/desktop/src-tauri/src/chrome.rs`.
 
 ## Pendências conhecidas
 

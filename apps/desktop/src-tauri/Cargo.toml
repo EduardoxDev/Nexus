@@ -34,7 +34,7 @@ windows-sys.workspace = true
 tempfile.workspace = true
 
 # Mesmas regras do workspace, exceto `unsafe_code`: aqui é `deny` (não `forbid`) para permitir
-# a única chamada FFI do app, marcada com `#[allow(unsafe_code)]` em src/chrome.rs.
+# as chamadas FFI da moldura da janela, marcadas com `#[allow(unsafe_code)]` em src/chrome.rs.
 [lints.rust]
 unsafe_code = "deny"
 unused_must_use = "deny"

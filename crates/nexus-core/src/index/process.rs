@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use crate::analysis::{self, FileAnalysis};
 use crate::chunk::{self, Chunk};
 use crate::classify::{self, FileKind};
 use crate::scan::{FileEntry, mtime_ns};
@@ -42,6 +43,8 @@ pub enum Outcome {
         line_count: i64,
         chunks: Vec<Chunk>,
         bytes_read: u64,
+        /// Símbolos e imports, para linguagens com analisador.
+        analysis: Option<FileAnalysis>,
     },
     Skipped {
         status: SkipStatus,
@@ -68,7 +71,7 @@ pub fn process(root: &Path, entry: &FileEntry, max_file_size: u64) -> Processed 
         language: classify::language(&entry.rel_path),
         kind: classify::kind(&entry.rel_path),
     };
-    let outcome = outcome(root, entry, max_file_size);
+    let outcome = outcome(root, entry, max_file_size, meta.language);
     Processed {
         entry: entry.clone(),
         meta,
@@ -76,7 +79,7 @@ pub fn process(root: &Path, entry: &FileEntry, max_file_size: u64) -> Processed 
     }
 }
 
-fn outcome(root: &Path, entry: &FileEntry, max_file_size: u64) -> Outcome {
+fn outcome(root: &Path, entry: &FileEntry, max_file_size: u64, language: Option<&str>) -> Outcome {
     if let Some(m) = sensitive::check_name(&entry.rel_path) {
         return Outcome::Skipped {
             status: SkipStatus::Sensitive,
@@ -153,6 +156,7 @@ fn outcome(root: &Path, entry: &FileEntry, max_file_size: u64) -> Outcome {
         line_count: chunk::line_count(&text),
         chunks: chunk::chunk_lines(&text),
         bytes_read,
+        analysis: analysis::analyze(language, &text),
     }
 }
 

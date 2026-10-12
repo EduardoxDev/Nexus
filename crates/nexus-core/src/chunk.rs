@@ -2,8 +2,9 @@
 
 use std::collections::BTreeSet;
 
-/// Versão do indexador (chunking + texto do FTS). Mudou ⇒ arquivos são reprocessados.
-pub const INDEXER_VERSION: i64 = 1;
+/// Versão do indexador (chunking + texto do FTS + análise de código). Mudou ⇒ arquivos são
+/// reprocessados. 2: símbolos e imports (Fase 6).
+pub const INDEXER_VERSION: i64 = 2;
 
 const MAX_CHUNK_LINES: usize = 60;
 const MAX_CHUNK_BYTES: usize = 8 * 1024;

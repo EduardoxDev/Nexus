@@ -336,6 +336,13 @@ impl Runner<'_> {
         self.job.removed = count(removed.len());
         self.job.renamed = renamed;
         self.job.generation = Some(generation);
+        // 6. Grafo de dependências: resolvido de novo quando o índice mudou (ou nunca foi feito).
+        if self
+            .db
+            .read(|c| crate::analysis::graph::needs_rebuild(c, project_id, generation))?
+        {
+            crate::analysis::graph::rebuild(self.db, project_id, &root, generation)?;
+        }
         Ok(())
     }
 
@@ -364,9 +371,18 @@ impl Runner<'_> {
                         line_count,
                         chunks,
                         bytes_read,
+                        analysis,
                     } => {
                         stats.bytes_read += i64::try_from(*bytes_read).unwrap_or(i64::MAX);
-                        if ensure_content(&tx, project_id, hash, *line_count, chunks, now)? {
+                        if ensure_content(
+                            &tx,
+                            project_id,
+                            hash,
+                            *line_count,
+                            chunks,
+                            analysis.as_ref(),
+                            now,
+                        )? {
                             stats.new_contents += 1;
                         } else {
                             stats.reused_contents += 1;
@@ -476,6 +492,7 @@ fn ensure_content(
     hash: &str,
     line_count: i64,
     chunks: &[Chunk],
+    analysis: Option<&crate::analysis::FileAnalysis>,
     now: i64,
 ) -> Result<bool> {
     let existing: Option<i64> = tx
@@ -530,6 +547,9 @@ fn ensure_content(
         ])?;
         let id = tx.last_insert_rowid();
         insert_fts.execute(params![id, chunk::fts_body(&c.text)])?;
+    }
+    if let Some(a) = analysis {
+        crate::analysis::graph::store_analysis(tx, project_id, hash, a)?;
     }
     Ok(true)
 }

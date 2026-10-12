@@ -1,0 +1,224 @@
+{
+  "description": "Respostas esperadas dos analisadores (Fase 6), conferidas à mão lendo cada arquivo das fixtures. Escopo = cobertura declarada em crates/nexus-core/src/analysis/mod.rs: declarações de nível superior e métodos de classe/impl/trait; métodos de objetos literais, funções aninhadas e membros de interface não contam. Símbolo: [nome, tipo, linha] ou [nome, tipo, linha, contêiner]. Import: [linha, especificador, destino], destino = caminho no projeto ou 'ext:pacote'. Arquivos analisáveis ausentes da lista esperam zero símbolos e zero imports.",
+  "fixtures": {
+    "saas-app": {
+      "src/auth/oauth/github.ts": {
+        "symbols": [["AUTHORIZE_URL", "const", 3], ["githubProvider", "const", 5]],
+        "imports": [[1, "./provider", "src/auth/oauth/provider.ts"]]
+      },
+      "src/auth/oauth/provider.ts": {
+        "symbols": [["OAuthProvider", "interface", 2], ["providers", "const", 9], ["registerProvider", "function", 11]],
+        "imports": []
+      },
+      "src/auth/password.ts": {
+        "symbols": [["scryptAsync", "const", 4], ["hashPassword", "function", 7], ["verifyPassword", "function", 13]],
+        "imports": [[1, "node:crypto", "ext:node:crypto"], [2, "node:util", "ext:node:util"]]
+      },
+      "src/auth/session.ts": {
+        "symbols": [["Session", "interface", 6], ["createSession", "function", 13], ["validateSession", "function", 25], ["revokeSession", "function", 36]],
+        "imports": [[1, "node:crypto", "ext:node:crypto"], [3, "../config", "src/config/index.ts"], [4, "../db/client", "src/db/client.ts"]]
+      },
+      "src/billing/invoices.ts": {
+        "symbols": [["Invoice", "interface", 4], ["invoiceNumber", "function", 11], ["createInvoice", "function", 15]],
+        "imports": [[1, "../db/client", "src/db/client.ts"], [2, "../utils/money", "src/utils/money.ts"]]
+      },
+      "src/billing/stripeClient.ts": {
+        "symbols": [["client", "variable", 6], ["stripe", "function", 8], ["createCharge", "function", 14]],
+        "imports": [[1, "stripe", "ext:stripe"], [3, "../config", "src/config/index.ts"], [4, "../utils/errors", "src/utils/errors.ts"]]
+      },
+      "src/billing/subscriptions.ts": {
+        "symbols": [["Plan", "type", 4], ["PLAN_PRICES_CENTS", "const", 6], ["changePlan", "function", 9]],
+        "imports": [[1, "../db/client", "src/db/client.ts"], [2, "../utils/errors", "src/utils/errors.ts"]]
+      },
+      "src/checkout/cart.ts": {
+        "symbols": [["CartItem", "interface", 3], ["cartSubtotal", "function", 9]],
+        "imports": [[1, "../utils/money", "src/utils/money.ts"]]
+      },
+      "src/checkout/checkout.ts": {
+        "symbols": [["checkout", "function", 9]],
+        "imports": [
+          [1, "../billing/stripeClient", "src/billing/stripeClient.ts"],
+          [2, "../billing/invoices", "src/billing/invoices.ts"],
+          [3, "../notifications/email", "src/notifications/email.ts"],
+          [4, "../orders/orderRepository", "src/orders/orderRepository.ts"],
+          [5, "./cart", "src/checkout/cart.ts"],
+          [6, "./shipping", "src/checkout/shipping.ts"]
+        ]
+      },
+      "src/checkout/discounts.ts": {
+        "symbols": [["Coupon", "interface", 4], ["coupons", "const", 10], ["applyCoupon", "function", 13], ["registerCoupon", "function", 20]],
+        "imports": [[1, "../utils/errors", "src/utils/errors.ts"], [2, "../utils/money", "src/utils/money.ts"]]
+      },
+      "src/checkout/shipping.ts": {
+        "symbols": [["shippingCost", "function", 4]],
+        "imports": [[1, "../utils/money", "src/utils/money.ts"]]
+      },
+      "src/config/index.ts": {
+        "symbols": [["AppConfig", "interface", 2], ["required", "function", 9], ["loadConfig", "function", 15]],
+        "imports": []
+      },
+      "src/db/client.ts": {
+        "symbols": [["pool", "variable", 5], ["db", "function", 8]],
+        "imports": [[1, "pg", "ext:pg"], [3, "../config", "src/config/index.ts"]]
+      },
+      "src/notifications/email.ts": {
+        "symbols": [["transport", "const", 7], ["sendOrderConfirmation", "function", 10]],
+        "imports": [[1, "nodemailer", "ext:nodemailer"], [3, "../config", "src/config/index.ts"], [4, "../utils/logger", "src/utils/logger.ts"], [5, "./templates", "src/notifications/templates.ts"]]
+      },
+      "src/notifications/templates.ts": {
+        "symbols": [["orderConfirmationTemplate", "function", 3]],
+        "imports": [[1, "../utils/money", "src/utils/money.ts"]]
+      },
+      "src/orders/orderRepository.ts": {
+        "symbols": [["Order", "interface", 6], ["saveOrder", "function", 13], ["listOrders", "function", 26]],
+        "imports": [[1, "node:crypto", "ext:node:crypto"], [3, "../db/client", "src/db/client.ts"], [4, "../checkout/cart", "src/checkout/cart.ts"]]
+      },
+      "src/server/app.ts": {
+        "symbols": [["Route", "interface", 7], ["createApp", "function", 14]],
+        "imports": [
+          [1, "./routes/auth.routes", "src/server/routes/auth.routes.ts"],
+          [2, "./routes/billing.routes", "src/server/routes/billing.routes.ts"],
+          [3, "./routes/orders.routes", "src/server/routes/orders.routes.ts"],
+          [4, "./middleware/rateLimit", "src/server/middleware/rateLimit.ts"],
+          [5, "../utils/logger", "src/utils/logger.ts"]
+        ]
+      },
+      "src/server/middleware/rateLimit.ts": {
+        "symbols": [["WINDOW_MS", "const", 1], ["MAX_REQUESTS", "const", 2], ["hits", "const", 3], ["rateLimit", "function", 6]],
+        "imports": []
+      },
+      "src/server/middleware/requireSession.ts": {
+        "symbols": [["requireSession", "function", 4]],
+        "imports": [[1, "../../auth/session", "src/auth/session.ts"]]
+      },
+      "src/server/routes/auth.routes.ts": {
+        "symbols": [["authRoutes", "const", 7]],
+        "imports": [
+          [1, "../../auth/password", "src/auth/password.ts"],
+          [2, "../../auth/oauth/provider", "src/auth/oauth/provider.ts"],
+          [3, "../../auth/session", "src/auth/session.ts"],
+          [4, "../../db/client", "src/db/client.ts"],
+          [5, "../app", "src/server/app.ts"]
+        ]
+      },
+      "src/server/routes/billing.routes.ts": {
+        "symbols": [["billingRoutes", "const", 5]],
+        "imports": [[1, "../../billing/subscriptions", "src/billing/subscriptions.ts"], [2, "../middleware/requireSession", "src/server/middleware/requireSession.ts"], [3, "../app", "src/server/app.ts"]]
+      },
+      "src/server/routes/orders.routes.ts": {
+        "symbols": [["orderRoutes", "const", 6]],
+        "imports": [[1, "../../checkout/checkout", "src/checkout/checkout.ts"], [2, "../../orders/orderRepository", "src/orders/orderRepository.ts"], [3, "../middleware/requireSession", "src/server/middleware/requireSession.ts"], [4, "../app", "src/server/app.ts"]]
+      },
+      "src/utils/errors.ts": {
+        "symbols": [["DomainError", "class", 1]],
+        "imports": []
+      },
+      "src/utils/logger.ts": {
+        "symbols": [["Level", "type", 1], ["log", "function", 4]],
+        "imports": []
+      },
+      "src/utils/money.ts": {
+        "symbols": [["Cents", "type", 2], ["formatCents", "function", 4], ["percentOf", "function", 8]],
+        "imports": []
+      },
+      "src/web/components/CheckoutPage.tsx": {
+        "symbols": [["CheckoutPage", "function", 5]],
+        "imports": [[1, "../../checkout/cart", "src/checkout/cart.ts"], [2, "./PriceTag", "src/web/components/PriceTag.tsx"]]
+      },
+      "src/web/components/LoginForm.tsx": {
+        "symbols": [["LoginForm", "function", 4]],
+        "imports": [[1, "react", "ext:react"]]
+      },
+      "src/web/components/PriceTag.tsx": {
+        "symbols": [["PriceTag", "function", 3]],
+        "imports": [[1, "../../utils/money", "src/utils/money.ts"]]
+      },
+      "src/web/hooks/useSession.ts": {
+        "symbols": [["useSession", "function", 4]],
+        "imports": [[1, "react", "ext:react"]]
+      },
+      "tests/auth/password.test.ts": {
+        "symbols": [],
+        "imports": [[1, "vitest", "ext:vitest"], [3, "../../src/auth/password", "src/auth/password.ts"]]
+      },
+      "tests/auth/session.test.ts": {
+        "symbols": [],
+        "imports": [[1, "vitest", "ext:vitest"], [3, "../../src/auth/session", "src/auth/session.ts"]]
+      },
+      "tests/billing/invoices.test.ts": {
+        "symbols": [],
+        "imports": [[1, "vitest", "ext:vitest"], [3, "../../src/billing/invoices", "src/billing/invoices.ts"]]
+      },
+      "tests/checkout/checkout.test.ts": {
+        "symbols": [],
+        "imports": [[1, "vitest", "ext:vitest"], [3, "../../src/checkout/checkout", "src/checkout/checkout.ts"]]
+      },
+      "tests/checkout/discounts.test.ts": {
+        "symbols": [],
+        "imports": [[1, "vitest", "ext:vitest"], [3, "../../src/checkout/discounts", "src/checkout/discounts.ts"]]
+      }
+    },
+    "ts-webapp": {
+      "src/auth/login.ts": {
+        "symbols": [["credentialsSchema", "const", 5], ["UserRepository", "interface", 10], ["loginWithPassword", "function", 16]],
+        "imports": [[1, "zod", "ext:zod"], [3, "./session", "src/auth/session.ts"]]
+      },
+      "src/auth/session.ts": {
+        "symbols": [["Session", "interface", 3], ["SESSION_TTL_MS", "const", 9], ["sessions", "const", 10], ["createSession", "function", 13], ["validateSession", "function", 20], ["revokeSession", "function", 29]],
+        "imports": [[1, "node:crypto", "ext:node:crypto"]]
+      },
+      "src/checkout/cart.ts": {
+        "symbols": [["CartItem", "interface", 1], ["cartTotalCents", "function", 7], ["addItem", "function", 11]],
+        "imports": []
+      },
+      "src/checkout/payment.test.ts": {
+        "symbols": [],
+        "imports": [[1, "vitest", "ext:vitest"], [3, "./payment", "src/checkout/payment.ts"]]
+      },
+      "src/checkout/payment.ts": {
+        "symbols": [["PaymentGateway", "interface", 3], ["PaymentError", "class", 7], ["checkoutCart", "function", 10]],
+        "imports": [[1, "./cart", "src/checkout/cart.ts"]]
+      },
+      "src/components/Button.tsx": {
+        "symbols": [["Button", "function", 3]],
+        "imports": [[1, "react", "ext:react"]]
+      }
+    },
+    "py-service": {
+      "app/payments/__init__.py": {
+        "symbols": [],
+        "imports": [[1, ".service", "app/payments/service.py"]]
+      },
+      "app/payments/gateway.py": {
+        "symbols": [["GatewayError", "class", 4], ["HttpGateway", "class", 8], ["__init__", "method", 9, "HttpGateway"], ["charge", "method", 13, "HttpGateway"]],
+        "imports": [[1, "httpx", "ext:httpx"]]
+      },
+      "app/payments/service.py": {
+        "symbols": [["MAX_RETRY_COUNT", "const", 5], ["ChargeResult", "class", 9], ["PaymentService", "class", 14], ["__init__", "method", 15, "PaymentService"], ["charge_with_retry", "method", 18, "PaymentService"]],
+        "imports": [[1, "dataclasses", "ext:dataclasses"], [3, ".gateway", "app/payments/gateway.py"]]
+      },
+      "tests/test_payments.py": {
+        "symbols": [["FlakyGateway", "class", 7], ["__init__", "method", 8, "FlakyGateway"], ["charge", "method", 11, "FlakyGateway"], ["test_charge_retries_until_success", "function", 18], ["test_rejects_non_positive_amount", "function", 24]],
+        "imports": [[1, "pytest", "ext:pytest"], [3, "app.payments.gateway", "app/payments/gateway.py"], [4, "app.payments.service", "app/payments/service.py"]]
+      }
+    },
+    "rust-lib": {
+      "src/config.rs": {
+        "symbols": [["Config", "struct", 6], ["from_str", "method", 11, "Config"], ["get", "method", 23, "Config"]],
+        "imports": [[1, "std::collections::BTreeMap", "ext:std"], [3, "crate::parser::parse_line", "src/parser.rs"], [3, "crate::parser::Line", "src/parser.rs"], [3, "crate::parser::ParseError", "src/parser.rs"]]
+      },
+      "src/lib.rs": {
+        "symbols": [],
+        "imports": [[3, "config", "src/config.rs"], [4, "parser", "src/parser.rs"], [6, "config::Config", "src/config.rs"]]
+      },
+      "src/parser.rs": {
+        "symbols": [["Line", "enum", 3], ["ParseError", "struct", 10], ["parse_line", "function", 15]],
+        "imports": []
+      },
+      "tests/parser.rs": {
+        "symbols": [["parses_pairs_and_ignores_comments", "function", 4], ["rejects_duplicate_keys", "function", 10]],
+        "imports": [[1, "tinyconf::Config", "src/lib.rs"]]
+      }
+    }
+  }
+}

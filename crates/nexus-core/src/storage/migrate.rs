@@ -48,6 +48,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "memory_freshness",
         sql: include_str!("migrations/0004_memory_freshness.sql"),
     },
+    Migration {
+        version: 5,
+        name: "analysis",
+        sql: include_str!("migrations/0005_analysis.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {

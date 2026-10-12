@@ -1,5 +1,6 @@
 //! Núcleo do NEXUS. Toda a lógica de negócio vive aqui; desktop, CLI e MCP são adaptadores finos.
 
+pub mod analysis;
 pub mod chunk;
 pub mod classify;
 pub mod context;
@@ -383,6 +384,36 @@ impl Core {
         let root = std::path::PathBuf::from(&project.root_path);
         self.db
             .read(|c| search::evidence::file_context(c, &root, project_id, rel_path, start, end))
+    }
+
+    /// Símbolos e dependências (imports e quem importa) de um arquivo indexado.
+    pub fn file_analysis(
+        &self,
+        project_id: i64,
+        rel_path: &str,
+    ) -> Result<analysis::query::FileAnalysisView> {
+        let rel = memory::normalize_rel_path(rel_path)?;
+        self.db
+            .read(|c| analysis::query::file_view(c, project_id, &rel))
+    }
+
+    /// Cobertura dos analisadores e estado do grafo do projeto.
+    pub fn analysis_overview(&self, project_id: i64) -> Result<analysis::query::AnalysisOverview> {
+        self.project(project_id)?;
+        self.db.read(|c| analysis::query::overview(c, project_id))
+    }
+
+    /// Declarações com um nome (comparação normalizada).
+    pub fn find_symbols(
+        &self,
+        project_id: i64,
+        name: &str,
+        limit: u32,
+    ) -> Result<Vec<analysis::query::SymbolHit>> {
+        self.project(project_id)?;
+        self.db.read(|c| {
+            analysis::query::find_symbols(c, project_id, name, limit.clamp(1, 100) as usize)
+        })
     }
 
     /// Arquivos relacionados por heurística (testes, pasta, manifesto, citações) e memórias.

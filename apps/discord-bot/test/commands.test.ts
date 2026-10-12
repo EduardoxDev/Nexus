@@ -80,9 +80,29 @@ describe("/nexus", () => {
     expect(calls).toEqual([
       {
         name: "search_project",
-        args: { project: "nexus", query: "como conecto no Claude Code?", limit: 3 },
+        args: {
+          project: "nexus",
+          query: "como conecto no Claude Code?",
+          limit: 3,
+          kinds: ["doc"],
+        },
       },
     ]);
+    expect(texts()).toContain("`docs/mcp.md:5-20`");
+  });
+
+  it("pergunta falls back to code when no docs match", async () => {
+    const calls: Record<string, unknown>[] = [];
+    const tools: Tools = {
+      async callTool<T>(_name: string, args: Record<string, unknown>): Promise<T> {
+        calls.push(args);
+        return (args.kinds ? { ...SEARCH, hits: [] } : SEARCH) as T;
+      },
+    };
+    const { i, texts } = fakeInteraction(COMMON, "pergunta", { texto: "shippingCost" });
+    await handleNexus(i, { tools, cfg });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.kinds).toBeUndefined();
     expect(texts()).toContain("`docs/mcp.md:5-20`");
   });
 

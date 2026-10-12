@@ -108,7 +108,11 @@ export async function handleNexus(
   try {
     if (sub === "pergunta" || sub === "buscar") {
       const query = i.option("texto") ?? "";
-      const r = await tools.callTool<SearchResult>("search_project", { project, query, limit: 3 });
+      const search = (extra: Record<string, unknown> = {}) =>
+        tools.callTool<SearchResult>("search_project", { project, query, limit: 3, ...extra });
+      // Dúvidas da comunidade: documentação primeiro; código só se a documentação não responder.
+      let r = sub === "pergunta" ? await search({ kinds: ["doc"] }) : await search();
+      if (sub === "pergunta" && r.hits.length === 0) r = await search();
       await i.editReply({ content: formatSearch(query, r), allowedMentions: NO_MENTIONS });
     } else if (sub === "pack") {
       const task = i.option("tarefa") ?? "";

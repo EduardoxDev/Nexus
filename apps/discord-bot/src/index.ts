@@ -5,11 +5,11 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { Client, Events, GatewayIntentBits } from "discord.js";
+import { Events } from "discord.js";
 
 import { autocompleteProjects, handleNexus } from "./commands/nexus.ts";
 import { loadConfig, loadEnv } from "./config.ts";
-import { adapt, channelRef } from "./discord.ts";
+import { adapt, channelRef, createClient } from "./discord.ts";
 import { McpClient } from "./mcp/client.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -22,7 +22,7 @@ const mcp = new McpClient({
   command: env.nexusCli,
   args: ["--data-dir", env.nexusDataDir, "mcp", "serve"],
 });
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = createClient();
 
 client.once(Events.ClientReady, (c) => {
   console.log(`NEXUS conectado como ${c.user.tag}`);

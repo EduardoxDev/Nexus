@@ -9,7 +9,7 @@ Cada fase termina com aplicação executável e testes aprovados. Critérios de 
 | 2    | Indexação de projetos        | concluída |
 | 3    | Busca e Context Packs        | concluída |
 | 4    | Memória e atualidade         | concluída |
-| 5    | MCP e CLI                    | planejada |
+| 5    | MCP e CLI                    | concluída |
 | 6    | Inteligência avançada        | planejada |
 | 7    | Hardening e release          | planejada |
 
@@ -102,6 +102,21 @@ Decisões em [ADR-0011](decisions/ADR-0011-memoria-revisada-e-alertas-estaveis.m
 - CLI completa: `projects`, `index`, `status`, `search`, `context`, `memory`, `freshness`, `diagnostics`, `mcp serve`, saída humana e `--json`, códigos de saída corretos.
 - Servidor MCP stdio com as ferramentas `list_projects`, `get_project_overview`, `search_project`, `get_file_context`, `get_symbol_context`, `get_related_files`, `get_project_memory`, `build_context_pack`, `get_project_decisions`, `get_stale_context`, `get_index_status`, `refresh_project_index`, `get_context_sources`; negociação de versão conforme a especificação vigente; schemas de entrada/saída; validação de escopo; leitura somente leitura; atualização incremental limitada e auditada.
 - Testes de sessão JSON-RPC, MCP Inspector e conexão real com Claude Code; guia de integração.
+
+Critérios de aceitação (verificados em 2026-10-12):
+
+- [x] Revisão vigente verificada antes de implementar (2026-07-28); servidor dual-era: `server/discover`, `_meta` por requisição, `-32022` para versão não suportada e `initialize` para 2025-11-25/2025-06-18/2025-03-26 ([ADR-0005](decisions/ADR-0005-mcp-implementado-a-mao.md)).
+- [x] As 13 ferramentas com `inputSchema` fechado, `outputSchema` e `structuredContent`; **todas** as saídas validadas contra o próprio esquema (`every_tool_output_matches_its_output_schema`).
+- [x] Escopo: só projetos autorizados, só arquivos indexados (sensíveis recusados), caminhos fora do projeto recusados, argumentos validados; erros de uso como `isError`, erros de protocolo como JSON-RPC.
+- [x] Somente leitura, exceto `refresh_project_index` (incremental, 1/30 s por projeto, até 120 s, trava entre processos) e `build_context_pack` (só referências no banco do NEXUS).
+- [x] Auditoria em `operations` (`mcp.session`, `mcp.tool`) sem argumentos (`tool_calls_are_audited_without_arguments`), visível ao vivo na tela Integrações.
+- [x] CLI completa: `projects`, `index`, `status`, `search`, `context`, `memory`, `freshness`, `diagnostics`, `mcp serve`, `mcp tools`, com `--json` e códigos de saída 0–5.
+- [x] Testes de sessão in-process (6), binário real por stdio (`mcp_serve_speaks_json_rpc_over_stdio`) e E2E com o app aberto no mesmo banco (12/12 no total).
+- [x] Guia de integração ([mcp.md](mcp.md)) e tela Integrações com o comando pronto para o Claude Code.
+- [ ] MCP Inspector: não executado (exige baixar o pacote `@modelcontextprotocol/inspector` pelo npm; pendente de autorização).
+- [ ] Conversa real com o Claude Code: `claude mcp list` (2.1.296) reconhece o servidor e o deixa aguardando aprovação; a chamada pelo modelo ainda não foi feita porque envia o resultado das ferramentas à API do provedor — pendente de autorização do usuário.
+
+Limitações: `get_symbol_context` e `get_related_files` são heurísticos (sem análise por linguagem nem grafo de imports — Fase 6); o MCP não grava memória (propostas de agentes ficam para uma fase futura); a CLI não vem no instalador (Fase 7); sem resources, prompts nem transporte HTTP.
 
 ## Fase 6 — Inteligência avançada
 

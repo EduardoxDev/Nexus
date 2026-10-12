@@ -40,9 +40,13 @@ Remover o projeto do índice apaga tudo isso do banco; os arquivos da pasta nunc
 - O banco **não é criptografado**. A proteção é a das permissões da sua conta no Windows: outros usuários sem privilégios de administrador não conseguem lê-lo, mas processos executados pela sua conta conseguem.
 - Quem tem acesso administrativo à máquina tem acesso aos dados do NEXUS.
 
+## Agentes conectados (MCP)
+
+O servidor MCP (`nexus mcp serve`) roda localmente e responde apenas ao cliente que o iniciou. O NEXUS continua sem enviar nada para fora, **mas o agente conectado envia ao provedor do modelo dele o que as ferramentas devolvem**: trechos de código, caminhos, memória e alertas. Conecte apenas agentes em que você confia para esses projetos. O histórico local registra cada chamada (ferramenta, resultado, duração), nunca os argumentos.
+
 ## Integrações futuras
 
-Se integrações com serviços de IA em nuvem forem adicionadas, elas serão **opcionais e desligadas por padrão**, mostrarão exatamente quais dados serão enviados e permitirão cancelar antes do envio.
+Se integrações diretas do NEXUS com serviços de IA em nuvem forem adicionadas, elas serão **opcionais e desligadas por padrão**, mostrarão exatamente quais dados serão enviados e permitirão cancelar antes do envio.
 
 ## Como apagar tudo
 

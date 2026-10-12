@@ -175,3 +175,19 @@ Decisões em [ADR-0011](decisions/ADR-0011-memoria-revisada-e-alertas-estaveis.m
 Cada alerta tem impressão digital estável; a gravação faz upsert, reabre resolvidos que voltaram, resolve os que sumiram do escopo verificado e preserva dispensados. Roda após cada indexação que muda o índice (`Core::index_project`), sob demanda (`scan`) e, só para memória, após cada mudança na memória.
 
 **Packs**: até 6 memórias confirmadas (bm25 sobre a tarefa + referência a arquivos do pack), no máximo ¼ do orçamento; alertas abertos ligados às fontes ou memórias aparecem em "Contradições e alertas pendentes" no app e no export.
+
+## 13. Servidor MCP (Fase 5)
+
+Decisões em [ADR-0005](decisions/ADR-0005-mcp-implementado-a-mao.md); guia de uso em [mcp.md](mcp.md).
+
+```
+cliente MCP (Claude Code…) ──stdio──▶ nexus mcp serve ──▶ nexus-mcp::Server ──▶ nexus-core (mesmo banco do app)
+                                                              │
+                                                              └─ operations: mcp.session, mcp.tool (sem argumentos)
+```
+
+- `nexus-mcp` é uma biblioteca síncrona: `Server::handle_line` recebe uma linha JSON e devolve no máximo uma; `serve` liga isso a stdin/stdout. Testável sem processo.
+- **Dual-era**: `_meta["io.modelcontextprotocol/protocolVersion"]` = `2026-07-28` ⇒ atendimento sem estado (`resultType`, `serverInfo` em `_meta`, `ttlMs`/`cacheScope` em listas, `server/discover`); `initialize` ⇒ semântica legada negociada para o processo.
+- Ferramentas declaradas numa tabela estática (`tools::TOOLS`) em ordem fixa: nome, título, descrição (em inglês, para os modelos), anotações (`readOnlyHint`, `idempotentHint`, `destructiveHint: false`, `openWorldHint: false`), `inputSchema` fechado e `outputSchema`. Cada handler valida argumentos (`Args`), resolve o projeto e devolve um objeto JSON montado explicitamente para seguir o esquema.
+- Novas funções do core para o MCP: `related::related_files` (testes por nome, mesma pasta, manifesto, citações do nome do módulo no FTS, memórias que referenciam o arquivo) e `related::symbol_context` (declaração por regex nos melhores resultados da busca + arquivos que citam o nome).
+- A tela **Integrações** do desktop monta o comando do Claude Code a partir da CLI encontrada ao lado do executável e do diretório de dados em uso, lista as ferramentas e mostra as operações `mcp.*` ao vivo.

@@ -121,6 +121,10 @@ A CLI age como o usuário: pode confirmar e revisar memórias. Veja [ADR-0011](d
 | 4      | banco criado por uma versão mais nova do NEXUS (`incompatible_schema`)   |
 | 5      | conflito: revisão desatualizada ou ação não permitida para a origem      |
 
-## Planejado (Fase 5)
+### `nexus mcp serve`
 
-`mcp serve` — ver [roadmap](roadmap.md).
+Servidor MCP em stdio (JSON-RPC, uma mensagem por linha). Logs vão só para o arquivo; stdout é exclusivo do protocolo. Termina quando o cliente fecha o stdin. Guia completo, ferramentas e segurança em [mcp.md](mcp.md).
+
+### `nexus mcp tools [--json]`
+
+Lista as 13 ferramentas (com `--json`, as definições completas com `inputSchema` e `outputSchema`).

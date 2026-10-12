@@ -2473,6 +2473,7 @@ dependencies = [
  "tauri-plugin-window-state",
  "tempfile",
  "tracing",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

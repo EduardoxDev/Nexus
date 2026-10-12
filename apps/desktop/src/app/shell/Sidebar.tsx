@@ -1,4 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import { motion } from "motion/react";
 
 import { ROUTES, type RouteDef } from "@/app/routes";
 import logoUrl from "@/assets/nexus-icon-128.png";
@@ -116,23 +117,28 @@ function NavItem({ route, collapsed }: { route: RouteDef; collapsed: boolean }) 
       className={cn(
         "group relative flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm transition-colors",
         collapsed && "justify-center px-0",
-        active
-          ? "bg-surface-1 font-medium text-fg [box-shadow:var(--shadow-card)] ring-1 ring-border"
-          : "text-fg-muted hover:bg-surface-2 hover:text-fg",
+        active ? "font-medium text-fg" : "text-fg-muted hover:bg-surface-2 hover:text-fg",
         disabled && "cursor-default text-fg-subtle hover:bg-transparent hover:text-fg-subtle",
       )}
     >
       {active && (
-        <span
+        <motion.span
+          layoutId="nav-active"
           aria-hidden="true"
-          className="absolute top-2 bottom-2 -left-2.5 w-[3px] rounded-r-full bg-accent"
-        />
+          transition={{ type: "spring", stiffness: 520, damping: 40 }}
+          className="absolute inset-0 rounded-lg bg-surface-1 ring-1 ring-border [box-shadow:var(--shadow-card)]"
+        >
+          <span className="absolute top-2 bottom-2 -left-2.5 w-[3px] rounded-r-full bg-accent" />
+        </motion.span>
       )}
       <Icon
-        className={cn("size-4 shrink-0", active ? "text-accent-text" : "")}
+        className={cn(
+          "relative size-4 shrink-0 transition-transform duration-[var(--duration-fast)] group-hover:scale-110",
+          active ? "text-accent-text" : "",
+        )}
         aria-hidden="true"
       />
-      {!collapsed && <span className="flex-1 truncate">{route.label}</span>}
+      {!collapsed && <span className="relative flex-1 truncate">{route.label}</span>}
       {!collapsed && disabled && route.plannedPhase !== null && (
         <Badge className="text-[11px]">{t.nav.phaseBadge(route.plannedPhase)}</Badge>
       )}

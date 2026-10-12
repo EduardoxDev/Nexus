@@ -149,7 +149,7 @@ export function StatCard({
         onClick={onClick}
         className={cn(
           className,
-          "transition-[border-color,box-shadow] duration-[var(--duration-fast)] hover:border-border-strong hover:shadow-raised",
+          "transition-[border-color,box-shadow,transform] duration-[var(--duration-base)] hover:-translate-y-0.5 hover:border-border-strong hover:shadow-raised",
         )}
       >
         {body}

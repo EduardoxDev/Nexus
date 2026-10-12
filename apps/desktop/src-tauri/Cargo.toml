@@ -27,8 +27,20 @@ serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
+
 [dev-dependencies]
 tempfile.workspace = true
 
-[lints]
-workspace = true
+# Mesmas regras do workspace, exceto `unsafe_code`: aqui é `deny` (não `forbid`) para permitir
+# a única chamada FFI do app, marcada com `#[allow(unsafe_code)]` em src/chrome.rs.
+[lints.rust]
+unsafe_code = "deny"
+unused_must_use = "deny"
+
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+dbg_macro = "warn"
+todo = "warn"

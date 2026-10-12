@@ -78,10 +78,10 @@ export function AppShell({ settings }: { settings: Settings }) {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={route}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12, ease: "easeOut" }}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                   className={FULL_HEIGHT.has(route) ? "h-full" : "h-full overflow-y-auto"}
                 >
                   {page}

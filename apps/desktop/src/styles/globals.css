@@ -177,3 +177,10 @@
     letter-spacing: -0.015em;
   }
 }
+
+@layer base {
+  /* Ícones com traço um pouco mais fino: visual mais leve e consistente. */
+  .lucide {
+    stroke-width: 1.75;
+  }
+}

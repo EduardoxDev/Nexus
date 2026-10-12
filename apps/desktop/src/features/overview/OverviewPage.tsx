@@ -1,7 +1,7 @@
 import {
   AlertTriangle,
   ArrowRight,
-  Brain,
+  BookOpenCheck,
   ChevronRight,
   FileCode2,
   FolderGit2,
@@ -16,6 +16,7 @@ import { routeDef } from "@/app/routes";
 import logoUrl from "@/assets/nexus-icon-128.png";
 import { EmptyState, ErrorState, StatusDot } from "@/components/feedback";
 import { KeyValueList, Page, Panel, StatCard } from "@/components/layout";
+import { CountUp, Reveal } from "@/components/motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,16 +41,28 @@ const RECENT = operationQuery({ limit: 6 });
 export function OverviewPage() {
   return (
     <Page title={t.nav.overview.label} description={t.nav.overview.description}>
-      <Hero />
-      <KpiRow />
+      <Reveal>
+        <Hero />
+      </Reveal>
+      <Reveal index={1}>
+        <KpiRow />
+      </Reveal>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <ProjectsPanel />
-          <RecentOperationsPanel />
+          <Reveal index={2}>
+            <ProjectsPanel />
+          </Reveal>
+          <Reveal index={4}>
+            <RecentOperationsPanel />
+          </Reveal>
         </div>
         <div className="flex min-w-0 flex-col gap-6">
-          <SystemPanel />
-          <StepsPanel />
+          <Reveal index={3}>
+            <SystemPanel />
+          </Reveal>
+          <Reveal index={5}>
+            <StepsPanel />
+          </Reveal>
         </div>
       </div>
     </Page>
@@ -124,7 +137,7 @@ function KpiRow() {
       <StatCard
         label={t.overview.kpiProjects}
         icon={FolderGit2}
-        value={list ? formatInteger(list.length) : loading}
+        value={list ? <CountUp value={list.length} /> : loading}
         hint={t.overview.kpiProjectsHint(indexingNow)}
         onClick={() => navigate("projects")}
       />
@@ -132,15 +145,15 @@ function KpiRow() {
         label={t.overview.kpiFiles}
         icon={FileCode2}
         tone="neutral"
-        value={list ? formatInteger(files) : loading}
+        value={list ? <CountUp value={files} /> : loading}
         hint={list ? t.overview.kpiFilesHint(formatBytes(bytes), formatInteger(lines)) : undefined}
         onClick={() => navigate("search")}
       />
       <StatCard
         label={t.overview.kpiMemory}
-        icon={Brain}
+        icon={BookOpenCheck}
         tone="success"
-        value={list && totals ? formatInteger(totals.confirmed) : loading}
+        value={list && totals ? <CountUp value={totals.confirmed} /> : loading}
         hint={totals ? t.overview.kpiMemoryHint(totals.proposed) : undefined}
         onClick={() => navigate("memory")}
       />
@@ -148,7 +161,7 @@ function KpiRow() {
         label={t.overview.kpiAlerts}
         icon={AlertTriangle}
         tone={totals && totals.openIssues > 0 ? "warning" : "success"}
-        value={list && totals ? formatInteger(totals.openIssues) : loading}
+        value={list && totals ? <CountUp value={totals.openIssues} /> : loading}
         hint={totals ? t.overview.kpiAlertsHint(totals.contradictions) : undefined}
         onClick={() => navigate("freshness")}
       />

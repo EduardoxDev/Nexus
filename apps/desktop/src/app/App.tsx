@@ -1,6 +1,7 @@
 import { DatabaseZap } from "lucide-react";
 
 import { AppShell } from "@/app/AppShell";
+import logoUrl from "@/assets/nexus-icon-128.png";
 import { ErrorState } from "@/components/feedback";
 import { KeyValueList } from "@/components/layout";
 import type { StartupStatus } from "@/lib/bindings";
@@ -31,9 +32,20 @@ export function App() {
         </Centered>
       );
     }
-    return <div className="h-full bg-bg" aria-busy="true" aria-label={t.common.loading} />;
+    return <Splash />;
   }
   return <AppShell settings={settings.data} />;
+}
+
+/** Mesma tela de abertura do index.html (estilos `.nx-splash` definidos lá), sem salto visual. */
+function Splash() {
+  return (
+    <div className="nx-splash" aria-busy="true" aria-label={t.common.loading}>
+      <img src={logoUrl} alt="" draggable={false} />
+      <p>{t.app.name}</p>
+      <span />
+    </div>
+  );
 }
 
 function Centered({ children }: { children: React.ReactNode }) {

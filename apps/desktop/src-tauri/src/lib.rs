@@ -1,7 +1,9 @@
 //! Shell desktop do NEXUS. Mantém-se fino: inicializa logging e core, registra plugins e comandos,
 //! e hospeda a fila de indexação e o monitor de arquivos.
 
+mod chrome;
 mod commands;
+mod guard;
 mod indexing;
 mod state;
 mod watch;
@@ -84,15 +86,29 @@ fn create_main_window(app: &tauri::App) -> tauri::Result<()> {
         tracing::error!("configuração da janela principal ausente");
         return Ok(());
     };
+    // O servidor do Vite só é aceito em builds de desenvolvimento.
+    let dev_url = if cfg!(debug_assertions) {
+        app.config().build.dev_url.clone()
+    } else {
+        None
+    };
     #[allow(unused_mut)]
-    let mut builder = tauri::WebviewWindowBuilder::from_config(app.handle(), config)?;
+    let mut builder = tauri::WebviewWindowBuilder::from_config(app.handle(), config)?
+        .on_navigation(move |url| guard::allow_navigation(url, dev_url.as_ref()))
+        .on_new_window(|_url, _features| {
+            tracing::warn!("abertura de nova janela bloqueada");
+            tauri::webview::NewWindowResponse::Deny
+        })
+        // O preenchimento automático do WebView2 guardaria dados digitados nos formulários.
+        .general_autofill_enabled(false);
     #[cfg(debug_assertions)]
     if let Some(port) = e2e_cdp_port() {
         builder = builder.additional_browser_args(&format!(
             "{DEFAULT_BROWSER_ARGS} --remote-debugging-port={port}"
         ));
     }
-    builder.build()?;
+    let window = builder.build()?;
+    chrome::apply_brand(&window);
     Ok(())
 }
 

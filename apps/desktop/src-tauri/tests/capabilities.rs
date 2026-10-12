@@ -80,6 +80,11 @@ fn global_tauri_api_is_disabled_and_csp_is_strict() {
     assert!(csp.contains("default-src 'self'"));
     assert!(csp.contains("script-src 'self'"));
     assert!(!csp.contains("unsafe-eval"));
+    // Trusted Types: nenhuma atribuição de HTML/script por string (innerHTML etc.) é aceita.
+    assert!(csp.contains("require-trusted-types-for 'script'"));
+    assert!(csp.contains("trusted-types 'none'"));
+    assert!(csp.contains("object-src 'none'"));
+    assert!(csp.contains("frame-ancestors 'none'"));
     assert!(!csp.contains("http://") || csp.contains("http://ipc.localhost"));
     for part in csp.split(';') {
         assert!(

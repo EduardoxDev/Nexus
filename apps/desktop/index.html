@@ -6,9 +6,99 @@
     <meta name="color-scheme" content="dark light" />
     <link rel="icon" type="image/png" href="/src/assets/favicon.png" />
     <title>NEXUS</title>
+    <style>
+      /* Tela de abertura: aparece antes do JavaScript e é trocada pelo app (mesmo visual de
+         <Splash /> em src/app/App.tsx). Só CSS local: a CSP não permite nada remoto. */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #111317;
+      }
+      @media (prefers-color-scheme: light) {
+        html:not(.dark),
+        html:not(.dark) body {
+          background: #f6f7fa;
+        }
+      }
+      .nx-splash {
+        display: flex;
+        height: 100%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+        color: #e9ebf0;
+        animation: nx-splash-in 260ms ease-out both;
+      }
+      .nx-splash img {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        box-shadow: 0 12px 32px -8px rgb(35 72 206 / 0.55);
+        animation: nx-splash-breathe 1.8s ease-in-out infinite;
+      }
+      .nx-splash p {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+      }
+      .nx-splash span {
+        display: block;
+        width: 96px;
+        height: 3px;
+        overflow: hidden;
+        border-radius: 3px;
+        background: rgb(127 139 170 / 0.25);
+        position: relative;
+      }
+      .nx-splash span::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        width: 40%;
+        border-radius: 3px;
+        background: #2f59df;
+        animation: nx-splash-bar 1.1s ease-in-out infinite;
+      }
+      @keyframes nx-splash-in {
+        from {
+          opacity: 0;
+          transform: scale(0.97);
+        }
+      }
+      @keyframes nx-splash-breathe {
+        50% {
+          transform: translateY(-2px);
+        }
+      }
+      @keyframes nx-splash-bar {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(250%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .nx-splash,
+        .nx-splash img,
+        .nx-splash span::after {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="nx-splash" aria-busy="true" aria-label="Carregando">
+        <img src="/src/assets/nexus-icon-128.png" alt="" draggable="false" />
+        <p>NEXUS</p>
+        <span></span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

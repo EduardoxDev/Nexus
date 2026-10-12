@@ -129,12 +129,14 @@ describe("shell do app", () => {
 
     const region = await screen.findByRole("region", { name: "Indicadores" });
     const kpi = (name: RegExp) => within(region).getByRole("button", { name });
-    await waitFor(() => expect(kpi(/^Projetos/)).toHaveTextContent("2"));
-    expect(kpi(/^Arquivos indexados/)).toHaveTextContent("26");
+    // Os números contam até o valor final (animação curta).
+    const value = (name: RegExp) => kpi(name).querySelector(".font-display")?.textContent;
+    await waitFor(() => expect(value(/^Projetos/)).toBe("2"));
+    await waitFor(() => expect(value(/^Arquivos indexados/)).toBe("26"));
     expect(kpi(/^Arquivos indexados/)).toHaveTextContent("200 linhas");
-    await waitFor(() => expect(kpi(/^Memórias confirmadas/)).toHaveTextContent("5"));
+    await waitFor(() => expect(value(/^Memórias confirmadas/)).toBe("5"));
     expect(kpi(/^Memórias confirmadas/)).toHaveTextContent("1 proposta aguardando revisão");
-    expect(kpi(/^Alertas abertos/)).toHaveTextContent("4");
+    await waitFor(() => expect(value(/^Alertas abertos/)).toBe("4"));
     expect(kpi(/^Alertas abertos/)).toHaveTextContent("1 contradição a revisar");
 
     await user.click(kpi(/^Alertas abertos/));

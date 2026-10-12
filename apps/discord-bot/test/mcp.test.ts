@@ -8,19 +8,10 @@ import { join, resolve } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  McpClient,
-  McpToolError,
-  McpUnavailableError,
-} from "../src/mcp/client.ts";
+import { McpClient, McpToolError, McpUnavailableError } from "../src/mcp/client.ts";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
-const CLI = join(
-  ROOT,
-  "target",
-  "debug",
-  process.platform === "win32" ? "nexus.exe" : "nexus",
-);
+const CLI = join(ROOT, "target", "debug", process.platform === "win32" ? "nexus.exe" : "nexus");
 
 describe.skipIf(!existsSync(CLI))("McpClient contra nexus mcp serve", () => {
   let dir: string;
@@ -33,15 +24,10 @@ describe.skipIf(!existsSync(CLI))("McpClient contra nexus mcp serve", () => {
       recursive: true,
     });
     const data = join(dir, "data");
-    const r = spawnSync(
-      CLI,
-      ["--data-dir", data, "projects", "add", repo, "--index"],
-      {
-        encoding: "utf8",
-      },
-    );
-    if (r.status !== 0)
-      throw new Error(`falha ao indexar a fixture: ${r.stderr}`);
+    const r = spawnSync(CLI, ["--data-dir", data, "projects", "add", repo, "--index"], {
+      encoding: "utf8",
+    });
+    if (r.status !== 0) throw new Error(`falha ao indexar a fixture: ${r.stderr}`);
     client = new McpClient({
       command: CLI,
       args: ["--data-dir", data, "mcp", "serve"],
@@ -77,10 +63,7 @@ describe.skipIf(!existsSync(CLI))("McpClient contra nexus mcp serve", () => {
 
   it("restarts after the server exits", async () => {
     client.__killForTests();
-    const r = await client.callTool<{ projects: unknown[] }>(
-      "list_projects",
-      {},
-    );
+    const r = await client.callTool<{ projects: unknown[] }>("list_projects", {});
     expect(r.projects.length).toBe(1);
   });
 });
@@ -93,9 +76,7 @@ describe("McpClient sem servidor útil", () => {
       timeoutMs: 300,
     });
     const started = Date.now();
-    await expect(stuck.callTool("list_projects", {})).rejects.toBeInstanceOf(
-      McpUnavailableError,
-    );
+    await expect(stuck.callTool("list_projects", {})).rejects.toBeInstanceOf(McpUnavailableError);
     expect(Date.now() - started).toBeLessThan(1_000);
     await stuck.close();
   });

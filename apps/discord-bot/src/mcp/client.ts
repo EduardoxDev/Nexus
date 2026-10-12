@@ -66,9 +66,7 @@ export class McpClient {
       arguments: args,
     })) as ToolResult;
     if (result.isError) {
-      const text =
-        result.content?.find((c) => c.type === "text")?.text ??
-        "erro da ferramenta";
+      const text = result.content?.find((c) => c.type === "text")?.text ?? "erro da ferramenta";
       throw new McpToolError(text);
     }
     return result.structuredContent as T;
@@ -80,9 +78,7 @@ export class McpClient {
     this.ready = null;
     if (!child || child.exitCode !== null) return;
     // Resolve só depois que o processo sai: no Windows o banco fica travado enquanto ele vive.
-    const exited = new Promise<void>((resolve) =>
-      child.once("exit", () => resolve()),
-    );
+    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
     child.stdin.end();
     child.kill();
     await exited;
@@ -95,8 +91,7 @@ export class McpClient {
 
   private start(): Promise<void> {
     // Um processo morto ou marcado para morrer conta como ausente, mesmo antes do evento `exit`.
-    const alive =
-      this.child && !this.child.killed && this.child.exitCode === null;
+    const alive = this.child && !this.child.killed && this.child.exitCode === null;
     if (alive && this.ready) return this.ready;
     if (this.child) {
       this.child.kill();
@@ -109,18 +104,13 @@ export class McpClient {
     this.child = child;
     // O stderr do servidor tem logs de diagnóstico; o bot não os repassa.
     child.stderr.resume();
-    createInterface({ input: child.stdout }).on("line", (line) =>
-      this.onLine(line),
-    );
+    createInterface({ input: child.stdout }).on("line", (line) => this.onLine(line));
     const onGone = () => {
       if (this.child === child) {
         this.child = null;
         this.ready = null;
       }
-      this.rejectAll(
-        child,
-        new McpUnavailableError("o servidor MCP da NEXUS foi encerrado"),
-      );
+      this.rejectAll(child, new McpUnavailableError("o servidor MCP da NEXUS foi encerrado"));
     };
     child.on("exit", onGone);
     child.on("error", onGone);
@@ -143,19 +133,12 @@ export class McpClient {
 
   private request(method: string, params: unknown): Promise<unknown> {
     const child = this.child;
-    if (!child)
-      return Promise.reject(
-        new McpUnavailableError("servidor MCP não iniciado"),
-      );
+    if (!child) return Promise.reject(new McpUnavailableError("servidor MCP não iniciado"));
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(
-          new McpUnavailableError(
-            `a NEXUS não respondeu em ${this.opts.timeoutMs} ms`,
-          ),
-        );
+        reject(new McpUnavailableError(`a NEXUS não respondeu em ${this.opts.timeoutMs} ms`));
         // Um servidor travado é descartado; a próxima chamada inicia outro.
         if (this.child === child) {
           this.child = null;
@@ -164,9 +147,7 @@ export class McpClient {
         }
       }, this.opts.timeoutMs);
       this.pending.set(id, { child, resolve, reject, timer });
-      child.stdin.write(
-        `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`,
-      );
+      child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
     });
   }
 
@@ -187,11 +168,7 @@ export class McpClient {
     this.pending.delete(msg.id);
     clearTimeout(pending.timer);
     if (msg.error)
-      pending.reject(
-        new McpUnavailableError(
-          `erro MCP ${msg.error.code}: ${msg.error.message}`,
-        ),
-      );
+      pending.reject(new McpUnavailableError(`erro MCP ${msg.error.code}: ${msg.error.message}`));
     else pending.resolve(msg.result);
   }
 

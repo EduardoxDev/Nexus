@@ -1,0 +1,18 @@
+/** Registra os comandos de barra no servidor configurado (aparecem na hora). */
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { REST, Routes } from "discord.js";
+
+import { nexusCommand } from "./commands/nexus.ts";
+import { loadEnv } from "./config.ts";
+
+const envFile = resolve(import.meta.dirname, "..", ".env");
+if (existsSync(envFile)) process.loadEnvFile(envFile);
+const env = loadEnv(process.env);
+
+const rest = new REST().setToken(env.token);
+await rest.put(Routes.applicationGuildCommands(env.appId, env.guildId), {
+  body: [nexusCommand.toJSON()],
+});
+console.log("Comandos registrados: /nexus");

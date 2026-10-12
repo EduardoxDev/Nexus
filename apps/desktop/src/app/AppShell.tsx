@@ -9,6 +9,7 @@ import { useGlobalShortcuts } from "@/app/useGlobalShortcuts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { OverviewPage } from "@/features/overview/OverviewPage";
 import { FreshnessPage } from "@/features/freshness/FreshnessPage";
+import { IntegrationsPage } from "@/features/integrations/IntegrationsPage";
 import { MemoryPage } from "@/features/memory/MemoryPage";
 import { ContextPacksPage } from "@/features/packs/ContextPacksPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
@@ -30,6 +31,7 @@ const PAGES: Partial<Record<RouteId, () => ReactNode>> = {
   contextPacks: () => <ContextPacksPage />,
   memory: () => <MemoryPage />,
   freshness: () => <FreshnessPage />,
+  integrations: () => <IntegrationsPage />,
   settings: () => <SettingsPage />,
   diagnostics: () => <DiagnosticsPage />,
 };

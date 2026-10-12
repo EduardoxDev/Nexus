@@ -27,14 +27,20 @@ test("abre na Visão geral com o banco migrado para o schema atual", async () =>
   ).toBeVisible();
 });
 
-test("seções de fases futuras ficam desabilitadas", async () => {
+test("Integrações mostra o comando do Claude Code com a CLI ao lado do app", async () => {
   app = await launchApp(data.dir);
-  const nav = app.page.getByRole("navigation", { name: "Navegação principal" });
-  const search = nav.getByRole("button", { name: /Integrações/ });
-  await expect(search).toHaveAttribute("aria-disabled", "true");
-  // Playwright trata aria-disabled como desabilitado; força o clique como um usuário faria.
-  await search.click({ force: true });
-  await expect(app.page.getByRole("heading", { name: "Visão geral" })).toBeVisible();
+  const { page } = app;
+  await page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .getByRole("button", { name: /Integrações/ })
+    .click();
+  const command = page.getByLabel("Comando para registrar no Claude Code");
+  await expect(command).toContainText("claude mcp add nexus --");
+  await expect(command).toContainText("nexus.exe");
+  await expect(command).toContainText("mcp serve");
+  await expect(page.getByRole("list", { name: "Ferramentas" }).getByRole("listitem")).toHaveCount(
+    13,
+  );
 });
 
 test("Diagnóstico mostra dados reais e executa a verificação de integridade", async () => {

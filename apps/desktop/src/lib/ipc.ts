@@ -15,6 +15,7 @@ import type {
   FreshnessIssue,
   FreshnessSummary,
   ImportReport,
+  IntegrationInfo,
   IssueQuery,
   Memory,
   MemoryCounts,
@@ -101,6 +102,7 @@ export interface Commands {
   touch_project: { args: ProjectArgs; result: null };
   reveal_project_dir: { args: ProjectArgs; result: null };
   get_startup_status: { args: undefined; result: StartupStatus };
+  get_integration_info: { args: undefined; result: IntegrationInfo };
   get_app_info: { args: undefined; result: AppInfo };
   get_diagnostics: { args: undefined; result: DiagnosticsReport };
   run_integrity_check: { args: undefined; result: IntegrityReport };

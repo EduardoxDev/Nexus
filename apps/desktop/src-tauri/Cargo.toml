@@ -16,6 +16,7 @@ tauri-build.workspace = true
 
 [dependencies]
 nexus-core.workspace = true
+nexus-mcp.workspace = true
 tauri.workspace = true
 tauri-plugin-single-instance.workspace = true
 tauri-plugin-window-state.workspace = true

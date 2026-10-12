@@ -211,6 +211,7 @@ pub fn run() {
             commands::memory::get_freshness_summary,
             commands::memory::scan_freshness,
             commands::memory::set_issue_dismissed,
+            commands::integrations::get_integration_info,
         ])
         .build(tauri::generate_context!());
 

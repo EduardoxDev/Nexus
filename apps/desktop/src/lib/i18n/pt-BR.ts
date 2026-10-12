@@ -532,6 +532,43 @@ export const ptBR = {
         "A memória foi alterada em outro lugar. Feche o editor e abra de novo para ver a versão atual.",
     },
   },
+  integrations: {
+    description:
+      "Conecte agentes de programação ao NEXUS pelo protocolo MCP. O servidor roda localmente pela CLI `nexus` e usa o mesmo banco deste app.",
+    claudeTitle: "Claude Code",
+    claudeCommandLabel: "Comando para registrar no Claude Code",
+    claudeDescription: "Rode este comando uma vez num terminal para registrar o servidor.",
+    claudeHint:
+      "O Claude Code inicia o servidor sozinho quando precisa. Ao usar pela primeira vez, ele pede sua aprovação para as ferramentas.",
+    cliMissing: "A CLI `nexus` não foi encontrada ao lado do aplicativo.",
+    buildCli: "Compilar a CLI",
+    cliMissingHint:
+      "Compile a CLI a partir do repositório e use o caminho de target/release/nexus. O instalador ainda não inclui a CLI (previsto para a Fase 7).",
+    otherTitle: "Outros clientes MCP",
+    otherDescription: "Configuração genérica (stdio) para clientes que leem um arquivo mcpServers.",
+    protocol: (modern: string, legacy: string) =>
+      `Protocolo MCP ${modern}; clientes antigos são atendidos via initialize (${legacy}).`,
+    toolsTitle: "Ferramentas",
+    toolsDescription: (n: number) =>
+      `${n} ferramentas. As descrições estão em inglês porque são lidas pelos modelos.`,
+    readOnly: "Somente leitura",
+    writesLocal: "Grava dados locais do NEXUS",
+    securityTitle: "Segurança",
+    securityItems: [
+      "Somente projetos que você autorizou; caminhos fora do projeto e arquivos ignorados (como segredos) nunca são lidos.",
+      "Nenhuma ferramenta altera arquivos dos projetos. Atualizar o índice é limitado a uma vez a cada 30 s por projeto e a 2 minutos por execução.",
+      "Agentes não confirmam nem editam memórias: só o que você confirmou é apresentado como decisão.",
+      "Todo conteúdo devolvido é marcado como dado, não instrução. Cada chamada fica registrada abaixo, sem os argumentos.",
+      "O NEXUS não envia nada para fora, mas o agente conectado envia o que as ferramentas devolvem (trechos de código, memória) ao provedor do modelo que ele usa. Conecte apenas agentes em que você confia para esses projetos.",
+    ],
+    callsTitle: "Chamadas recentes",
+    callsDescription: "Atualizado a cada 5 segundos. Registra ferramenta, resultado e duração.",
+    callsEmpty: "Nenhuma chamada ainda",
+    callsEmptyHint: "Depois de conectar um agente, as chamadas aparecem aqui.",
+    callOk: "OK",
+    callError: "Erro",
+    session: (client: string) => `sessão iniciada por ${client}`,
+  },
   memoryKinds: {
     decision: "Decisão",
     convention: "Convenção",
@@ -668,6 +705,8 @@ export const ptBR = {
     "memory.transition": "Estado de memória alterado",
     "memory.import_adrs": "Importação de ADRs",
     "freshness.scan": "Verificação de atualidade",
+    "mcp.session": "Sessão MCP",
+    "mcp.tool": "Ferramenta MCP",
   } as Record<string, string>,
 } as const;
 

@@ -2461,6 +2461,7 @@ name = "nexus-desktop"
 version = "0.1.0"
 dependencies = [
  "nexus-core",
+ "nexus-mcp",
  "notify",
  "notify-debouncer-full",
  "serde",

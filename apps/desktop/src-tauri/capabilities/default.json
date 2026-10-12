@@ -47,6 +47,7 @@
     "allow-list-freshness-issues",
     "allow-get-freshness-summary",
     "allow-scan-freshness",
-    "allow-set-issue-dismissed"
+    "allow-set-issue-dismissed",
+    "allow-get-integration-info"
   ]
 }

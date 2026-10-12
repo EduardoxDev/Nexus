@@ -13,16 +13,57 @@ describe("shell do app", () => {
     expect(screen.getByText("Banco OK · schema v1")).toBeInTheDocument();
   });
 
-  it("desabilita seções de fases futuras e não navega para elas", async () => {
+  it("Integrações mostra o comando do Claude Code, as ferramentas e as chamadas MCP", async () => {
     const user = userEvent.setup();
-    setupIpc();
+    setupIpc({
+      get_integration_info: () => ({
+        cliPath: "C:\\NEXUS\\nexus.exe",
+        dataDir: "C:\\dados",
+        serveArgs: ["--data-dir", "C:\\dados", "mcp", "serve"],
+        claudeCommand:
+          "claude mcp add nexus -- C:\\NEXUS\\nexus.exe --data-dir C:\\dados mcp serve",
+        protocolVersions: ["2026-07-28", "2025-11-25"],
+        tools: [
+          {
+            name: "search_project",
+            title: "Search",
+            description: "Hybrid search.",
+            readOnly: true,
+          },
+          {
+            name: "refresh_project_index",
+            title: "Refresh",
+            description: "Incremental update.",
+            readOnly: false,
+          },
+        ],
+      }),
+      list_operations: () => [
+        operation({
+          kind: "mcp.tool",
+          detail: { tool: "search_project", isError: false },
+          durationMs: 12,
+        }),
+      ],
+    });
     renderApp();
     const nav = await screen.findByRole("navigation", { name: "Navegação principal" });
-    const search = within(nav).getByRole("button", { name: /Integrações/ });
-    expect(search).toHaveAttribute("aria-disabled", "true");
-    expect(within(search).getByText("Fase 5")).toBeInTheDocument();
-    await user.click(search);
-    expect(screen.getByRole("heading", { name: "Visão geral" })).toBeInTheDocument();
+    const item = within(nav).getByRole("button", { name: /Integrações/ });
+    expect(item).not.toHaveAttribute("aria-disabled");
+    await user.click(item);
+    expect(
+      await screen.findByRole("heading", { name: "Integrações", level: 1 }),
+    ).toBeInTheDocument();
+    expect(await screen.findByLabelText("Comando para registrar no Claude Code")).toHaveTextContent(
+      "claude mcp add nexus -- C:\\NEXUS\\nexus.exe --data-dir C:\\dados mcp serve",
+    );
+    const tools = screen.getByRole("list", { name: "Ferramentas" });
+    expect(within(tools).getByText("Somente leitura")).toBeInTheDocument();
+    expect(within(tools).getByText("Grava dados locais do NEXUS")).toBeInTheDocument();
+    expect(screen.getByText(/Protocolo MCP 2026-07-28/)).toBeInTheDocument();
+    const calls = await screen.findByRole("list", { name: "Chamadas recentes" });
+    expect(within(calls).getByText("search_project")).toBeInTheDocument();
+    expect(within(calls).getByText("OK")).toBeInTheDocument();
   });
 
   it("navega para o Diagnóstico e mostra migrations reais do contrato", async () => {

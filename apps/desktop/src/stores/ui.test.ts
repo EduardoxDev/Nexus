@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { ROUTES } from "@/app/routes";
+
 import { useUi } from "./ui";
 
 describe("navegação", () => {
-  it("recusa seções que ainda não existem", () => {
-    expect(useUi.getState().navigate("integrations")).toBe(false);
+  it("todas as seções do roadmap da interface já existem e são navegáveis", () => {
+    expect(ROUTES.every((r) => r.plannedPhase === null)).toBe(true);
+    expect(useUi.getState().navigate("integrations")).toBe(true);
+    expect(useUi.getState().route).toBe("integrations");
+    useUi.getState().back();
     expect(useUi.getState().route).toBe("overview");
   });
 

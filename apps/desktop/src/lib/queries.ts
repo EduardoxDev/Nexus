@@ -383,3 +383,11 @@ export function useFreshnessMutations() {
   });
   return { scan, dismiss };
 }
+
+export function useIntegrationInfo() {
+  return useQuery({
+    queryKey: ["integrationInfo"] as const,
+    queryFn: () => call("get_integration_info"),
+    staleTime: Infinity,
+  });
+}

@@ -8,6 +8,7 @@ pub mod error;
 pub mod freshness;
 pub mod git;
 pub mod index;
+pub mod integration;
 pub mod logging;
 pub mod memory;
 pub mod ops;

@@ -32,6 +32,18 @@ const COMMANDS: &[&str] = &[
     "delete_context_pack",
     "render_context_pack",
     "save_context_pack",
+    "list_memories",
+    "get_memory",
+    "get_memory_counts",
+    "create_memory",
+    "update_memory",
+    "transition_memory",
+    "review_memory_refs",
+    "import_adrs",
+    "list_freshness_issues",
+    "get_freshness_summary",
+    "scan_freshness",
+    "set_issue_dismissed",
 ];
 
 fn main() {

@@ -12,6 +12,18 @@ import type {
   ExportFormat,
   ExportOptions,
   FileContext,
+  FreshnessIssue,
+  FreshnessSummary,
+  ImportReport,
+  IssueQuery,
+  Memory,
+  MemoryCounts,
+  MemoryDetail,
+  MemoryQuery,
+  MemoryUpdate,
+  NewMemory,
+  ScanReport,
+  Transition,
   SearchRequest,
   SearchResponse,
   DiagnosticsReport,
@@ -37,7 +49,31 @@ type ProjectArgs = { projectId: number };
 type PackArgs = { packId: string };
 type ExportArgs = PackArgs & { format: ExportFormat; options: ExportOptions };
 
+type MemoryArgs = { memoryId: string };
+
 export interface Commands {
+  list_memories: { args: { query: MemoryQuery }; result: Memory[] };
+  get_memory: { args: MemoryArgs; result: MemoryDetail };
+  get_memory_counts: { args: ProjectArgs; result: MemoryCounts };
+  create_memory: { args: { request: NewMemory }; result: Memory };
+  update_memory: { args: MemoryArgs & { request: MemoryUpdate }; result: Memory };
+  transition_memory: {
+    args: MemoryArgs & {
+      transition: Transition;
+      expectedRevision: number | null;
+      note: string | null;
+    };
+    result: Memory;
+  };
+  review_memory_refs: { args: MemoryArgs & { expectedRevision: number }; result: Memory };
+  import_adrs: { args: ProjectArgs; result: ImportReport };
+  list_freshness_issues: { args: { query: IssueQuery }; result: FreshnessIssue[] };
+  get_freshness_summary: { args: ProjectArgs; result: FreshnessSummary };
+  scan_freshness: { args: ProjectArgs; result: ScanReport };
+  set_issue_dismissed: {
+    args: { issueId: number; dismissed: boolean; note: string | null };
+    result: FreshnessIssue;
+  };
   search_project: { args: { request: SearchRequest }; result: SearchResponse };
   get_file_context: {
     args: ProjectArgs & { relPath: string; startLine: number | null; endLine: number | null };

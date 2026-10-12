@@ -1,5 +1,6 @@
 import { Command } from "cmdk";
 import {
+  FileUp,
   FolderGit2,
   FolderOpen,
   FolderPlus,
@@ -7,6 +8,7 @@ import {
   Monitor,
   Moon,
   RefreshCw,
+  ScanSearch,
   ShieldCheck,
   Sun,
 } from "lucide-react";
@@ -20,7 +22,9 @@ import { t } from "@/lib/i18n/pt-BR";
 import {
   useAddProject,
   useIndexControl,
+  useFreshnessMutations,
   useIntegrityCheck,
+  useMemoryMutations,
   useProjects,
   useRevealDataDir,
   useSetSetting,
@@ -36,6 +40,8 @@ export function CommandPalette() {
   const setSetting = useSetSetting();
   const integrity = useIntegrityCheck();
   const reveal = useRevealDataDir();
+  const { scan } = useFreshnessMutations();
+  const { importAdrs } = useMemoryMutations();
 
   const run = (action: () => void) => {
     setPaletteOpen(false);
@@ -109,6 +115,38 @@ export function CommandPalette() {
                   >
                     <RefreshCw aria-hidden="true" />
                     {t.projects.paletteUpdate(p.project.name)}
+                  </Item>
+                ))}
+                {projects.data.map((p) => (
+                  <Item
+                    key={`fresh-${p.project.id}`}
+                    value={t.projects.paletteFreshness(p.project.name)}
+                    onSelect={() =>
+                      run(() => {
+                        selectProject(p.project.id);
+                        navigate("freshness");
+                        scan.mutate(p.project.id);
+                      })
+                    }
+                  >
+                    <ScanSearch aria-hidden="true" />
+                    {t.projects.paletteFreshness(p.project.name)}
+                  </Item>
+                ))}
+                {projects.data.map((p) => (
+                  <Item
+                    key={`adrs-${p.project.id}`}
+                    value={t.projects.paletteImportAdrs(p.project.name)}
+                    onSelect={() =>
+                      run(() => {
+                        selectProject(p.project.id);
+                        navigate("memory");
+                        importAdrs.mutate(p.project.id);
+                      })
+                    }
+                  >
+                    <FileUp aria-hidden="true" />
+                    {t.projects.paletteImportAdrs(p.project.name)}
                   </Item>
                 ))}
               </Group>

@@ -8,6 +8,8 @@ import { StatusBar } from "@/app/shell/StatusBar";
 import { useGlobalShortcuts } from "@/app/useGlobalShortcuts";
 import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { OverviewPage } from "@/features/overview/OverviewPage";
+import { FreshnessPage } from "@/features/freshness/FreshnessPage";
+import { MemoryPage } from "@/features/memory/MemoryPage";
 import { ContextPacksPage } from "@/features/packs/ContextPacksPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { SearchPage } from "@/features/search/SearchPage";
@@ -26,12 +28,21 @@ const PAGES: Partial<Record<RouteId, () => ReactNode>> = {
   projects: () => <ProjectsPage />,
   search: () => <SearchPage />,
   contextPacks: () => <ContextPacksPage />,
+  memory: () => <MemoryPage />,
+  freshness: () => <FreshnessPage />,
   settings: () => <SettingsPage />,
   diagnostics: () => <DiagnosticsPage />,
 };
 
 /** Páginas que gerenciam a própria rolagem (layout em colunas). */
-const FULL_HEIGHT = new Set<RouteId>(["diagnostics", "projects", "search", "contextPacks"]);
+const FULL_HEIGHT = new Set<RouteId>([
+  "diagnostics",
+  "projects",
+  "search",
+  "contextPacks",
+  "memory",
+  "freshness",
+]);
 
 export function AppShell({ settings }: { settings: Settings }) {
   const route = useUi((s) => s.route);

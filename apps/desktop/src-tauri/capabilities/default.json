@@ -35,6 +35,18 @@
     "allow-get-context-pack",
     "allow-delete-context-pack",
     "allow-render-context-pack",
-    "allow-save-context-pack"
+    "allow-save-context-pack",
+    "allow-list-memories",
+    "allow-get-memory",
+    "allow-get-memory-counts",
+    "allow-create-memory",
+    "allow-update-memory",
+    "allow-transition-memory",
+    "allow-review-memory-refs",
+    "allow-import-adrs",
+    "allow-list-freshness-issues",
+    "allow-get-freshness-summary",
+    "allow-scan-freshness",
+    "allow-set-issue-dismissed"
   ]
 }

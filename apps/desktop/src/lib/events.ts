@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 import type { IndexingQueue, IndexJob } from "@/lib/bindings";
 import { call } from "@/lib/ipc";
-import { projectKeys, queryKeys } from "@/lib/queries";
+import { freshnessKeys, memoryKeys, projectKeys, queryKeys } from "@/lib/queries";
 import { useIndexing } from "@/stores/indexing";
 
 export const EVENTS = {
@@ -32,6 +32,9 @@ export function useIndexingEvents(): void {
           void client.invalidateQueries({ queryKey: projectKeys.all });
           void client.invalidateQueries({ queryKey: queryKeys.operationsAll });
           void client.invalidateQueries({ queryKey: queryKeys.diagnostics });
+          // O core reavalia a atualidade depois de cada indexação com mudanças.
+          void client.invalidateQueries({ queryKey: freshnessKeys.all });
+          void client.invalidateQueries({ queryKey: memoryKeys.all });
         }),
         listen<IndexingQueue>(EVENTS.queue, (e) => {
           setQueue(e.payload);

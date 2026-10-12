@@ -4,7 +4,7 @@ import { useUi } from "./ui";
 
 describe("navegação", () => {
   it("recusa seções que ainda não existem", () => {
-    expect(useUi.getState().navigate("memory")).toBe(false);
+    expect(useUi.getState().navigate("integrations")).toBe(false);
     expect(useUi.getState().route).toBe("overview");
   });
 

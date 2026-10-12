@@ -2,7 +2,7 @@ import { ErrorState } from "@/components/feedback";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { t } from "@/lib/i18n/pt-BR";
-import { useRemoveProject } from "@/lib/queries";
+import { useMemoryCounts, useRemoveProject } from "@/lib/queries";
 import { useUi } from "@/stores/ui";
 
 interface Props {
@@ -16,6 +16,12 @@ interface Props {
 export function RemoveProjectDialog({ open, onOpenChange, projectId, name }: Props) {
   const remove = useRemoveProject();
   const selectProject = useUi((s) => s.selectProject);
+  const counts = useMemoryCounts(open ? projectId : null);
+  const memories =
+    (counts.data?.proposed ?? 0) +
+    (counts.data?.confirmed ?? 0) +
+    (counts.data?.archived ?? 0) +
+    (counts.data?.superseded ?? 0);
   return (
     <Dialog
       open={open}
@@ -33,6 +39,11 @@ export function RemoveProjectDialog({ open, onOpenChange, projectId, name }: Pro
         <DialogDescription className="mt-2 text-sm text-fg-muted">
           {t.projects.removeDialog.body}
         </DialogDescription>
+        {memories > 0 && (
+          <p role="alert" className="mt-2 text-sm text-warning">
+            {t.projects.removeDialog.memoryWarning(memories)}
+          </p>
+        )}
         {remove.isError && <ErrorState className="mt-3" error={remove.error} />}
         <div className="mt-5 flex justify-end gap-2">
           <Button onClick={() => onOpenChange(false)} disabled={remove.isPending} autoFocus>

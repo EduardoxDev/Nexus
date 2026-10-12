@@ -107,12 +107,15 @@ function pack(stale = 0): ContextPack {
       limitations: ["Recuperação por texto, caminho, nomes de arquivo e heurísticas."],
       tokenBudget: 8000,
       estimatedTokens: 200,
+      memories: [],
     },
     excerpts: [
       { startLine: 1, endLine: 3, text: "a\nb\nc", freshness: stale > 0 ? "modified" : "fresh" },
       { startLine: 1, endLine: 2, text: "t1\nt2", freshness: "fresh" },
     ],
     staleSources: stale,
+    memories: [],
+    issues: [],
   };
 }
 
@@ -228,7 +231,11 @@ describe("Context Packs", () => {
         args: {
           packId: "0190aaaa-bbbb-7ccc-8ddd-eeeeffff0000",
           format: "markdown",
-          options: { excludedPaths: ["tests/auth/session.test.ts"], notes: "manter API" },
+          options: {
+            excludedPaths: ["tests/auth/session.test.ts"],
+            excludedMemories: [],
+            notes: "manter API",
+          },
         },
       }),
     );

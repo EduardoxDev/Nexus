@@ -5,10 +5,11 @@ import { CodeBlock, FreshnessBadge } from "@/components/code";
 import { EmptyState, ErrorState } from "@/components/feedback";
 import { Panel } from "@/components/layout";
 import { ProjectPicker } from "@/components/ProjectPicker";
+import { IssueCard } from "@/features/freshness/FreshnessPage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ContextPack, ExportFormat, SourceRole } from "@/lib/bindings";
+import type { ContextPack, ExportFormat, PackMemoryState, SourceRole } from "@/lib/bindings";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatRelative, shortHash } from "@/lib/format";
 import { t } from "@/lib/i18n/pt-BR";
@@ -33,6 +34,11 @@ const ROLE_ORDER: SourceRole[] = [
   "dependency",
   "config",
 ];
+
+/** Memórias arquivadas/substituídas ou apagadas depois do pack ficam fora do export. */
+function usable(state: PackMemoryState): boolean {
+  return state === "unchanged" || state === "revised";
+}
 
 export function ContextPacksPage() {
   const projects = useProjects();
@@ -198,14 +204,19 @@ function PackView({ packId, onDeleted }: { packId: string; onDeleted: () => void
 function PackContent({ pack, onDeleted }: { pack: ContextPack; onDeleted: () => void }) {
   const { plan } = pack;
   const [excluded, setExcluded] = useState<string[]>([]);
+  const [excludedMemories, setExcludedMemories] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [copied, setCopied] = useState(false);
   const [savedTo, setSavedTo] = useState<string | null>(null);
   const exporter = usePackExport();
   const remove = useDeletePack();
   const options = useMemo(
-    () => ({ excludedPaths: excluded, ...(notes.trim() ? { notes } : {}) }),
-    [excluded, notes],
+    () => ({
+      excludedPaths: excluded,
+      excludedMemories,
+      ...(notes.trim() ? { notes } : {}),
+    }),
+    [excluded, excludedMemories, notes],
   );
 
   const items = plan.sources.map((source, i) => ({ source, excerpt: pack.excerpts[i] }));
@@ -213,9 +224,16 @@ function PackContent({ pack, onDeleted }: { pack: ContextPack; onDeleted: () => 
     role,
     items: items.filter((it) => it.source.role === role),
   })).filter((g) => g.items.length > 0);
-  const includedTokens = plan.sources
-    .filter((s) => !excluded.includes(s.relPath))
-    .reduce((sum, s) => sum + s.estimatedTokens, 0);
+  const includedTokens =
+    plan.sources
+      .filter((s) => !excluded.includes(s.relPath))
+      .reduce((sum, s) => sum + s.estimatedTokens, 0) +
+    pack.memories
+      .filter(
+        (m) =>
+          usable(m.state) && m.current !== null && !excludedMemories.includes(m.reference.memoryId),
+      )
+      .reduce((sum, m) => sum + m.reference.estimatedTokens, 0);
 
   const copyMarkdown = () => {
     exporter.render.mutate(
@@ -295,6 +313,54 @@ function PackContent({ pack, onDeleted }: { pack: ContextPack; onDeleted: () => 
         <p className="text-sm text-fg">{plan.summary}</p>
       </Panel>
 
+      {pack.memories.length > 0 && (
+        <Panel title={t.packs.memories} bodyClassName="flex flex-col gap-3">
+          {pack.memories.map((m) => {
+            const id = m.reference.memoryId;
+            const exportable = usable(m.state) && m.current !== null;
+            const included = exportable && !excludedMemories.includes(id);
+            return (
+              <div key={id} className={cn(!included && "opacity-50")}>
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={included}
+                      disabled={!exportable}
+                      onChange={() =>
+                        setExcludedMemories((cur) =>
+                          included ? [...cur, id] : cur.filter((x) => x !== id),
+                        )
+                      }
+                      aria-label={`${t.packs.include}: ${m.reference.title}`}
+                      className="size-4 accent-[var(--accent)]"
+                    />
+                    <span className="text-sm font-medium">
+                      {t.memoryKinds[m.reference.kind]} — {m.current?.title ?? m.reference.title}
+                    </span>
+                  </label>
+                  <Badge tone={m.state === "unchanged" ? "success" : "warning"}>
+                    {t.packs.memoryStates[m.state]}
+                  </Badge>
+                  <span className="ml-auto text-xs text-fg-subtle">
+                    ~{m.reference.estimatedTokens} tokens
+                  </span>
+                </div>
+                {m.reference.reasons.length > 0 && (
+                  <p className="mb-1 text-xs text-fg-muted">{m.reference.reasons.join(" · ")}</p>
+                )}
+                {!exportable && (
+                  <p className="text-xs text-fg-muted">{t.packs.memoryWithdrawnHint}</p>
+                )}
+                {m.current?.body && (
+                  <p className="selectable text-sm whitespace-pre-wrap text-fg">{m.current.body}</p>
+                )}
+              </div>
+            );
+          })}
+        </Panel>
+      )}
+
       {byRole.map((group) => (
         <Panel
           key={group.role}
@@ -360,8 +426,12 @@ function PackContent({ pack, onDeleted }: { pack: ContextPack; onDeleted: () => 
           </ul>
         )}
       </Panel>
-      <Panel title={t.packs.contradictions}>
-        <p className="text-sm text-fg-muted">{t.packs.contradictionsPending}</p>
+      <Panel title={t.packs.contradictions} bodyClassName="flex flex-col gap-3">
+        {pack.issues.length === 0 ? (
+          <p className="text-sm text-fg-muted">{t.packs.noContradictions}</p>
+        ) : (
+          pack.issues.map((issue) => <IssueCard key={issue.id} issue={issue} compact />)
+        )}
       </Panel>
       <Panel title={t.packs.limitations}>
         <ul className="list-disc pl-5 text-sm text-fg-muted">

@@ -14,7 +14,7 @@ import {
 import { t } from "@/lib/i18n/pt-BR";
 
 /** Última fase do roadmap entregue (as etapas até ela aparecem como disponíveis). */
-export const CURRENT_PHASE = 3;
+export const CURRENT_PHASE = 4;
 
 export type RouteId =
   | "overview"
@@ -54,8 +54,8 @@ export const ROUTES: readonly RouteDef[] = [
     plannedPhase: null,
     ...t.nav.contextPacks,
   },
-  { id: "memory", icon: Brain, group: "workspace", plannedPhase: 4, ...t.nav.memory },
-  { id: "freshness", icon: History, group: "workspace", plannedPhase: 4, ...t.nav.freshness },
+  { id: "memory", icon: Brain, group: "workspace", plannedPhase: null, ...t.nav.memory },
+  { id: "freshness", icon: History, group: "workspace", plannedPhase: null, ...t.nav.freshness },
   { id: "integrations", icon: Plug, group: "workspace", plannedPhase: 5, ...t.nav.integrations },
   { id: "settings", icon: Settings, group: "system", plannedPhase: null, ...t.nav.settings },
   { id: "diagnostics", icon: Activity, group: "system", plannedPhase: null, ...t.nav.diagnostics },

@@ -4,5 +4,6 @@
 pub mod app;
 pub mod context;
 pub mod diagnostics;
+pub mod memory;
 pub mod projects;
 pub mod settings;

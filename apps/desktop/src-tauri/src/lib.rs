@@ -168,6 +168,18 @@ pub fn run() {
             commands::context::delete_context_pack,
             commands::context::render_context_pack,
             commands::context::save_context_pack,
+            commands::memory::list_memories,
+            commands::memory::get_memory,
+            commands::memory::get_memory_counts,
+            commands::memory::create_memory,
+            commands::memory::update_memory,
+            commands::memory::transition_memory,
+            commands::memory::review_memory_refs,
+            commands::memory::import_adrs,
+            commands::memory::list_freshness_issues,
+            commands::memory::get_freshness_summary,
+            commands::memory::scan_freshness,
+            commands::memory::set_issue_dismissed,
         ])
         .build(tauri::generate_context!());
 

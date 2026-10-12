@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-scan-freshness"
+description = "Enables the scan_freshness command without any pre-configured scope."
+commands.allow = ["scan_freshness"]
+
+[[permission]]
+identifier = "deny-scan-freshness"
+description = "Denies the scan_freshness command without any pre-configured scope."
+commands.deny = ["scan_freshness"]

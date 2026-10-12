@@ -11,7 +11,7 @@
 
 | Item              | Onde                                          | Conteúdo                                                                                                 |
 | ----------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Banco             | `%LOCALAPPDATA%\Nexus\nexus.db`               | configurações, histórico de operações (metadados) e, a partir da Fase 2, índice dos projetos autorizados |
+| Banco             | `%LOCALAPPDATA%\Nexus\nexus.db`               | configurações, histórico de operações (metadados), índice dos projetos autorizados e memória do projeto  |
 | Logs              | `%LOCALAPPDATA%\Nexus\logs\`                  | eventos estruturados (tipos, durações, códigos de erro, caminhos). **Nunca** conteúdo de arquivos        |
 | Backups           | `%LOCALAPPDATA%\Nexus\backups\`               | cópias do banco feitas antes de migrações                                                                |
 | Estado da janela  | `%APPDATA%\dev.nexus.desktop\`                | posição e tamanho da janela                                                                              |
@@ -26,6 +26,14 @@
 - Ref e commit do HEAD do git (lidos de `.git`, sem executar `git`).
 
 Remover o projeto do índice apaga tudo isso do banco; os arquivos da pasta nunca são alterados.
+
+## Memória do projeto
+
+- A memória guarda **texto**: o que você escreve e, ao importar ADRs, a seção de decisão do documento (até 4 000 caracteres por ADR). Cada revisão guarda o texto completo daquela versão.
+- Referências a arquivos guardam caminho, linhas e hash — não o código.
+- O histórico de operações registra apenas IDs, tipo, estado e revisão das memórias; nunca título ou texto.
+- Alertas de atualidade guardam caminhos, linhas e o que foi citado (um caminho ou nome), não trechos de código.
+- Diferente do índice, **a memória não é reconstruível** a partir dos arquivos: remover o projeto a apaga. Faça backup do banco se ela for importante.
 
 ## Limites da proteção
 

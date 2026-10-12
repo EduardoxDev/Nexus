@@ -8,7 +8,7 @@ Cada fase termina com aplicação executável e testes aprovados. Critérios de 
 | 1    | Fundação desktop             | concluída |
 | 2    | Indexação de projetos        | concluída |
 | 3    | Busca e Context Packs        | concluída |
-| 4    | Memória e atualidade         | planejada |
+| 4    | Memória e atualidade         | concluída |
 | 5    | MCP e CLI                    | planejada |
 | 6    | Inteligência avançada        | planejada |
 | 7    | Hardening e release          | planejada |
@@ -75,7 +75,7 @@ Critérios de aceitação (verificados em 2026-10-11):
 - [x] Context Packs com objetivo, resumo, arquivos, trechos, convenções, decisões, dependências, testes, riscos, contradições (pendente: Fase 4), fontes, data/atualidade e limitações; persistidos só como referências; exportação Markdown/JSON com exclusões e notas.
 - [x] Desktop (Busca, Context Packs) e CLI (`search`, `context`) com testes de componente, CLI e E2E no app real.
 
-Decisões em [ADR-0010](decisions/ADR-0010-busca-explicavel-e-packs-por-referencia.md). Pendências desta área: grafo de dependências e símbolos (Fase 6), contradições (Fase 4).
+Decisões em [ADR-0010](decisions/ADR-0010-busca-explicavel-e-packs-por-referencia.md). Pendências desta área: grafo de dependências e símbolos (Fase 6); contradições entregues na Fase 4.
 
 ## Fase 4 — Memória e atualidade
 
@@ -83,6 +83,19 @@ Decisões em [ADR-0010](decisions/ADR-0010-busca-explicavel-e-packs-por-referenc
 - Fontes que não sejam o usuário só criam propostas; nada sobrescreve decisões confirmadas sem revisão.
 - Importação de ADRs como propostas.
 - Detecção de: caminhos inexistentes citados em docs, símbolos removidos citados em docs, referências de memória com arquivo ausente ou hash alterado, memórias duplicadas, arquivos alterados desde a indexação. Cada alerta com fontes, motivo, data e ação recomendada; "requer revisão humana" quando indecidível.
+
+Critérios de aceitação (verificados em 2026-10-12):
+
+- [x] Nove tipos de memória com origem, datas, estados `proposed → confirmed → archived | superseded`, referências por hash e histórico integral de revisões (`tests/memory.rs`).
+- [x] Fontes que não são o usuário (importação de ADRs, agentes) só criam ou ajustam propostas; confirmar, arquivar e editar confirmadas exige o usuário — testado para `agent`, `adr_import` e `system`.
+- [x] ADRs importados como propostas, de forma idempotente; ADR alterado depois da confirmação vira proposta de substituição sem tocar na decisão confirmada (`changed_adr_never_overwrites_a_confirmed_decision`).
+- [x] Detecção de caminhos inexistentes, símbolos removidos, referências de memória alteradas/movidas/ausentes, origem alterada, decisão substituída na origem, duplicatas e contradições entre memórias, arquivos alterados desde a indexação — cada alerta com fontes (caminho e linha), motivo, datas, recomendação e "requer revisão humana" (`tests/freshness.rs`).
+- [x] Alertas estáveis: dispensado continua dispensado; corrigido é resolvido; reaparecimento reabre.
+- [x] Nenhum alerta de documento nas 4 fixtures; no repositório do NEXUS, 1 alerta (exemplo ilustrativo, marcado para revisão) — ver [benchmarks.md](benchmarks.md).
+- [x] Context Packs incluem só memórias confirmadas (por referência, com aviso se editadas depois) e a seção "Contradições e alertas pendentes" deixou de ser placeholder; JSON `schemaVersion` 2 e planos v1 ainda carregam.
+- [x] Desktop (Memória, Atualidade, packs, aviso ao remover projeto, paleta) e CLI (`memory`, `freshness`, código de saída 5 para conflito), com testes de componente, CLI e E2E no app real (11/11).
+
+Decisões em [ADR-0011](decisions/ADR-0011-memoria-revisada-e-alertas-estaveis.md). Limitações: nomes citados que nunca existiram no código não geram alerta; contradições são heurísticas (sem análise semântica); a CLI age como usuário (agentes com shell herdam esse poder até o MCP da Fase 5 usar o papel `agent`); remover um projeto apaga sua memória (com aviso, sem lixeira); a verificação automática acrescenta ~0,3 s por indexação com mudanças em 10 000 arquivos.
 
 ## Fase 5 — MCP e CLI
 

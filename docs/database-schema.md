@@ -11,7 +11,7 @@ Pragmas aplicados em toda conexão: `journal_mode=WAL`, `foreign_keys=ON`, `sync
 | 1      | `foundation`       | 1               | `settings`, `operations`                                                                 |
 | 2      | `projects_index`   | 2               | `projects`, `contents`, `files`, `chunks`, `chunks_fts`, `indexing_jobs`, `index_errors` |
 | 3      | `context_packs`    | 3               | `context_packs`, `context_sources`                                                       |
-| 4      | `memory_freshness` | 4 _(planejada)_ | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`        |
+| 4      | `memory_freshness` | 4               | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`, `freshness_scans` |
 | 5      | `analysis`         | 6 _(planejada)_ | `symbols`, `symbols_fts`, `symbol_removals`, `edges`                                     |
 
 Regras (ADR-0007):
@@ -96,9 +96,23 @@ Integridade e concorrência:
 
 Os trechos são lidos do disco ao abrir/exportar e comparados com o hash da criação (ADR-0010).
 
+## Versão 4 — `memory_freshness`
+
+| Tabela             | Conteúdo                                                                                                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `memories`         | uma linha por memória: tipo, estado (`proposed`/`confirmed`/`archived`/`superseded`), título, texto, origem (`user`/`cli`/`adr_import`/`agent`), documento e hash de origem, `supersedes`/`superseded_by`, revisão e datas |
+| `memory_refs`      | referências: caminho, linhas opcionais e hash do arquivo indexado quando a referência foi criada ou revisada                                                                                               |
+| `memory_revisions` | retrato integral de cada revisão (tipo, estado, título, texto, referências em JSON), com autor (`actor`), tipo de mudança e nota                                                                            |
+| `memories_fts`     | FTS5 (título, texto) mantido por gatilhos; `memory_id` não indexado                                                                                                                                       |
+| `freshness_issues` | alertas: tipo, `fingerprint` único por projeto, severidade, estado (`open`/`dismissed`/`resolved`), requer revisão, caminho/memórias relacionados, `detail_json` (título, motivo, recomendação, fontes, sugestão, contradição) e datas |
+| `freshness_scans`  | última verificação completa por projeto: data, geração do índice, duração, contagens e identificadores citados vistos no código (para detectar remoções)                                                    |
+
+Memórias e alertas são apagados em cascata com o projeto. `supersedes`/`superseded_by` usam `ON DELETE SET NULL`.
+
 ## Retenção
 
 - `context_packs`: 100 mais recentes por projeto (fontes removidas em cascata).
+- `freshness_issues` resolvidos: removidos 30 dias após a resolução. Memórias e revisões não têm retenção automática.
 
 - `indexing_jobs` (e seus `index_errors`): 50 mais recentes por projeto.
 - Conteúdos sem nenhum arquivo apontando para eles são removidos ao fim de cada job (com seus chunks e linhas do FTS).

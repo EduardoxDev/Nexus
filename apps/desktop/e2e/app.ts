@@ -96,6 +96,9 @@ export async function launchApp(dataDir: string): Promise<RunningApp> {
       ...process.env,
       NEXUS_DATA_DIR: dataDir,
       NEXUS_LOG: "info",
+      // Lido pelo app em builds de desenvolvimento; a variável do WebView2 fica como alternativa
+      // para executáveis de release (instalados).
+      NEXUS_E2E_CDP_PORT: String(port),
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
     },
     stdio: "ignore",

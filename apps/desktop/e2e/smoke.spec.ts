@@ -21,16 +21,16 @@ test("abre na Visão geral com o banco migrado para o schema atual", async () =>
   app = await launchApp(data.dir);
   const { page } = app;
   await expect(page.getByRole("heading", { name: "Visão geral" })).toBeVisible();
-  await expect(page.getByText("Banco OK · schema v3")).toBeVisible();
+  await expect(page.getByText("Banco OK · schema v4")).toBeVisible();
   await expect(
-    page.getByText("Migrations aplicadas nesta inicialização: v1, v2, v3"),
+    page.getByText("Migrations aplicadas nesta inicialização: v1, v2, v3, v4"),
   ).toBeVisible();
 });
 
 test("seções de fases futuras ficam desabilitadas", async () => {
   app = await launchApp(data.dir);
   const nav = app.page.getByRole("navigation", { name: "Navegação principal" });
-  const search = nav.getByRole("button", { name: /Memória/ });
+  const search = nav.getByRole("button", { name: /Integrações/ });
   await expect(search).toHaveAttribute("aria-disabled", "true");
   // Playwright trata aria-disabled como desabilitado; força o clique como um usuário faria.
   await search.click({ force: true });

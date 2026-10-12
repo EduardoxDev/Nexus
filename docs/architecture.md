@@ -149,4 +149,29 @@ Resultados são deduplicados por hash ("também em"), cada um com trecho de até
 4. Ordem por papel, promovendo o que a tarefa pede (decisões, testes, configuração); orçamento de tokens estimado (caracteres ÷ 4) e limite de arquivos; o que não cabe vai para "omitidos".
 5. Riscos (fontes alteradas, ausência de testes, sensíveis excluídos nas pastas relevantes, índice antigo) e limitações sempre presentes.
 6. Persistido como plano (sem texto); materializado ao abrir com verificação de hash; retenção de 100 packs por projeto.
-7. Exportação Markdown (cercas seguras + aviso de conteúdo não confiável + tabela de fontes) e JSON (`nexus.context-pack`, `schemaVersion` 1), com exclusões e notas do usuário.
+7. Exportação Markdown (cercas seguras + aviso de conteúdo não confiável + tabela de fontes) e JSON (`nexus.context-pack`, `schemaVersion` 2 desde a Fase 4), com exclusões e notas do usuário.
+
+## 12. Memória e atualidade (Fase 4)
+
+Decisões em [ADR-0011](decisions/ADR-0011-memoria-revisada-e-alertas-estaveis.md).
+
+**Memória** (`memory`): tipos decisão, convenção, requisito, restrição, bug, solução, dependência, tarefa e lição; estados `proposed → confirmed → archived | superseded` (e `archived → proposed`). O ator de cada chamada é explícito (`user`, `cli`, `adr_import`, `agent`, `system`); só `user`/`cli` revisam. Cada mudança grava uma revisão integral; edições exigem `expectedRevision`. Busca por FTS5 (`memories_fts`, título com peso 3). Referências a arquivos indexados guardam o hash e são verificadas contra o índice (`unchanged`, `changed`, `moved` pelo mesmo hash em outro caminho, `not_indexed`, `missing`); "Revisar referências" fixa o hash atual e corrige caminhos movidos.
+
+**Importação de ADRs** (`memory::adr`): Markdown indexado sob `decisions/`, `adr/` ou `ADR-*`; extrai título, estado (`Estado:`/`Status:`/seção) e a seção de decisão (com subtítulos), ou o início do documento. Idempotente pelo hash; ADRs marcados como substituídos/rejeitados não geram proposta nova; ADR alterado após a confirmação gera proposta com `supersedes`.
+
+**Atualidade** (`freshness`): verificações em três escopos — documentos (Markdown indexado, exceto changelogs e ADRs inativos), memória e arquivos.
+
+| Alerta                  | Detecção                                                                                       | Severidade | Requer revisão          |
+| ----------------------- | ---------------------------------------------------------------------------------------------- | ---------- | ----------------------- |
+| `missing_path`          | link relativo ou código inline com cara de caminho que não existe (índice, pastas, disco, sufixo) | aviso (link) / info (inline) | não (link) / sim (inline) |
+| `missing_symbol`        | identificador composto citado em código inline que existia no código e sumiu                   | aviso      | não                     |
+| `memory_ref_changed`    | hash do arquivo referenciado mudou                                                             | info       | sim                     |
+| `memory_ref_missing`    | arquivo referenciado sumiu (com sugestão quando o mesmo conteúdo está em outro caminho)        | aviso      | não se movido; senão sim |
+| `memory_source_changed` | o texto da decisão no ADR de origem difere da memória (contradição se confirmada)              | aviso      | sim                     |
+| `superseded_source`     | ADR de origem marcado como substituído/rejeitado com memória ainda confirmada (contradição)    | aviso      | sim                     |
+| `duplicate_memory`      | títulos iguais/parecidos ou textos com Jaccard ≥ 0,8; contradição se ambas confirmadas, mesmo tipo e textos diferentes (< 0,5) | info / aviso | sim |
+| `files_changed`         | tamanho/mtime no disco diferente do indexado, ou arquivo apagado (um alerta por geração)       | info       | não                     |
+
+Cada alerta tem impressão digital estável; a gravação faz upsert, reabre resolvidos que voltaram, resolve os que sumiram do escopo verificado e preserva dispensados. Roda após cada indexação que muda o índice (`Core::index_project`), sob demanda (`scan`) e, só para memória, após cada mudança na memória.
+
+**Packs**: até 6 memórias confirmadas (bm25 sobre a tarefa + referência a arquivos do pack), no máximo ¼ do orçamento; alertas abertos ligados às fontes ou memórias aparecem em "Contradições e alertas pendentes" no app e no export.

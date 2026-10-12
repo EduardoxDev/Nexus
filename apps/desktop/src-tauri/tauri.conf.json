@@ -14,6 +14,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "NEXUS",
         "width": 1280,
         "height": 800,

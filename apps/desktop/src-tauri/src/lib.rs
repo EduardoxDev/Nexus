@@ -66,6 +66,36 @@ fn start_reconciler(core: Arc<Core>, manager: JobManager, stop: Arc<AtomicBool>)
     }
 }
 
+/// Argumentos padrão do Tauri/wry para o WebView2 (mantidos ao acrescentar outros).
+#[cfg(debug_assertions)]
+const DEFAULT_BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection";
+
+/// Porta CDP pedida pelos testes E2E (`NEXUS_E2E_CDP_PORT`). Só existe em builds de
+/// desenvolvimento: o WebView2 deixou de respeitar `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
+/// neste ambiente, então a porta é passada explicitamente na criação da janela.
+#[cfg(debug_assertions)]
+fn e2e_cdp_port() -> Option<u16> {
+    std::env::var("NEXUS_E2E_CDP_PORT").ok()?.parse().ok()
+}
+
+/// Cria a janela principal a partir da configuração (`create: false` no tauri.conf.json).
+fn create_main_window(app: &tauri::App) -> tauri::Result<()> {
+    let Some(config) = app.config().app.windows.iter().find(|w| w.label == "main") else {
+        tracing::error!("configuração da janela principal ausente");
+        return Ok(());
+    };
+    #[allow(unused_mut)]
+    let mut builder = tauri::WebviewWindowBuilder::from_config(app.handle(), config)?;
+    #[cfg(debug_assertions)]
+    if let Some(port) = e2e_cdp_port() {
+        builder = builder.additional_browser_args(&format!(
+            "{DEFAULT_BROWSER_ARGS} --remote-debugging-port={port}"
+        ));
+    }
+    builder.build()?;
+    Ok(())
+}
+
 pub fn run() {
     let paths = DataPaths::resolve();
     let console = if cfg!(debug_assertions) {
@@ -102,6 +132,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
         .setup(move |app| {
+            create_main_window(app)?;
             let info = commands::app::app_info(app.handle());
             tracing::info!(
                 version = %info.app_version,

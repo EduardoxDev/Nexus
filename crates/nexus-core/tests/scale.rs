@@ -132,6 +132,20 @@ fn ten_thousand_files_incremental_touches_exactly_one() {
         pack_ms[pack_ms.len() - 1]
     );
 
+    // Verificação de atualidade completa (documentos, memória e stat de todos os arquivos).
+    let mut scan_ms = Vec::new();
+    for _ in 0..3 {
+        let t = Instant::now();
+        let report = core.scan_freshness(id).unwrap();
+        scan_ms.push(t.elapsed().as_secs_f64() * 1000.0);
+        assert_eq!(report.info.memories_checked, 0);
+    }
+    scan_ms.sort_by(f64::total_cmp);
+    eprintln!(
+        "verificação de atualidade (3x): mín {:.1} ms, máx {:.1} ms",
+        scan_ms[0], scan_ms[2]
+    );
+
     let db_size = std::fs::metadata(core.paths().db()).unwrap().len();
     let wal_size =
         std::fs::metadata(core.paths().db().with_extension("db-wal")).map_or(0, |m| m.len());

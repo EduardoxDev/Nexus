@@ -52,6 +52,26 @@ Mesmo teste de escala (`tests/scale.rs`, release), após indexar: 24 buscas (8 c
 
 Na fixture de avaliação (47 arquivos): busca p50 2,5 ms; Context Pack p50 7,9 ms — ver [evaluation.md](evaluation.md).
 
+## Atualidade (Fase 4)
+
+| Medida (2026-10-12, release)                                         | Resultado                                                                                     |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Verificação completa, 10 000 arquivos sem documentos (`tests/scale.rs`) | 315–316 ms (3 execuções) — dominada pelo `stat` de cada arquivo indexado                       |
+| Incremental com 1 arquivo alterado, **incluindo** a verificação automática | 0,82 s (antes da Fase 4: 0,39–0,43 s). Sem mudanças no índice a verificação não roda: 0,39 s |
+| Repositório do NEXUS (36 documentos Markdown, debug)                  | 46–56 ms                                                                                      |
+
+Nesta mesma execução: busca p50 48,6 ms · p95 54,0 ms; Context Pack 99–152 ms; indexação inicial 3,6 s.
+
+### Precisão dos alertas de documentos
+
+| Repositório                                  | Alertas de documento | Avaliação                                                                                         |
+| -------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| 4 fixtures (`saas-app`, `ts-webapp`, `py-service`, `rust-lib`) | 0                    | teste `fixtures_have_no_document_alerts`                                                          |
+| NEXUS (este repositório), 1ª versão da heurística | 17                   | 16 falsos positivos: caminhos relativos a subprojeto (`tests/scale.rs`), pastas de execução (`logs/`) |
+| NEXUS, heurística final                      | 1                    | `test_service.py` citado como exemplo de convenção — marcado "requer revisão humana"              |
+
+Reproduzir: `NEXUS_FRESHNESS_REPO=<pasta> cargo test -p nexus-core --test freshness -- --ignored --nocapture`.
+
 ## Pendentes
 
 Consumo de memória e uso de CPU durante a indexação (Fase 6).

@@ -112,6 +112,22 @@ export function setupIpc(overrides: Partial<Record<CommandName, Handler>> = {}) 
     reveal_data_dir: () => null,
     list_projects: () => [],
     get_indexing_queue: () => ({ running: null, paused: false, queued: [] }),
+    get_analysis_overview: () => ({
+      graph: null,
+      languages: [],
+      notAnalyzed: [],
+      mostImported: [],
+      externalPackages: [],
+      coverage: [],
+    }),
+    get_file_analysis: (args) => ({
+      relPath: args.relPath as string,
+      language: null,
+      analyzed: false,
+      symbols: [],
+      imports: [],
+      importedBy: [],
+    }),
     ...overrides,
   };
   mockIPC(

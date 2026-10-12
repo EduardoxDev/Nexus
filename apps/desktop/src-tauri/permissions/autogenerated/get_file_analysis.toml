@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-file-analysis"
+description = "Enables the get_file_analysis command without any pre-configured scope."
+commands.allow = ["get_file_analysis"]
+
+[[permission]]
+identifier = "deny-get-file-analysis"
+description = "Denies the get_file_analysis command without any pre-configured scope."
+commands.deny = ["get_file_analysis"]

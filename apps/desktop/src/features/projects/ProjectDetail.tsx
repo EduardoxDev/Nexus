@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
 import { jobFraction, jobProgressLabel } from "@/features/projects/activity";
+import { AnalysisPanel } from "@/features/projects/AnalysisPanel";
 import { JobsPanel } from "@/features/projects/JobsPanel";
 import { LanguageBars } from "@/features/projects/LanguageBars";
 import { RemoveProjectDialog } from "@/features/projects/RemoveProjectDialog";
@@ -258,6 +259,7 @@ function ProjectDetailView({ overview }: { overview: ProjectOverview }) {
         )}
       </Panel>
 
+      <AnalysisPanel projectId={project.id} />
       <SkippedPanel projectId={project.id} />
       <JobsPanel projectId={project.id} />
 

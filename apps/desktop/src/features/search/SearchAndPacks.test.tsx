@@ -269,3 +269,96 @@ describe("Context Packs", () => {
     );
   });
 });
+
+describe("Dependências na prévia", () => {
+  it("mostra declarações, imports e quem importa, e navega pelo grafo", async () => {
+    const user = userEvent.setup();
+    const { calls } = setupIpc({
+      list_projects: () => [project],
+      search_project: () => response,
+      get_file_context: (args) => ({
+        relPath: args.relPath as string,
+        language: "typescript",
+        kind: "code",
+        startLine: 1,
+        endLine: 3,
+        totalLines: 40,
+        text: `conteúdo de ${args.relPath as string}`,
+        freshness: "fresh",
+        contentHash: "abc",
+        indexedAt: NOW,
+      }),
+      get_file_analysis: (args) => ({
+        relPath: args.relPath as string,
+        language: "typescript",
+        analyzed: true,
+        symbols: [
+          {
+            name: "validateSession",
+            kind: "function",
+            line: 25,
+            endLine: 34,
+            exported: true,
+            container: null,
+          },
+        ],
+        imports: [
+          {
+            fromPath: "src/auth/session.ts",
+            line: 4,
+            specifier: "../db/client",
+            kind: "import",
+            toPath: "src/db/client.ts",
+            external: null,
+          },
+          {
+            fromPath: "src/auth/session.ts",
+            line: 1,
+            specifier: "node:crypto",
+            kind: "import",
+            toPath: null,
+            external: "node:crypto",
+          },
+        ],
+        importedBy: [
+          {
+            fromPath: "src/server/routes/auth.routes.ts",
+            line: 3,
+            specifier: "../../auth/session",
+            kind: "import",
+            toPath: "src/auth/session.ts",
+            external: null,
+          },
+        ],
+      }),
+    });
+    renderApp();
+    await open(user, "Busca");
+    await user.type(await screen.findByRole("searchbox"), "validateSession");
+    await user.click(screen.getByRole("button", { name: "Buscar" }));
+    const results = await screen.findByRole("list", { name: "Resultados" });
+    await user.click(within(results).getByRole("button", { name: /src\/auth\/session\.ts/ }));
+    const preview = await screen.findByRole("complementary", { name: "Prévia" });
+    const deps = await within(preview).findByRole("region", { name: "Dependências do arquivo" });
+    expect(within(deps).getByText("validateSession")).toBeInTheDocument();
+    expect(within(deps).getByText("função · 25")).toBeInTheDocument();
+    expect(within(deps).getByText("pacote node:crypto")).toBeInTheDocument();
+    await user.click(
+      within(deps).getByRole("button", { name: "src/server/routes/auth.routes.ts" }),
+    );
+    expect(
+      await within(preview).findByText("conteúdo de src/server/routes/auth.routes.ts"),
+    ).toBeInTheDocument();
+    expect(calls).toContainEqual({
+      cmd: "get_file_context",
+      args: {
+        projectId: 1,
+        relPath: "src/server/routes/auth.routes.ts",
+        startLine: 1,
+        endLine: 400,
+      },
+    });
+    await user.click(within(preview).getByRole("button", { name: "Voltar ao resultado" }));
+    expect(await within(preview).findByText("conteúdo de src/auth/session.ts")).toBeInTheDocument();
+  });
+});

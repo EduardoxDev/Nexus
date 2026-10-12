@@ -391,3 +391,19 @@ export function useIntegrationInfo() {
     staleTime: Infinity,
   });
 }
+
+// ---- Análise de código -------------------------------------------------------------------
+
+export function useAnalysisOverview(projectId: number) {
+  return useQuery({
+    queryKey: [...projectKeys.all, "analysis", projectId] as const,
+    queryFn: () => call("get_analysis_overview", { projectId }),
+  });
+}
+
+export function useFileAnalysis(projectId: number, relPath: string) {
+  return useQuery({
+    queryKey: [...projectKeys.all, "fileAnalysis", projectId, relPath] as const,
+    queryFn: () => call("get_file_analysis", { projectId, relPath }),
+  });
+}

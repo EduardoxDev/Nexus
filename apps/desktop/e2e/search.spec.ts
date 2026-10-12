@@ -45,6 +45,13 @@ test("busca em português encontra o código certo, com motivos e prévia verifi
   await first.getByRole("button", { name: /src\/checkout\/shipping\.ts/ }).click();
   const preview = page.getByRole("complementary", { name: "Prévia" });
   await expect(preview).toContainText("export function shippingCost");
+  // Grafo: quem importa shipping.ts, com navegação para o arquivo.
+  const deps = preview.getByRole("region", { name: "Dependências do arquivo" });
+  await expect(deps.getByRole("list", { name: "Arquivos que importam este" })).toContainText(
+    "src/checkout/checkout.ts",
+  );
+  await deps.getByRole("button", { name: "src/checkout/checkout.ts" }).click();
+  await expect(preview).toContainText("export async function checkout");
 });
 
 test("Context Pack é compilado, persiste após reiniciar e mostra fontes verificadas", async () => {

@@ -45,6 +45,8 @@ const COMMANDS: &[&str] = &[
     "scan_freshness",
     "set_issue_dismissed",
     "get_integration_info",
+    "get_analysis_overview",
+    "get_file_analysis",
 ];
 
 fn main() {

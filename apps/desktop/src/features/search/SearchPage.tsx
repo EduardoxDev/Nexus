@@ -2,6 +2,7 @@ import { FolderGit2, Package, Search as SearchIcon, SearchX } from "lucide-react
 import { useState, type SubmitEvent } from "react";
 
 import { CodeBlock, FreshnessBadge } from "@/components/code";
+import { FileDependencies } from "@/features/search/FileDependencies";
 import { EmptyState, ErrorState } from "@/components/feedback";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { Badge } from "@/components/ui/badge";
@@ -150,7 +151,12 @@ export function SearchPage() {
         </div>
       </div>
       {selected && projectId !== null && (
-        <Preview projectId={projectId} hit={selected} onClose={() => setSelected(null)} />
+        <Preview
+          key={`${selected.relPath}:${selected.startLine}`}
+          projectId={projectId}
+          hit={selected}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
@@ -309,15 +315,23 @@ function Preview({
   hit: SearchHit;
   onClose: () => void;
 }) {
-  const start = Math.max(1, hit.startLine - 20);
-  const ctx = useFileContext(projectId, hit.relPath, start, hit.endLine + 60);
+  // Navegar por uma dependência mostra o outro arquivo desde o início.
+  const [path, setPath] = useState(hit.relPath);
+  const own = path === hit.relPath;
+  const start = own ? Math.max(1, hit.startLine - 20) : 1;
+  const ctx = useFileContext(projectId, path, start, own ? hit.endLine + 60 : 400);
   return (
     <aside
       aria-label={t.searchPage.previewTitle}
       className="flex w-[44%] min-w-[360px] shrink-0 flex-col border-l border-border bg-surface-1"
     >
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <span className="min-w-0 flex-1 truncate font-mono text-sm">{hit.relPath}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-sm">{path}</span>
+        {!own && (
+          <Button size="sm" variant="ghost" onClick={() => setPath(hit.relPath)}>
+            {t.analysis.backToResult}
+          </Button>
+        )}
         {ctx.data && <FreshnessBadge freshness={ctx.data.freshness} />}
         <Button size="sm" variant="ghost" onClick={onClose}>
           {t.common.close}
@@ -337,9 +351,10 @@ function Preview({
             <CodeBlock
               text={ctx.data.text}
               startLine={ctx.data.startLine}
-              highlight={hit.matchLines}
+              highlight={own ? hit.matchLines : []}
               label={t.searchPage.previewTitle}
             />
+            <FileDependencies projectId={projectId} relPath={path} onOpen={setPath} />
           </>
         )}
       </div>

@@ -14,6 +14,8 @@ import type {
   FileContext,
   FreshnessIssue,
   FreshnessSummary,
+  AnalysisOverview,
+  FileAnalysisView,
   ImportReport,
   IntegrationInfo,
   IssueQuery,
@@ -103,6 +105,8 @@ export interface Commands {
   reveal_project_dir: { args: ProjectArgs; result: null };
   get_startup_status: { args: undefined; result: StartupStatus };
   get_integration_info: { args: undefined; result: IntegrationInfo };
+  get_analysis_overview: { args: ProjectArgs; result: AnalysisOverview };
+  get_file_analysis: { args: ProjectArgs & { relPath: string }; result: FileAnalysisView };
   get_app_info: { args: undefined; result: AppInfo };
   get_diagnostics: { args: undefined; result: DiagnosticsReport };
   run_integrity_check: { args: undefined; result: IntegrityReport };

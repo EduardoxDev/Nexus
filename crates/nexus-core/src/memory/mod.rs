@@ -609,7 +609,8 @@ pub fn resolve_id(conn: &Connection, reference: &str) -> Result<String> {
             "identificador de memória inválido: \"{reference}\" (use o ID ou 6+ caracteres dele)"
         )));
     }
-    let mut stmt = conn.prepare("SELECT id FROM memories WHERE id LIKE ?1 || '%' OR id LIKE '%' || ?1 LIMIT 2")?;
+    let mut stmt = conn
+        .prepare("SELECT id FROM memories WHERE id LIKE ?1 || '%' OR id LIKE '%' || ?1 LIMIT 2")?;
     let ids: Vec<String> = stmt
         .query_map([&r], |row| row.get(0))?
         .collect::<std::result::Result<_, _>>()?;

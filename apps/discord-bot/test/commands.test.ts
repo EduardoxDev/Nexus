@@ -16,6 +16,9 @@ const cfg: BotConfig = {
   publicProject: "nexus",
   teamProjects: ["otimiza"],
   teamChannelIds: ["100"],
+  announceChannelId: null,
+  teamAlertsChannelId: null,
+  githubRepo: "EduardoxDev/Nexus",
 };
 const COMMON: ChannelRef = { id: "999", parentId: null };
 const TEAM: ChannelRef = { id: "100", parentId: null };
@@ -214,6 +217,63 @@ describe("/nexus", () => {
     );
   });
 
+  it("sends the configured project spelling to NEXUS (M2)", async () => {
+    const { tools, calls } = fakeTools();
+    const { i } = fakeInteraction(TEAM, "buscar", { texto: "login", projeto: "OTIMIZA" });
+    await handleNexus(i, { tools, cfg });
+    expect(calls[0]?.args.project).toBe("otimiza");
+  });
+
+  it("the whole command has one deadline, even with several calls (M5)", async () => {
+    // Cada chamada sozinha caberia no prazo do cliente; a soma não pode passar do prazo total.
+    const tools: Tools = {
+      callTool: <T>() => new Promise<T>(() => undefined),
+    };
+    const { i, sent } = fakeInteraction(COMMON, "pergunta", { texto: "x" });
+    const logged: string[] = [];
+    const started = Date.now();
+    await handleNexus(i, { tools, cfg, deadlineMs: 50, log: (l) => logged.push(l) });
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(sent.at(-1)?.payload?.embeds?.[0]?.description).toBe(
+      "A NEXUS não respondeu agora. Tente de novo em instantes.",
+    );
+    expect(logged[0]).toContain("prazo de 50 ms");
+  });
+
+  it("versao shows the version in use and the latest release, in any channel", async () => {
+    const tools: Tools = {
+      callTool: async <T>() => ({}) as T,
+      serverVersion: async () => "0.2.0",
+    };
+    const { i, texts } = fakeInteraction(COMMON, "versao");
+    await handleNexus(i, {
+      tools,
+      cfg,
+      latestRelease: async () => ({
+        tag: "v0.2.1",
+        name: "NEXUS v0.2.1",
+        notes: "",
+        url: "https://github.com/EduardoxDev/Nexus/releases/tag/v0.2.1",
+        assets: [],
+      }),
+    });
+    expect(texts()).toContain("v0.2.0");
+    expect(texts()).toContain("v0.2.1");
+    expect(texts()).toContain("mais nova");
+  });
+
+  it("versao still answers when GitHub is unreachable", async () => {
+    const tools: Tools = { callTool: async <T>() => ({}) as T, serverVersion: async () => "0.2.0" };
+    const { i, texts } = fakeInteraction(COMMON, "versao");
+    await handleNexus(i, {
+      tools,
+      cfg,
+      latestRelease: () => Promise.reject(new Error("sem rede")),
+    });
+    expect(texts()).toContain("v0.2.0");
+    expect(texts()).toContain("nenhuma ainda");
+  });
+
   it("failures are logged with the reason, without user content", async () => {
     const { tools } = fakeTools(
       {},
@@ -236,6 +296,12 @@ describe("/nexus", () => {
   it("defines the slash command with its subcommands", () => {
     const json = nexusCommand.toJSON();
     expect(json.name).toBe("nexus");
-    expect(json.options?.map((o) => o.name)).toEqual(["pergunta", "buscar", "pack", "status"]);
+    expect(json.options?.map((o) => o.name)).toEqual([
+      "pergunta",
+      "buscar",
+      "pack",
+      "status",
+      "versao",
+    ]);
   });
 });

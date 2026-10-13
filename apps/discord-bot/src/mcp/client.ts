@@ -69,6 +69,8 @@ export class McpClient {
   private lastExit: Promise<void> = Promise.resolve();
   private nextId = 1;
   private readonly pending = new Map<number, Pending>();
+  /** Versão informada pela NEXUS no `initialize` (ex.: "0.2.0"). */
+  private version: string | null = null;
 
   constructor(opts: McpClientOptions) {
     this.opts = { timeoutMs: 30_000, ...opts };
@@ -99,6 +101,12 @@ export class McpClient {
       throw new McpToolError(text);
     }
     return result.structuredContent as T;
+  }
+
+  /** Versão da NEXUS conectada (inicia o servidor se preciso). */
+  async serverVersion(): Promise<string | null> {
+    await this.start();
+    return this.version;
   }
 
   async close(): Promise<void> {
@@ -174,7 +182,11 @@ export class McpClient {
       protocolVersion: PROTOCOL_VERSION,
       capabilities: {},
       clientInfo: CLIENT_INFO,
-    }).then(() => this.notify("notifications/initialized"));
+    }).then((result) => {
+      const info = (result as { serverInfo?: { version?: unknown } } | null)?.serverInfo;
+      this.version = typeof info?.version === "string" ? info.version : null;
+      this.notify("notifications/initialized");
+    });
     // Uma falha na inicialização não deixa o cliente preso: a próxima chamada tenta de novo.
     init.catch(() => this.discard(child));
     return init;

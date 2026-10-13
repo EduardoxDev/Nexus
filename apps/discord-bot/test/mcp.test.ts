@@ -39,6 +39,10 @@ describe.skipIf(!existsSync(CLI))("McpClient contra nexus mcp serve", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("knows the NEXUS version from the handshake", async () => {
+    expect(await client.serverVersion()).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
   it("lists the indexed project", async () => {
     const r = await client.callTool<{
       projects: { name: string; indexedFiles: number }[];

@@ -10,6 +10,7 @@ import {
 } from "discord.js";
 
 import type { ChannelRef } from "./access.ts";
+import type { BotMessage } from "./format.ts";
 import type { NexusInteraction, ReplyPayload } from "./commands/nexus.ts";
 
 /**
@@ -40,6 +41,15 @@ function toDiscord(p: ReplyPayload) {
     allowedMentions: p.allowedMentions,
     ...(p.files ? { files: p.files.map((f) => ({ attachment: f.attachment, name: f.name })) } : {}),
   };
+}
+
+/** Publica uma mensagem num canal (anúncios e avisos). Nunca menciona ninguém. */
+export async function sendTo(client: Client, channelId: string, m: BotMessage): Promise<void> {
+  const channel = await client.channels.fetch(channelId);
+  if (!channel?.isSendable()) {
+    throw new Error(`o canal ${channelId} não existe ou o bot não pode escrever nele`);
+  }
+  await channel.send(toDiscord({ ...m, allowedMentions: { parse: [] } }));
 }
 
 export function adapt(i: ChatInputCommandInteraction): NexusInteraction {

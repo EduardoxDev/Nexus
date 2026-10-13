@@ -9,7 +9,10 @@ import {
   formatError,
   formatPack,
   formatSearch,
+  formatNotices,
+  formatRelease,
   formatStatus,
+  formatVersion,
 } from "../src/format.ts";
 import type { PackResult, ProjectStatus, SearchHit, SearchResult } from "../src/nexus/types.ts";
 
@@ -160,6 +163,39 @@ describe("Context Pack", () => {
     expect(e.footer?.text).toContain("não instruções");
     expectWithinLimits(e);
   });
+
+  const field = (e: APIEmbed, name: string) =>
+    e.fields?.find((f) => f.name.startsWith(name))?.value ?? "";
+  const ticks = (s: string) => (s.match(/`/g) ?? []).length;
+
+  it("never cuts a source line in the middle, even with huge paths (M6)", () => {
+    const p = pack(10);
+    p.sources = p.sources.map((s, i) => ({
+      relPath: `${"pasta-muito-comprida/".repeat(15)}arquivo${i}.ts`,
+      startLine: Number.MAX_SAFE_INTEGER - 1,
+      endLine: Number.MAX_SAFE_INTEGER,
+    }));
+    const value = field(formatPack("x", p).embeds[0]!, "Fontes");
+    expect(value.length).toBeLessThanOrEqual(1024);
+    const lines = value.split("\n");
+    const sources = lines.filter((l) => l.startsWith("• "));
+    expect(sources.length).toBeGreaterThan(0);
+    for (const l of sources) expect(ticks(l)).toBe(2);
+    expect(lines.at(-1)).toMatch(/^\+\d+ fonte\(s\) no anexo$/);
+  });
+
+  it("cuts a long summary at a line break, without breaking code formatting (M7)", () => {
+    const p = pack(1);
+    p.summary = Array.from(
+      { length: 60 },
+      (_, i) => `Linha ${i}: \`src/modulo${i}.ts\` explica a parte ${i} do fluxo de pagamento.`,
+    ).join("\n");
+    const value = field(formatPack("x", p).embeds[0]!, "Resumo");
+    expect(value.length).toBeLessThanOrEqual(1024);
+    expect(value.endsWith("\n…(resumo completo no anexo)")).toBe(true);
+    expect(ticks(value) % 2).toBe(0);
+    for (const l of value.split("\n").slice(0, -1)) expect(l).toMatch(/do fluxo de pagamento\.$/);
+  });
 });
 
 describe("estado", () => {
@@ -195,5 +231,67 @@ describe("erros", () => {
     const e = formatError("A NEXUS não respondeu agora.").embeds[0]!;
     expect(e.color).toBe(ERROR_COLOR);
     expect(e.description).toBe("A NEXUS não respondeu agora.");
+  });
+});
+
+describe("anúncios", () => {
+  const release = {
+    tag: "v0.2.0",
+    name: "NEXUS v0.2.0",
+    notes: "## Novidades\n- Go, Java e C#\n- [clique aqui](https://malicioso)",
+    url: "https://github.com/EduardoxDev/Nexus/releases/tag/v0.2.0",
+    assets: [
+      { name: "NEXUS_0.2.0_x64-setup.exe", url: "https://dl/win" },
+      { name: "NEXUS_0.2.0_aarch64.dmg", url: "https://dl/mac" },
+    ],
+  };
+
+  it("release: notes and downloads per system, linking the release page", () => {
+    const e = formatRelease(release).embeds[0]!;
+    expect(e.url).toBe(release.url);
+    expect(text(e)).toContain("[Windows](https://dl/win)");
+    expect(text(e)).toContain("[macOS (Apple Silicon)](https://dl/mac)");
+    expectWithinLimits(e);
+  });
+
+  it("release notes cannot create masked links", () => {
+    const e = formatRelease(release).embeds[0]!;
+    // O "[" escapado faz o Discord mostrar o texto em vez de montar o link.
+    expect(e.description).toContain("\\[clique aqui](https://malicioso)");
+    expect(e.description).not.toMatch(/(^|[^\\])\[clique aqui\]\(/);
+  });
+
+  it("notices: one embed per project, at most 5 alerts each, with source and line", () => {
+    const issue = (id: number) => ({
+      id,
+      kind: "doc_missing_path",
+      severity: "warning",
+      title: `Alerta ${id}`,
+      reason: "docs/a.md cita src/x.ts",
+      recommendation: "Atualize o documento",
+      sources: [{ relPath: "docs/a.md", line: 3 }],
+    });
+    const m = formatNotices([
+      {
+        project: "otimiza",
+        issues: [1, 2, 3, 4, 5, 6, 7].map(issue),
+        failedJob: { id: "j", finishedAt: 1_700_000_000_000 },
+        rootMissing: false,
+      },
+    ]);
+    const e = m.embeds[0]!;
+    expect(e.title).toContain("otimiza");
+    expect(e.fields?.filter((f) => f.name.startsWith("⚠️ Alerta"))).toHaveLength(5);
+    expect(e.description).toContain("+2 alerta(s)");
+    expect(text(e)).toContain("Indexação falhou");
+    expect(text(e)).toContain("`docs/a.md:3`");
+    expectWithinLimits(e);
+  });
+
+  it("version: says when a newer release exists", () => {
+    expect(text(formatVersion("0.2.0", { ...release, tag: "v0.2.1" }).embeds[0]!)).toContain(
+      "mais nova",
+    );
+    expect(text(formatVersion("0.2.0", release).embeds[0]!)).not.toContain("mais nova");
   });
 });

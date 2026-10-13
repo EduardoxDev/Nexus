@@ -1,5 +1,8 @@
 {
   "publicProject": "nexus",
   "teamProjects": ["otimiza"],
-  "teamChannelIds": ["123456789012345678"]
+  "teamChannelIds": ["123456789012345678"],
+  "announceChannelId": "234567890123456789",
+  "teamAlertsChannelId": "123456789012345678",
+  "githubRepo": "EduardoxDev/Nexus"
 }

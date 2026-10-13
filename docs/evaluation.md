@@ -102,6 +102,18 @@ As fixtures são pequenas e limpas, então esse resultado é otimista. Medição
 3. Como os ajustes foram guiados pelo conjunto principal, há **risco de sobreajuste**. Por isso o conjunto reservado foi escrito depois e nunca usado para ajustar: a busca híbrida ganhou da simples também ali (MRR 0,833 × 0,616).
 4. Ajustes posteriores vieram de uso real da interface (não do conjunto): flexões em português (`validada` → `validar`), desempate de trechos e declarações pela cobertura de conceitos, limite de documentação genérica nos packs e testes procurados também para arquivos relacionados. As métricas permaneceram estáveis.
 
+## v0.2 — Go, Java e C# (2026-10-13)
+
+Gabarito conferido à mão em três fixtures novas (`tests/evaluation/analysis.json`), medido por `cargo test -p nexus-core --test analysis -- --nocapture`:
+
+| Linguagem | Símbolos: precisão | Símbolos: revocação | Imports resolvidos: precisão | Imports resolvidos: revocação |
+| --------- | ------------------ | ------------------- | ---------------------------- | ----------------------------- |
+| Go        | 1,000 (14/14)      | 1,000               | 1,000 (12/12)                | 1,000                         |
+| Java      | 1,000 (19/19)      | 1,000               | 1,000 (8/8)                  | 1,000                         |
+| C#        | 1,000 (17/17)      | 1,000               | 1,000 (7/7)                  | 1,000                         |
+
+As linguagens anteriores continuaram em 1,000. Limitação: as fixtures são pequenas e escritas por mim; código real com geração de código, text blocks ou strings verbatim desbalanceadas pode errar (ver cobertura declarada em `analysis::coverage()`).
+
 ## Falhas conhecidas (conjunto principal)
 
 | Tarefa                                     | Problema                                                                                                            |

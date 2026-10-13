@@ -240,3 +240,34 @@ fn embedded_sqlite_has_fts5() {
     )
     .expect("FTS5 contentless_delete (ADR-0003) precisa estar disponível");
 }
+
+/// v5 → v6: as arestas antigas somem (são recalculadas na próxima indexação), o grafo fica
+/// marcado para reconstrução e um mesmo import passa a poder apontar para vários arquivos.
+#[test]
+fn v6_recreates_edges_with_target_in_the_key() {
+    let mut conn = mem();
+    migrate::migrate_with(&mut conn, &migrate::MIGRATIONS[..5], None).unwrap();
+    conn.execute_batch(
+        "INSERT INTO projects (id, name, root_path, created_at, last_opened_at)
+           VALUES (1, 'p', '/p', 0, 0);
+         INSERT INTO edges (project_id, from_path, line, specifier, kind, to_path, external)
+           VALUES (1, 'main.go', 3, 'x/store', 'import', 'store/a.go', NULL);
+         INSERT INTO graph_state (project_id, index_generation, built_at, duration_ms, files, edges, resolved, external, unresolved)
+           VALUES (1, 7, 0, 0, 1, 1, 1, 0, 0);",
+    )
+    .unwrap();
+
+    let report = migrate::migrate(&mut conn, None).unwrap();
+    assert_eq!(report.applied, vec![6]);
+    let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+    assert_eq!(count("SELECT COUNT(*) FROM edges"), 0);
+    assert_eq!(count("SELECT COUNT(*) FROM graph_state"), 0);
+
+    conn.execute_batch(
+        "INSERT INTO edges (project_id, from_path, line, specifier, kind, to_path, external, target)
+           VALUES (1, 'main.go', 3, 'x/store', 'import', 'store/a.go', NULL, 'store/a.go'),
+                  (1, 'main.go', 3, 'x/store', 'import', 'store/b.go', NULL, 'store/b.go');",
+    )
+    .unwrap();
+    assert_eq!(count("SELECT COUNT(*) FROM edges"), 2);
+}

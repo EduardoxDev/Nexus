@@ -28,6 +28,18 @@ Observações:
 - O tempo da passada incremental é dominado pela varredura de diretórios e pela comparação de metadados.
 - Gerar os 10 000 arquivos levou ~34 s (fora da medição).
 
+### v0.2 — Go, Java e C# (2026-10-13, mesma máquina)
+
+Mesmo teste, `main` e a branch da etapa rodados em sequência para comparar nas mesmas condições (a máquina estava mais lenta que no dia da tabela acima: só gerar os arquivos levou 44–51 s):
+
+| Medida                             | `main` | Com Go/Java/C# |
+| ---------------------------------- | ------ | -------------- |
+| Indexação inicial (10 000 arquivos) | 13,2 s | 15,5 s         |
+| Incremental sem mudanças           | 0,40 s | 0,40 s         |
+| Incremental com 1 arquivo alterado | 0,89 s | 0,91 s         |
+
+A diferença na inicial está dentro da variação da máquina; as incrementais ficaram iguais. A resolução nova só roda para arquivos Go/Java/C#.
+
 ## Repositório real
 
 `nexus projects add <repo> --index` sobre o repositório do NEXUS (2026-10-11, build de depuração):

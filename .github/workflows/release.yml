@@ -31,10 +31,14 @@ jobs:
       - uses: actions/checkout@v7
       - name: A tag bate com a versão do app e tem notas no CHANGELOG
         shell: bash
+        # A tag entra por variável de ambiente (nunca interpolada no script): um nome de tag com
+        # caracteres de shell não vira comando.
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           app=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
-          test "v$app" = "${{ github.ref_name }}" || { echo "tag ${{ github.ref_name }}, mas o app está em $app"; exit 1; }
-          node scripts/release-notes.mjs "${{ github.ref_name }}" > /dev/null
+          test "v$app" = "$TAG" || { echo "tag $TAG, mas o app está em $app"; exit 1; }
+          node scripts/release-notes.mjs "$TAG" > /dev/null
       - name: Dependências do sistema (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -96,7 +100,10 @@ jobs:
           path: out
           merge-multiple: true
       - name: latest.json (atualizador)
-        run: node scripts/latest-json.mjs out "${{ github.ref_name }}" "${{ github.repository }}"
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: node scripts/latest-json.mjs out "$TAG" "$REPO"
       - name: SHA256SUMS
         working-directory: out
         run: |
@@ -105,9 +112,10 @@ jobs:
       - name: Criar o rascunho
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
         run: |
-          node scripts/release-notes.mjs "${{ github.ref_name }}" > notes.md
-          gh release create "${{ github.ref_name }}" --draft --verify-tag \
-            --title "NEXUS ${{ github.ref_name }}" \
+          node scripts/release-notes.mjs "$TAG" > notes.md
+          gh release create "$TAG" --draft --verify-tag \
+            --title "NEXUS $TAG" \
             --notes-file notes.md \
             out/*

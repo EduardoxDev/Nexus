@@ -7,7 +7,7 @@ Cada versão da NEXUS, da mais nova para a mais antiga. A seção de cada versã
 ### Destaques
 
 - **Windows, Linux e macOS.** Pacotes para Windows (instalador), Linux (`.deb` e `.AppImage`) e macOS (Apple Silicon e Intel), todos com a CLI `nexus` incluída.
-- **Atualização automática, com a sua permissão.** Na primeira abertura o app pergunta se pode verificar versões novas no GitHub. Sem resposta, não conecta em nada. Com permissão, verifica no máximo uma vez por dia; a instalação só acontece quando você clica, e a atualização é conferida por assinatura antes de instalar.
+- **Atualização automática, com a sua permissão.** Na primeira abertura o app pergunta se pode verificar versões novas no GitHub. Sem resposta, não conecta em nada. Com permissão, verifica no máximo uma vez por dia; a instalação só acontece quando você clica, e a atualização é conferida por assinatura antes de instalar. Vale para o instalador do Windows, o `.AppImage` do Linux e o macOS; quem instalou pelo `.deb` atualiza baixando o `.deb` novo.
 - **Mais agentes.** A tela Integrações mostra a configuração pronta para Claude Code, Codex, Cursor, VS Code e Claude Desktop, com os caminhos da sua instalação, para copiar.
 - **Go, Java e C#.** Além de TypeScript, JavaScript, Python e Rust: funções, classes, métodos e quem importa quem. Em Go e C#, um import aponta para todos os arquivos do pacote ou namespace.
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -96,5 +96,15 @@ describe("bot.config.json", () => {
     expect(() =>
       loadConfig(write({ publicProject: "nexus", teamProjects: ["NEXUS"], teamChannelIds: [] })),
     ).toThrow(/público e da equipe/);
+  });
+});
+
+describe("identificação do bot", () => {
+  it("the MCP handshake uses the version from package.json", async () => {
+    const { CLIENT_INFO } = await import("../src/mcp/client.ts");
+    const pkg = JSON.parse(
+      readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8"),
+    ) as { version: string };
+    expect(CLIENT_INFO.version).toBe(pkg.version);
   });
 });

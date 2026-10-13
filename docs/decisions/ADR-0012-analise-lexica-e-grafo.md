@@ -20,4 +20,11 @@ A busca e os Context Packs dependiam de texto e heurísticas de nome; `get_symbo
 
 - Construções fora da cobertura declarada (funções aninhadas, métodos de objetos literais, itens gerados por macros, imports montados em tempo de execução) não viram símbolos nem arestas.
 - A reconstrução global do grafo a cada geração custa ~0,25 s em 10 000 arquivos e soma-se à verificação de atualidade (~0,32 s) em cada indexação com mudanças. Tornar a resolução incremental por arquivo fica como otimização futura.
-- Para linguagens sem analisador (Go, Java…), continuam a regex de declarações e a citação textual do nome do módulo.
+- Para linguagens sem analisador, continuam a regex de declarações e a citação textual do nome do módulo.
+
+## Atualização v0.2 (2026-10-13): Go, Java e C#
+
+- Mesma abordagem léxica, sem tree-sitter: `go`, `java` e `csharp` acertaram 100% do gabarito conferido à mão nas novas fixtures (`go-service`, `java-app`, `csharp-lib`: 50 declarações e 27 arestas).
+- `package` (Java) e `namespace` (C#) viram símbolos `module` e servem para resolver imports por nome; Go usa o `module` do `go.mod`.
+- Um import pode apontar para **vários arquivos** (pacote Go, `import a.b.*`, `using X.Y`): `Target::Files`, e o destino passou a fazer parte da chave de `edges` (migration v6). A tabela é recriada vazia e o grafo é refeito na próxima indexação.
+- `ANALYZER_VERSION` 2 e `INDEXER_VERSION` 3: conteúdos já indexados são reanalisados uma vez.

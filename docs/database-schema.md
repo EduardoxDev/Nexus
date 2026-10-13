@@ -13,6 +13,7 @@ Pragmas aplicados em toda conexão: `journal_mode=WAL`, `foreign_keys=ON`, `sync
 | 3      | `context_packs`    | 3    | `context_packs`, `context_sources`                                                                   |
 | 4      | `memory_freshness` | 4    | `memories`, `memory_refs`, `memory_revisions`, `memories_fts`, `freshness_issues`, `freshness_scans` |
 | 5      | `analysis`         | 6    | `symbols`, `imports`, `edges`, `graph_state`                                                         |
+| 6      | `edges_targets`    | v0.2 | `edges` recriada com o destino na chave (um import → vários arquivos); `graph_state` zerado          |
 
 Regras (ADR-0007):
 
@@ -115,7 +116,7 @@ Memórias e alertas são apagados em cascata com o projeto. `supersedes`/`supers
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `symbols`     | declarações por **conteúdo** (hash): nome, `name_norm` (minúsculas, sem `_`/`$`), tipo, linha, fim do corpo, exportado, contêiner. Cascata com `contents`                    |
 | `imports`     | imports por conteúdo: linha, especificador como escrito, tipo (`import`, `reexport`, `require`, `dynamic`, `module`). Cascata com `contents`                                 |
-| `edges`       | grafo por **caminho**: origem, linha, especificador, tipo, `to_path` (arquivo do projeto) ou `external` (pacote/crate); ambos nulos = não resolvido. Recalculado por geração |
+| `edges`       | grafo por **caminho**: origem, linha, especificador, tipo, `to_path` (arquivo do projeto) ou `external` (pacote/crate); ambos nulos = não resolvido. Chave inclui `target` (destino ou `''`) desde a v6: um import pode ter várias arestas. Recalculado por geração |
 | `graph_state` | última montagem do grafo por projeto: geração, data, duração e contagens                                                                                                     |
 
 As tabelas `symbols_fts` e `symbol_removals`, previstas no plano inicial, não foram criadas (ADR-0007): a busca por nome usa o índice `symbols(project_id, name_norm)`, e símbolos removidos citados em documentos são detectados pela verificação de atualidade. Com `INDEXER_VERSION` = 2, conteúdos indexados antes da Fase 6 são reanalisados na próxima indexação.

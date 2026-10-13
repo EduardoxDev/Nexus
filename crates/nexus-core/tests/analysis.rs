@@ -106,6 +106,9 @@ fn family(language: &str) -> &'static str {
         "typescript" | "tsx" | "javascript" | "jsx" => "typescript/javascript",
         "python" => "python",
         "rust" => "rust",
+        "go" => "go",
+        "java" => "java",
+        "csharp" => "c#",
         _ => "outra",
     }
 }
@@ -136,7 +139,7 @@ fn analyzers_match_hand_checked_answers() {
                 let mut stmt = c
                     .prepare(
                         "SELECT rel_path, language FROM files WHERE project_id = ?1 AND status = 'indexed'
-                         AND language IN ('typescript','tsx','javascript','jsx','python','rust') ORDER BY rel_path",
+                         AND language IN ('typescript','tsx','javascript','jsx','python','rust','go','java','csharp') ORDER BY rel_path",
                     )
                     .unwrap();
                 let rows = stmt

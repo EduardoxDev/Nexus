@@ -121,11 +121,11 @@ type Spring = ["rx" | "ry" | "tx" | "ty", "vrx" | "vry" | "vtx" | "vty"];
 
 const THEMES: Record<"dark" | "light", Record<string, string | number>> = {
   dark: {
-    "--mb-surface": "linear-gradient(180deg, #1a1820 0%, #121116 100%)",
+    "--mb-surface": "linear-gradient(180deg, #17171a 0%, #111113 100%)",
     "--mb-edge": "rgba(255, 255, 255, 0.07)",
     "--mb-highlight": "rgba(255, 255, 255, 0.06)",
     "--mb-shadow": "0 24px 48px -28px rgba(0, 0, 0, 0.85), 0 8px 18px -12px rgba(0, 0, 0, 0.6)",
-    "--mb-tile": "linear-gradient(180deg, #3a3644 0%, #27242f 100%)",
+    "--mb-tile": "linear-gradient(180deg, #34343a 0%, #24242a 100%)",
     "--mb-tile-edge": "rgba(255, 255, 255, 0.07)",
     "--mb-tile-highlight": "rgba(255, 255, 255, 0.12)",
     "--mb-tile-shadow": "0 4px 10px -4px rgba(0, 0, 0, 0.7)",

@@ -1,49 +1,19 @@
 import { Download } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import AnimatedContent from "@/components/AnimatedContent";
 import { Bento, Shot } from "@/components/Bento";
 import { GithubIcon } from "@/components/icons";
 import Magnet from "@/components/Magnet";
-import Particles from "@/components/Particles";
 import SplitText from "@/components/SplitText";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/useTheme";
 import { downloadHref, site } from "@/site";
 
-/** Fundo WebGL só no navegador (o HTML pré-renderizado sai sem ele). */
-function useMounted() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted;
-}
-
 export function Hero() {
-  const mounted = useMounted();
   const theme = useTheme();
   return (
     <section className="relative isolate overflow-hidden">
-      <div aria-hidden="true" className="absolute inset-0 -z-10 h-[760px]">
-        {mounted && (
-          <Particles
-            particleCount={220}
-            particleSpread={10}
-            speed={0.08}
-            particleColors={["#ffffff", "#7d9bff", "#4f6fff"]}
-            moveParticlesOnHover
-            particleHoverFactor={0.6}
-            alphaParticles
-            particleBaseSize={90}
-            sizeRandomness={1}
-            cameraDistance={22}
-            disableRotation={false}
-            lightMode={theme === "light"}
-          />
-        )}
-        <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-b from-transparent to-background" />
-      </div>
-
       <div className="mx-auto max-w-6xl px-5 pt-20 text-center sm:pt-28">
         <AnimatedContent distance={20} duration={0.7}>
           <Badge variant="secondary" className="rounded-full px-3 py-1 text-[13px]">

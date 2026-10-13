@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useTheme } from "@/lib/useTheme";
 import { site } from "@/site";
+import { asset } from "@/lib/asset";
 
 const LINES = ["O contexto do seu código,", "na mão do seu agente de IA."];
 
@@ -103,8 +104,8 @@ export function Hero() {
                   <Shot
                     src={
                       theme === "light"
-                        ? "/screens/visao-geral-claro.webp"
-                        : "/screens/visao-geral-escuro.webp"
+                        ? asset("/screens/visao-geral-claro.webp")
+                        : asset("/screens/visao-geral-escuro.webp")
                     }
                     alt="Visão geral do app Nexus: indicadores, projetos e operações recentes"
                     className="aspect-[16/10] h-auto"

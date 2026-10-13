@@ -5,6 +5,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // No GitHub Pages o site fica em /Nexus/ (o workflow define SITE_BASE); local e testes usam /.
+  base: process.env.SITE_BASE ?? "/",
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },

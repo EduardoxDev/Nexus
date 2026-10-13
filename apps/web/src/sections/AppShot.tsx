@@ -4,13 +4,14 @@ import { useState } from "react";
 import { Bento, Shot } from "@/components/Bento";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { asset } from "@/lib/asset";
 
 const SCREENS = [
   {
     id: "visao",
     label: "Visão geral",
     icon: LayoutDashboard,
-    src: "/screens/visao-geral-escuro.webp",
+    src: asset("/screens/visao-geral-escuro.webp"),
     alt: "Visão geral com indicadores do projeto",
     caption: "Indicadores reais do projeto, operações recentes e o estado do sistema.",
   },
@@ -18,7 +19,7 @@ const SCREENS = [
     id: "busca",
     label: "Busca",
     icon: ScanSearch,
-    src: "/screens/busca-com-previa.webp",
+    src: asset("/screens/busca-com-previa.webp"),
     alt: "Busca com motivos e prévia do arquivo",
     caption: "Cada resultado com o motivo de ter aparecido e a prévia conferida no disco.",
   },
@@ -26,7 +27,7 @@ const SCREENS = [
     id: "pack",
     label: "Context Pack",
     icon: PackageOpen,
-    src: "/screens/context-pack.webp",
+    src: asset("/screens/context-pack.webp"),
     alt: "Context Pack para uma tarefa",
     caption: "Arquivos, testes e decisões de uma tarefa, prontos para o agente.",
   },
@@ -34,7 +35,7 @@ const SCREENS = [
     id: "memoria",
     label: "Memória",
     icon: BookOpenCheck,
-    src: "/screens/memoria.webp",
+    src: asset("/screens/memoria.webp"),
     alt: "Memória do projeto com histórico",
     caption: "Decisões confirmadas por você, com histórico de revisões.",
   },
@@ -42,7 +43,7 @@ const SCREENS = [
     id: "integracoes",
     label: "Integrações",
     icon: Cable,
-    src: "/screens/integracoes.webp",
+    src: asset("/screens/integracoes.webp"),
     alt: "Integrações com o comando do Claude Code",
     caption: "O comando do Claude Code e a configuração MCP, com os caminhos certos.",
   },

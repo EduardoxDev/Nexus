@@ -2,6 +2,7 @@ import { BookOpenCheck, Cable, Code2, PackageOpen, Radar, ScanSearch } from "luc
 
 import { Bento, Shot, type BentoItem } from "@/components/Bento";
 import { SectionHeader } from "@/components/SectionHeader";
+import { asset } from "@/lib/asset";
 
 /** A seção aprovada: o mesmo conteúdo e o mesmo MagicBento (agora via <Bento>). */
 const ITEMS: BentoItem[] = [
@@ -11,7 +12,10 @@ const ITEMS: BentoItem[] = [
       "Pergunte em português ou inglês. A resposta traz o arquivo, as linhas e o motivo — e avisa se o arquivo mudou.",
     icon: <ScanSearch className="size-5" />,
     visual: (
-      <Shot src="/screens/busca-com-previa.webp" alt="Busca com motivos e prévia verificada" />
+      <Shot
+        src={asset("/screens/busca-com-previa.webp")}
+        alt="Busca com motivos e prévia verificada"
+      />
     ),
     colSpan: 2,
     rowSpan: 2,
@@ -31,7 +35,12 @@ const ITEMS: BentoItem[] = [
     description:
       "Arquivos certos, testes e decisões num pacote só, do tamanho que o agente aguenta.",
     icon: <PackageOpen className="size-5" />,
-    visual: <Shot src="/screens/context-pack.webp" alt="Context Pack compilado para uma tarefa" />,
+    visual: (
+      <Shot
+        src={asset("/screens/context-pack.webp")}
+        alt="Context Pack compilado para uma tarefa"
+      />
+    ),
     colSpan: 2,
     rowSpan: 2,
   },

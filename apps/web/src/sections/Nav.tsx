@@ -6,6 +6,7 @@ import { GithubIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { downloadHref, site } from "@/site";
+import { asset } from "@/lib/asset";
 
 const LINKS = [
   { href: "#o-que-faz", label: "O que faz" },
@@ -17,7 +18,7 @@ const LINKS = [
 export function Logo({ className = "size-8" }: { className?: string }) {
   return (
     <img
-      src="/logo.png"
+      src={asset("/logo.png")}
       alt=""
       width={32}
       height={32}

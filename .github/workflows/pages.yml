@@ -1,0 +1,51 @@
+name: Site (GitHub Pages)
+
+# Publica apps/web em https://eduardoxdev.github.io/Nexus/ a cada mudança do site no main.
+on:
+  push:
+    branches: [main]
+    paths: ["apps/web/**", "pnpm-lock.yaml", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build do site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Testes
+        run: pnpm --dir apps/web test
+      - name: Build pré-renderizado (base /Nexus/)
+        run: pnpm --dir apps/web build
+        env:
+          SITE_BASE: /Nexus/
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Publicar
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

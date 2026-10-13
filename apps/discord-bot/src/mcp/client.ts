@@ -5,10 +5,20 @@
  * é iniciado sob demanda e reiniciado na próxima chamada se terminar; cada chamada tem prazo.
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createInterface } from "node:readline";
 
 const PROTOCOL_VERSION = "2025-11-25";
-const CLIENT_INFO = { name: "nexus-discord-bot", version: "0.1.0" };
+/** O bot se identifica com a versão do próprio `package.json` (aparece no Diagnóstico da NEXUS). */
+export const CLIENT_INFO = {
+  name: "nexus-discord-bot",
+  version: (
+    JSON.parse(readFileSync(resolve(import.meta.dirname, "..", "..", "package.json"), "utf8")) as {
+      version: string;
+    }
+  ).version,
+};
 
 /** A ferramenta respondeu com erro de uso (`isError: true`); `message` é o texto da NEXUS. */
 export class McpToolError extends Error {

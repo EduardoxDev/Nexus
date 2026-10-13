@@ -58,7 +58,7 @@ No CI, o job `bundle` (disparo manual com `bundle: true`) gera o instalador Wind
    Se o ícone for trocado, regenere os tamanhos com `pnpm tauri icon assets/brand/nexus-icon-1024.png -o src-tauri/icons` (apague `android/` e `ios/`).
 5. Gerar o instalador em ambiente limpo (CI) a partir de uma tag.
 6. **Assinar** o instalador e o executável — _pendente_: requer certificado de assinatura de código (OV/EV ou Azure Trusted Signing) e configuração de `bundle.windows.signCommand`/`certificateThumbprint`.
-7. Revisar o rascunho (notas do CHANGELOG com mudanças de schema e limitações, `latest.json`, `SHA256SUMS.txt`) e publicar. Depois, atualizar `site.version` em `apps/web/src/site.ts` para os botões de download do site apontarem para a versão nova.
+7. Revisar o rascunho (notas do CHANGELOG com mudanças de schema e limitações, `latest.json`, `SHA256SUMS.txt`) e publicar. Os botões de download do site apontam para `releases/latest` (a última release publicada), então passam a levar à versão nova sem mudança no site.
 
 ## Atualização automática (v0.2)
 

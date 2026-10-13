@@ -30,7 +30,7 @@ use nexus_core::freshness::{
 use nexus_core::index::{
     IndexError, IndexJob, IndexMode, IndexTrigger, IndexingQueue, JobPhase, JobStatus,
 };
-use nexus_core::integration::{IntegrationInfo, McpToolInfo};
+use nexus_core::integration::{ClientSetup, IntegrationInfo, McpToolInfo, SetupKind};
 use nexus_core::memory::adr::ImportReport;
 use nexus_core::memory::{
     Actor, Memory, MemoryCounts, MemoryDetail, MemoryKind, MemoryOrigin, MemoryQuery, MemoryRef,
@@ -158,6 +158,8 @@ fn generate() -> BTreeMap<String, String> {
     render::<ScanReport>(&cfg, &mut files);
     render::<FreshnessSummary>(&cfg, &mut files);
     render::<McpToolInfo>(&cfg, &mut files);
+    render::<SetupKind>(&cfg, &mut files);
+    render::<ClientSetup>(&cfg, &mut files);
     render::<IntegrationInfo>(&cfg, &mut files);
     render::<SymbolKind>(&cfg, &mut files);
     render::<Symbol>(&cfg, &mut files);

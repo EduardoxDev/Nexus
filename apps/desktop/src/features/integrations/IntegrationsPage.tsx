@@ -1,8 +1,10 @@
 import { Plug } from "lucide-react";
+import { useState } from "react";
 
 import { CopyButton, EmptyState, ErrorState } from "@/components/feedback";
 import { Page, Panel } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
+import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { IntegrationInfo, OperationRecord } from "@/lib/bindings";
 import { formatDateTime, formatDuration, formatRelative } from "@/lib/format";
@@ -33,45 +35,54 @@ function CommandBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
-function IntegrationsContent({ info }: { info: IntegrationInfo }) {
-  const calls = useOperations(operationQuery({ kindPrefix: "mcp.", limit: 20 }), 5_000);
-  const config = JSON.stringify(
-    {
-      mcpServers: {
-        nexus: { command: info.cliPath ?? "nexus", args: info.serveArgs },
-      },
-    },
-    null,
-    2,
-  );
+/** Configuração pronta por agente (comando ou arquivo); só para copiar. */
+function ConnectPanel({ info }: { info: IntegrationInfo }) {
+  const [selected, setSelected] = useState(info.clients[0]?.id ?? "");
+  const client = info.clients.find((c) => c.id === selected) ?? info.clients[0];
   return (
-    <>
-      <Panel title={s.claudeTitle} description={s.claudeDescription}>
-        {info.claudeCommand ? (
-          <div className="flex flex-col gap-2">
-            <CommandBlock label={s.claudeCommandLabel} value={info.claudeCommand} />
-            <p className="text-xs text-fg-muted">{s.claudeHint}</p>
-          </div>
-        ) : (
-          <div role="alert" className="flex flex-col gap-2 text-sm">
-            <p>{s.cliMissing}</p>
-            <CommandBlock label={s.buildCli} value="cargo build -p nexus-cli --release" />
-            <p className="text-xs text-fg-muted">{s.cliMissingHint}</p>
-          </div>
-        )}
-      </Panel>
-
-      <Panel title={s.otherTitle} description={s.otherDescription}>
-        <pre className="selectable overflow-x-auto rounded-md border border-border bg-surface-2 p-2 font-mono text-xs">
-          {config}
-        </pre>
-        <div className="mt-2 flex items-center justify-between gap-2">
+    <Panel title={s.connectTitle} description={s.connectDescription}>
+      {client ? (
+        <div className="flex flex-col gap-3">
+          <Segmented
+            aria-label={s.clientsLabel}
+            value={client.id}
+            options={info.clients.map((c) => ({ value: c.id, label: c.name }))}
+            onValueChange={setSelected}
+          />
+          <p className="text-sm text-fg-muted">{client.whereHint}</p>
+          {client.kind === "command" ? (
+            <CommandBlock label={s.commandLabel(client.name)} value={client.text} />
+          ) : (
+            <div className="flex items-start gap-2 rounded-md border border-border bg-surface-2 p-2">
+              <pre
+                aria-label={s.configLabel(client.name)}
+                className="selectable min-w-0 flex-1 overflow-x-auto font-mono text-xs"
+              >
+                {client.text}
+              </pre>
+              <CopyButton value={client.text} />
+            </div>
+          )}
           <p className="text-xs text-fg-muted">
             {s.protocol(info.protocolVersions[0] ?? "", info.protocolVersions.slice(1).join(", "))}
           </p>
-          <CopyButton value={config} />
         </div>
-      </Panel>
+      ) : (
+        <div role="alert" className="flex flex-col gap-2 text-sm">
+          <p>{s.cliMissing}</p>
+          <CommandBlock label={s.buildCli} value="cargo build -p nexus-cli --release" />
+          <p className="text-xs text-fg-muted">{s.cliMissingHint}</p>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function IntegrationsContent({ info }: { info: IntegrationInfo }) {
+  const calls = useOperations(operationQuery({ kindPrefix: "mcp.", limit: 20 }), 5_000);
+  return (
+    <>
+      <ConnectPanel info={info} />
 
       <Panel title={s.toolsTitle} description={s.toolsDescription(info.tools.length)}>
         <ul className="flex flex-col divide-y divide-border" aria-label={s.toolsTitle}>

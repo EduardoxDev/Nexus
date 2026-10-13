@@ -1,36 +1,43 @@
 # Servidor MCP
 
-O NEXUS expõe seus projetos a agentes de programação (Claude Code e outros clientes MCP) pelo comando `nexus mcp serve`, que fala JSON-RPC 2.0 em stdio. O servidor usa o mesmo banco do app e da CLI; nada sai da máquina pelo NEXUS — mas veja [Privacidade](#privacidade).
+O NEXUS expõe seus projetos a agentes de programação (Claude Code, Codex, Cursor, VS Code, Claude Desktop e outros clientes MCP) pelo comando `nexus mcp serve`, que fala JSON-RPC 2.0 em stdio. O servidor usa o mesmo banco do app e da CLI; nada sai da máquina pelo NEXUS — mas veja [Privacidade](#privacidade).
 
-## Conectar o Claude Code
+## Conectar um agente
 
-A tela **Integrações** do app mostra o comando pronto, com os caminhos certos. O formato é:
+A tela **Integrações** do app mostra a configuração pronta de cada agente, com os caminhos desta instalação, para copiar. O app não grava nada nos arquivos dos agentes. Formatos conferidos na documentação oficial de cada um em 2026-10-13:
+
+| Agente         | Como                    | Onde                                                                                          |
+| -------------- | ----------------------- | --------------------------------------------------------------------------------------------- |
+| Claude Code    | `claude mcp add nexus -- <cli> <args>` | terminal                                                                        |
+| Codex          | `codex mcp add nexus -- <cli> <args>`  | terminal (grava em `~/.codex/config.toml`)                                      |
+| Cursor         | JSON `mcpServers` com `"type": "stdio"` | `~/.cursor/mcp.json` ou `.cursor/mcp.json`                                     |
+| VS Code        | JSON `servers` com `"type": "stdio"`    | `.vscode/mcp.json` ou "MCP: Open User Configuration"                           |
+| Claude Desktop | JSON `mcpServers`                       | `%APPDATA%\Claude\claude_desktop_config.json` (Windows), `~/Library/Application Support/Claude/` (macOS), `~/.config/Claude/` (Linux) |
+
+Exemplo (Claude Code):
 
 ```bash
 claude mcp add nexus -- "C:\caminho\nexus.exe" --data-dir "C:\Users\voce\AppData\Local\Nexus" mcp serve
 ```
 
-`--data-dir` garante que o servidor use o mesmo banco do app. Sem ele, vale `NEXUS_DATA_DIR` ou o diretório padrão (`%LOCALAPPDATA%\Nexus`). Na primeira vez, o Claude Code pede aprovação para usar o servidor e as ferramentas.
-
-Para outros clientes (arquivo `mcpServers`):
+Exemplo (Claude Desktop):
 
 ```json
 {
   "mcpServers": {
     "nexus": {
-      "command": "C:\\caminho\\nexus.exe",
-      "args": [
-        "--data-dir",
-        "C:\\Users\\voce\\AppData\\Local\\Nexus",
-        "mcp",
-        "serve"
-      ]
+      "command": "C:\caminho\nexus.exe",
+      "args": ["--data-dir", "C:\Users\voce\AppData\Local\Nexus", "mcp", "serve"]
     }
   }
 }
 ```
 
-A CLI não vem no instalador ainda (Fase 7): compile com `cargo build -p nexus-cli --release` e use `target\release\nexus.exe`. O app procura `nexus.exe` na própria pasta.
+`--data-dir` garante que o servidor use o mesmo banco do app. Sem ele, vale `NEXUS_DATA_DIR` ou o diretório padrão (`%LOCALAPPDATA%\Nexus`). Na primeira vez, o agente pede aprovação para usar o servidor e as ferramentas.
+
+O instalador traz a CLI ao lado do app, onde a tela Integrações a encontra. Em builds de desenvolvimento, compile com `cargo build -p nexus-cli --release` e use `target/release/nexus`.
+
+Testado de verdade com o servidor: Claude Code (handshake e ferramentas). Os demais seguem o formato documentado de cada agente e usam o mesmo `initialize`; o servidor aceita as revisões listadas em [Protocolo](#protocolo).
 
 ## Protocolo
 

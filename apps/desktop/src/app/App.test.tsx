@@ -13,7 +13,7 @@ describe("shell do app", () => {
     expect(screen.getByText("Banco OK · schema v1")).toBeInTheDocument();
   });
 
-  it("Integrações mostra o comando do Claude Code, as ferramentas e as chamadas MCP", async () => {
+  it("Integrações mostra a configuração de cada agente, as ferramentas e as chamadas MCP", async () => {
     const user = userEvent.setup();
     setupIpc({
       get_integration_info: () => ({
@@ -22,6 +22,22 @@ describe("shell do app", () => {
         serveArgs: ["--data-dir", "C:\\dados", "mcp", "serve"],
         claudeCommand:
           "claude mcp add nexus -- C:\\NEXUS\\nexus.exe --data-dir C:\\dados mcp serve",
+        clients: [
+          {
+            id: "claude-code",
+            name: "Claude Code",
+            kind: "command",
+            text: "claude mcp add nexus -- C:\\NEXUS\\nexus.exe --data-dir C:\\dados mcp serve",
+            whereHint: "Rode uma vez num terminal.",
+          },
+          {
+            id: "cursor",
+            name: "Cursor",
+            kind: "json",
+            text: '{\n  "mcpServers": {}\n}',
+            whereHint: "Cole em ~/.cursor/mcp.json.",
+          },
+        ],
         protocolVersions: ["2026-07-28", "2025-11-25"],
         tools: [
           {
@@ -57,6 +73,12 @@ describe("shell do app", () => {
     expect(await screen.findByLabelText("Comando para registrar no Claude Code")).toHaveTextContent(
       "claude mcp add nexus -- C:\\NEXUS\\nexus.exe --data-dir C:\\dados mcp serve",
     );
+    expect(screen.getByText("Rode uma vez num terminal.")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Cursor" }));
+    expect(await screen.findByLabelText("Configuração para o Cursor")).toHaveTextContent(
+      '"mcpServers"',
+    );
+    expect(screen.getByText("Cole em ~/.cursor/mcp.json.")).toBeInTheDocument();
     const tools = screen.getByRole("list", { name: "Ferramentas" });
     expect(within(tools).getByText("Somente leitura")).toBeInTheDocument();
     expect(within(tools).getByText("Grava dados locais do NEXUS")).toBeInTheDocument();

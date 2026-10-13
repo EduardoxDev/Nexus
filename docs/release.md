@@ -50,14 +50,15 @@ No CI, o job `bundle` (disparo manual com `bundle: true`) gera o instalador Wind
 
 ## Checklist de release (a cumprir)
 
-1. Atualizar versão em `Cargo.toml` (workspace), `apps/desktop/package.json` e `tauri.conf.json`.
+1. Atualizar a versão em `Cargo.toml` (workspace), `tauri.conf.json` e nos `package.json` de `apps/desktop`, `apps/web` e `apps/discord-bot`, e escrever a seção `## <versão>` no [CHANGELOG](../CHANGELOG.md) (vira a descrição da release; uma `-rc.N` usa a seção da versão final). O workflow recusa uma tag que não bata com a versão do app ou sem seção no CHANGELOG.
+   - Versões de teste (`0.2.0-rc.1`): para a atualização automática testar uma rc, publique-a como release **normal** (não marque "pre-release"), senão `releases/latest` não a enxerga.
 2. Bateria completa verde (ver [testing.md](testing.md)), incluindo E2E no Windows.
 3. Revisar o [modelo de ameaças](threat-model.md) e `cargo audit` / `pnpm audit` (no CI, job `audit`).
 4. Confirmar a licença do ícone (seção Marca).
    Se o ícone for trocado, regenere os tamanhos com `pnpm tauri icon assets/brand/nexus-icon-1024.png -o src-tauri/icons` (apague `android/` e `ios/`).
 5. Gerar o instalador em ambiente limpo (CI) a partir de uma tag.
 6. **Assinar** o instalador e o executável — _pendente_: requer certificado de assinatura de código (OV/EV ou Azure Trusted Signing) e configuração de `bundle.windows.signCommand`/`certificateThumbprint`.
-7. Publicar notas de versão com mudanças de schema (migrations) e limitações conhecidas.
+7. Revisar o rascunho (notas do CHANGELOG com mudanças de schema e limitações, `latest.json`, `SHA256SUMS.txt`) e publicar. Depois, atualizar `site.version` em `apps/web/src/site.ts` para os botões de download do site apontarem para a versão nova.
 
 ## Atualização automática (v0.2)
 

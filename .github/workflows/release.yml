@@ -29,6 +29,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - name: A tag bate com a versão do app e tem notas no CHANGELOG
+        shell: bash
+        run: |
+          app=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          test "v$app" = "${{ github.ref_name }}" || { echo "tag ${{ github.ref_name }}, mas o app está em $app"; exit 1; }
+          node scripts/release-notes.mjs "${{ github.ref_name }}" > /dev/null
       - name: Dependências do sistema (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -100,7 +106,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          node scripts/release-notes.mjs "${{ github.ref_name }}" > notes.md
           gh release create "${{ github.ref_name }}" --draft --verify-tag \
             --title "NEXUS ${{ github.ref_name }}" \
-            --notes "Pacotes **não assinados**: no Windows o SmartScreen pode alertar; no macOS, veja docs/release.md para abrir o app. Confira o SHA-256 em SHA256SUMS.txt." \
+            --notes-file notes.md \
             out/*

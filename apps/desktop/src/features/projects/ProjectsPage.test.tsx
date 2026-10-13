@@ -165,6 +165,17 @@ describe("Projetos", () => {
     expect(screen.getByText("Binário")).toBeInTheDocument();
   });
 
+  it("pasta sem git: o aviso aparece inteiro, sem ser cortado", async () => {
+    resetIndexing();
+    const user = userEvent.setup();
+    projectsIpc([summary({ headRef: null, headCommit: null })]);
+    renderApp();
+    await openProjects(user);
+    const value = await screen.findByText("Não é um repositório git");
+    expect(value).not.toHaveClass("truncate");
+    expect(value.parentElement).toHaveAttribute("title", "Não é um repositório git");
+  });
+
   it("acompanha o progresso ao vivo pelos eventos do core", async () => {
     resetIndexing();
     const user = userEvent.setup();

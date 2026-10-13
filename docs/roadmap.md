@@ -169,7 +169,7 @@ Etapa 2 — atualização automática:
 - [x] Pergunta na Visão geral, painel em Configurações ("Verificar agora", instalar e reiniciar) e aviso ao abrir (testes em `features/updates`).
 - [x] Release assina os pacotes do atualizador e publica `latest.json` (`scripts/latest-json.mjs`).
 - [ ] Teste real de atualização entre duas versões publicadas (rc.1 → rc.2).
-- [ ] Teste instável a corrigir: `MemoryAndFreshness` "aviso de conflito" falhou uma vez sob carga (passa isolado e nas repetições).
+- [x] Teste instável: `MemoryAndFreshness` "aviso de conflito" falhou uma vez sob carga e não se repetiu em 6 execuções completas; o prazo dos testes do desktop passou de 5 para 15 s (`vite.config.ts`).
 
 Etapa 4 — Go, Java e C#:
 

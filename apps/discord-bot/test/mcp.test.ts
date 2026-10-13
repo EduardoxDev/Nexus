@@ -89,6 +89,64 @@ rl.on("line", (line) => {
 });
 `;
 
+/**
+ * Servidor falso que conta quantas vezes foi iniciado (arquivo em argv[1]). `mode` em argv[2]:
+ * `dies-first` — o primeiro processo sai sem responder; `storage-first` — o primeiro responde
+ * às ferramentas com a falha de banco da NEXUS. Os seguintes funcionam.
+ */
+const FLAKY_SERVER = `
+const fs = require("node:fs");
+const [file, mode] = process.argv.slice(1);
+const n = (fs.existsSync(file) ? Number(fs.readFileSync(file, "utf8")) : 0) + 1;
+fs.writeFileSync(file, String(n));
+if (mode === "dies-first" && n === 1) process.exit(1);
+const rl = require("node:readline").createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  const m = JSON.parse(line);
+  if (m.id === undefined) return;
+  let result;
+  if (m.method === "initialize") result = { protocolVersion: "2025-11-25", capabilities: {}, serverInfo: { name: "f", version: "0" } };
+  else if (mode === "storage-first" && n === 1) result = { isError: true, content: [{ type: "text", text: "Falha ao acessar o banco local. Veja o Diagnóstico para detalhes." }] };
+  else result = { structuredContent: { spawn: n } };
+  process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: m.id, result }) + String.fromCharCode(10));
+});
+`;
+
+describe("McpClient se recupera sozinho", () => {
+  const flaky = (mode: string) => {
+    const counter = join(mkdtempSync(join(tmpdir(), "nexus-bot-flaky-")), "count");
+    return new McpClient({ command: process.execPath, args: ["-e", FLAKY_SERVER, counter, mode] });
+  };
+
+  it("retries once when the server dies while starting", async () => {
+    const c = flaky("dies-first");
+    const r = await c.callTool<{ spawn: number }>("x", {});
+    expect(r.spawn).toBe(2);
+    await c.close();
+  });
+
+  it("reopens the connection when NEXUS reports a database failure", async () => {
+    const c = flaky("storage-first");
+    const r = await c.callTool<{ spawn: number }>("x", {});
+    expect(r.spawn).toBe(2);
+    await c.close();
+  });
+
+  it("other tool errors are not retried", async () => {
+    const c = new McpClient({
+      command: process.execPath,
+      args: [
+        "-e",
+        FLAKY_SERVER.replace("Falha ao acessar o banco local", "projeto não encontrado"),
+        join(mkdtempSync(join(tmpdir(), "nexus-bot-flaky-")), "count"),
+        "storage-first",
+      ],
+    });
+    await expect(c.callTool("x", {})).rejects.toThrow("projeto não encontrado");
+    await c.close();
+  });
+});
+
 describe("McpClient e o ambiente do processo", () => {
   it("never passes Discord secrets to the NEXUS process", async () => {
     process.env.DISCORD_TOKEN = "segredo-de-teste";

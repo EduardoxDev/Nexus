@@ -18,6 +18,20 @@ export class McpToolError extends Error {
 /** O servidor não respondeu: processo encerrado, prazo esgotado ou erro de protocolo. */
 export class McpUnavailableError extends Error {
   override name = "McpUnavailableError";
+  /** Um processo novo pode resolver (o anterior morreu); prazo esgotado não é repetido. */
+  readonly retryable: boolean;
+  constructor(message: string, retryable = false) {
+    super(message);
+    this.retryable = retryable;
+  }
+}
+
+/** Falha de banco relatada pela NEXUS: costuma ser uma conexão antiga; um processo novo resolve. */
+const STORAGE_FAILURE = /falha ao acessar o banco local/i;
+
+function isRetryable(e: unknown): boolean {
+  if (e instanceof McpUnavailableError) return e.retryable;
+  return e instanceof McpToolError && STORAGE_FAILURE.test(e.message);
 }
 
 interface Pending {
@@ -60,8 +74,21 @@ export class McpClient {
     this.opts = { timeoutMs: 30_000, ...opts };
   }
 
-  /** Chama uma ferramenta e devolve o `structuredContent`. */
+  /**
+   * Chama uma ferramenta e devolve o `structuredContent`. Se o processo morreu ou a NEXUS relatou
+   * falha de banco, descarta o processo e tenta uma única vez com um novo.
+   */
   async callTool<T>(name: string, args: Record<string, unknown>): Promise<T> {
+    try {
+      return await this.callOnce<T>(name, args);
+    } catch (e) {
+      if (!isRetryable(e)) throw e;
+      if (this.child) this.discard(this.child);
+      return await this.callOnce<T>(name, args);
+    }
+  }
+
+  private async callOnce<T>(name: string, args: Record<string, unknown>): Promise<T> {
     await this.start();
     const result = (await this.request("tools/call", {
       name,
@@ -138,7 +165,7 @@ export class McpClient {
         this.child = null;
         this.ready = null;
       }
-      this.rejectAll(child, new McpUnavailableError("o servidor MCP da NEXUS foi encerrado"));
+      this.rejectAll(child, new McpUnavailableError("o servidor MCP da NEXUS foi encerrado", true));
     };
     child.on("exit", onGone);
     child.on("error", onGone);
@@ -155,7 +182,7 @@ export class McpClient {
 
   private request(method: string, params: unknown): Promise<unknown> {
     const child = this.child;
-    if (!child) return Promise.reject(new McpUnavailableError("servidor MCP não iniciado"));
+    if (!child) return Promise.reject(new McpUnavailableError("servidor MCP não iniciado", true));
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {

@@ -10,6 +10,7 @@ import { Events } from "discord.js";
 import { autocompleteProjects, handleNexus } from "./commands/nexus.ts";
 import { loadConfig, loadEnv } from "./config.ts";
 import { adapt, channelRef, createClient } from "./discord.ts";
+import { AlreadyRunningError, acquireInstanceLock } from "./instance.ts";
 import { McpClient } from "./mcp/client.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -18,6 +19,16 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const env = loadEnv(process.env);
 const cfg = loadConfig(resolve(root, "bot.config.json"));
+
+let lock: { release(): void };
+try {
+  lock = acquireInstanceLock(resolve(root, "bot.lock"));
+} catch (e) {
+  if (!(e instanceof AlreadyRunningError)) throw e;
+  console.error(e.message);
+  process.exit(1);
+}
+process.on("exit", () => lock.release());
 const mcp = new McpClient({
   command: env.nexusCli,
   args: ["--data-dir", env.nexusDataDir, "mcp", "serve"],
@@ -38,7 +49,8 @@ client.on(Events.InteractionCreate, async (it) => {
       await handleNexus(adapt(it), { tools: mcp, cfg });
     }
   } catch (e) {
-    console.error(`falha ao responder interação: ${(e as Error).name}`);
+    const err = e as Error;
+    console.error(`falha ao responder interação: ${err.name}: ${err.message}`);
   }
 });
 

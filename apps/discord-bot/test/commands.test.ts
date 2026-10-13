@@ -200,6 +200,17 @@ describe("/nexus", () => {
     );
   });
 
+  it("failures are logged with the reason, without user content", async () => {
+    const { tools } = fakeTools({}, new McpUnavailableError("o servidor MCP da NEXUS foi encerrado"));
+    const logged: string[] = [];
+    const { i } = fakeInteraction(COMMON, "pergunta", { texto: "pergunta-secreta" });
+    await handleNexus(i, { tools, cfg, log: (line) => logged.push(line) });
+    expect(logged).toEqual([
+      "/nexus pergunta falhou: McpUnavailableError: o servidor MCP da NEXUS foi encerrado",
+    ]);
+    expect(logged.join()).not.toContain("pergunta-secreta");
+  });
+
   it("autocomplete hides team projects", () => {
     expect(autocompleteProjects("", COMMON, cfg)).toEqual([{ name: "nexus", value: "nexus" }]);
     expect(autocompleteProjects("oti", TEAM, cfg)).toEqual([{ name: "otimiza", value: "otimiza" }]);

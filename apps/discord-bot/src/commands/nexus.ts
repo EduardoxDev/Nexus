@@ -94,9 +94,9 @@ function resolveProject(i: NexusInteraction, cfg: BotConfig): string {
 
 export async function handleNexus(
   i: NexusInteraction,
-  deps: { tools: Tools; cfg: BotConfig },
+  deps: { tools: Tools; cfg: BotConfig; log?: (line: string) => void },
 ): Promise<void> {
-  const { tools, cfg } = deps;
+  const { tools, cfg, log = console.error } = deps;
   const sub = i.subcommand;
   const project = sub === "pergunta" ? cfg.publicProject : resolveProject(i, cfg);
   if (sub !== "status" && !canQuery(cfg, i.channel, project)) {
@@ -134,6 +134,9 @@ export async function handleNexus(
       await i.editReply({ content: formatStatus(shown), allowedMentions: NO_MENTIONS });
     }
   } catch (e) {
+    // Motivo técnico no terminal (sem o texto digitado nem conteúdo do repositório).
+    const err = e as Error;
+    log(`/nexus ${sub} falhou: ${err.name}: ${err.message}`);
     const content =
       e instanceof McpUnavailableError
         ? MSG.unavailable

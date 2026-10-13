@@ -1,3 +1,4 @@
 .env
 bot.config.json
 node_modules/
+bot.lock

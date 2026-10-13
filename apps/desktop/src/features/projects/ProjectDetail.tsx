@@ -298,7 +298,8 @@ function Stat({
   title?: string | undefined;
 }) {
   return (
-    <div className="bg-surface-1 px-5 py-3.5" title={title}>
+    // Valor inteiro também no tooltip (hash e textos podem não caber na coluna).
+    <div className="min-w-0 bg-surface-1 px-5 py-3.5" title={title ?? value}>
       <dt className="text-[11px] font-semibold tracking-[0.06em] text-fg-subtle uppercase">
         {label}
       </dt>
@@ -309,7 +310,8 @@ function Stat({
             ? "mt-1 truncate font-mono text-sm"
             : /^[\d.,\s]+[A-Za-z]*$/.test(value)
               ? "mt-1 truncate font-display text-xl font-semibold tabular-nums"
-              : "mt-1 truncate font-display text-lg font-semibold")
+              : // Texto quebra linha em vez de ser cortado ("Não é um repositório git").
+                "mt-1 font-display text-base leading-snug font-semibold text-balance break-words")
         }
       >
         {value}

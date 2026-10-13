@@ -32,5 +32,7 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     css: false,
     restoreMocks: true,
+    // Testes com muita digitação/clique passam de 5 s (padrão) com a máquina ocupada.
+    testTimeout: 15_000,
   },
 });

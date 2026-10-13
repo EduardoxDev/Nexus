@@ -21,6 +21,7 @@ tauri.workspace = true
 tauri-plugin-single-instance.workspace = true
 tauri-plugin-window-state.workspace = true
 tauri-plugin-dialog.workspace = true
+tauri-plugin-updater.workspace = true
 notify.workspace = true
 notify-debouncer-full.workspace = true
 serde.workspace = true

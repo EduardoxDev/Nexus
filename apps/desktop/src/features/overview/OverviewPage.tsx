@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OperationsTable, integrityPassed } from "@/features/operations/OperationsTable";
+import { UpdateConsent } from "@/features/updates/updates";
 import { activityLine } from "@/features/projects/activity";
 import type { ProjectSummary } from "@/lib/bindings";
 import { formatBytes, formatDateTime, formatInteger } from "@/lib/format";
@@ -30,6 +31,7 @@ import {
   useDiagnostics,
   useOperations,
   useProjects,
+  useSettings,
   useStartupStatus,
   useWorkspaceTotals,
 } from "@/lib/queries";
@@ -38,12 +40,19 @@ import { useUi } from "@/stores/ui";
 
 const RECENT = operationQuery({ limit: 6 });
 
+/** Pergunta sobre atualizações, enquanto a pessoa não respondeu. */
+function UpdateConsentSlot() {
+  const settings = useSettings();
+  return settings.data ? <UpdateConsent settings={settings.data} /> : null;
+}
+
 export function OverviewPage() {
   return (
     <Page title={t.nav.overview.label} description={t.nav.overview.description}>
       <Reveal>
         <Hero />
       </Reveal>
+      <UpdateConsentSlot />
       <Reveal index={1}>
         <KpiRow />
       </Reveal>

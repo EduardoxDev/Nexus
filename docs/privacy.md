@@ -4,6 +4,7 @@
 
 - **Nada sai da sua máquina.** O NEXUS não envia código, nomes de arquivos, consultas, memória técnica ou métricas para serviços externos.
 - **Sem telemetria.** Não há coleta de uso, crash reports remotos ou "phone home".
+- **Atualizações só com permissão (v0.2).** A única conexão de rede do app é a consulta ao GitHub por versões novas. Na primeira abertura o app pergunta; sem resposta, não consulta nada. Com permissão, consulta ao abrir, no máximo uma vez por dia, e envia ao GitHub apenas o que qualquer download envia (seu IP e a versão do app no pedido) — nada dos projetos. Dá para desligar em Configurações, e "Verificar agora" funciona mesmo desligado. Cada consulta fica registrada em Diagnóstico (`updates.check`). A consulta é feita pelo Rust; o webview continua sem acesso à rede.
 - **A interface não acessa a internet.** A política de segurança de conteúdo (CSP) do app só permite o próprio app e o canal IPC local; o webview não tem acesso a plugins de rede.
 - **Somente pastas autorizadas** (a partir da Fase 2): o NEXUS nunca varre o computador por conta própria.
 

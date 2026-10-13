@@ -105,4 +105,7 @@ export type * from "./SymbolHit";
 export type * from "./SymbolKind";
 export type * from "./ThemePreference";
 export type * from "./Transition";
+export type * from "./UpdateCheck";
+export type * from "./UpdateInfo";
+export type * from "./UpdateStatus";
 export type * from "./serde_json/JsonValue";

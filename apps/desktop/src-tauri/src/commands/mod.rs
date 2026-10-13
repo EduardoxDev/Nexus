@@ -9,3 +9,4 @@ pub mod integrations;
 pub mod memory;
 pub mod projects;
 pub mod settings;
+pub mod updates;

@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { MotionPreference, ThemePreference } from "@/lib/bindings";
 import { formatBytes } from "@/lib/format";
 import { t } from "@/lib/i18n/pt-BR";
+import { UpdatesPanel } from "@/features/updates/updates";
 import { useRevealDataDir, useSetSetting, useSettings, useStartupStatus } from "@/lib/queries";
 
 const THEME_OPTIONS: readonly SegmentedOption<ThemePreference>[] = [
@@ -163,6 +164,8 @@ export function SettingsPage() {
           </div>
         </Panel>
       )}
+
+      {settings.data && <UpdatesPanel settings={settings.data} />}
 
       <Panel title={t.settings.data} description={t.settings.dataDescription}>
         <div className="flex items-center gap-3">

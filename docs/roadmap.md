@@ -162,6 +162,15 @@ Etapa 1 — multiplataforma:
 - [ ] Rodar o workflow numa tag `-rc` e conferir os pacotes dos três sistemas.
 - [ ] Interface no Linux/macOS: teste manual pendente (sem máquina disponível).
 
+Etapa 2 — atualização automática:
+
+- [x] Preferência `updates.check` (`ask`/`on`/`off`, padrão `ask`) e regra de 1×/24 h testadas (`nexus_core::updates`).
+- [x] Comandos `check_for_update`/`install_update` no Rust; plugin sem permissões no webview (`updater:` proibido em `tests/capabilities.rs`).
+- [x] Pergunta na Visão geral, painel em Configurações ("Verificar agora", instalar e reiniciar) e aviso ao abrir (testes em `features/updates`).
+- [x] Release assina os pacotes do atualizador e publica `latest.json` (`scripts/latest-json.mjs`).
+- [ ] Teste real de atualização entre duas versões publicadas (rc.1 → rc.2).
+- [ ] Teste instável a corrigir: `MemoryAndFreshness` "aviso de conflito" falhou uma vez sob carga (passa isolado e nas repetições).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

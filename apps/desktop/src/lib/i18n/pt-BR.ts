@@ -230,6 +230,7 @@ export const ptBR = {
       "O NEXUS não envia código, caminhos, consultas ou memória para serviços externos.",
       "Não há telemetria. Logs e histórico ficam apenas neste computador.",
       "A interface não pode acessar a internet: a política de segurança do app bloqueia conexões externas.",
+      "A única conexão de rede é a verificação de atualizações no GitHub, e só se você permitir (envia seu IP e a versão do app).",
       "O banco local não é criptografado; ele é protegido pelas permissões da sua conta do Windows.",
     ],
     saved: "Configuração salva",
@@ -577,6 +578,31 @@ export const ptBR = {
       conflict:
         "A memória foi alterada em outro lugar. Feche o editor e abra de novo para ver a versão atual.",
     },
+  },
+  updates: {
+    title: "Atualizações",
+    description:
+      "Versões novas vêm das releases do GitHub e são conferidas por assinatura antes de instalar.",
+    auto: "Verificar ao abrir",
+    autoDescription: "No máximo uma vez por dia. Envia ao GitHub seu IP e a versão do app.",
+    on: "Ligado",
+    off: "Desligado",
+    checkNow: "Verificar agora",
+    checking: "Verificando…",
+    upToDate: (v: string) => `Você está na versão mais recente (${v}).`,
+    available: (v: string) => `Versão ${v} disponível`,
+    current: (v: string) => `Você usa a ${v}.`,
+    install: "Instalar e reiniciar",
+    installing: "Baixando e instalando…",
+    installHint:
+      "O app fecha e abre de novo na versão nova. Seus projetos e a memória continuam onde estão.",
+    consentTitle: "Verificar atualizações?",
+    consentBody:
+      "O NEXUS pode consultar o GitHub ao abrir (no máximo uma vez por dia) para avisar quando sair uma versão nova. Isso envia seu IP e a versão do app — nada dos seus projetos. Dá para mudar em Configurações.",
+    consentAllow: "Permitir",
+    consentDeny: "Agora não",
+    toastTitle: (v: string) => `NEXUS ${v} disponível`,
+    toastAction: "Ver",
   },
   integrations: {
     description:

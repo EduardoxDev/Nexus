@@ -53,7 +53,7 @@ export function WhatItDoes() {
   return (
     <section id="o-que-faz" className="scroll-mt-20">
       <div className="mx-auto max-w-6xl px-5 py-24">
-        <SectionHeader title="O que ela faz por você">
+        <SectionHeader title="O que ela faz por você." accent="Sem explicar o projeto de novo.">
           Pense numa bibliotecária que leu o seu projeto inteiro e sempre diz de onde tirou cada
           coisa.
         </SectionHeader>

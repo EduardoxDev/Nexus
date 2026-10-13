@@ -1,14 +1,17 @@
 import { Download } from "lucide-react";
+import { motion } from "motion/react";
+import { Fragment } from "react";
 
 import AnimatedContent from "@/components/AnimatedContent";
 import { Bento, Shot } from "@/components/Bento";
 import { GithubIcon } from "@/components/icons";
 import Magnet from "@/components/Magnet";
-import SplitText from "@/components/SplitText";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/useTheme";
 import { downloadHref, site } from "@/site";
+
+const LINES = ["O contexto do seu código,", "na mão do seu agente de IA."];
 
 export function Hero() {
   const theme = useTheme();
@@ -21,17 +24,21 @@ export function Hero() {
           </Badge>
         </AnimatedContent>
 
-        <SplitText
-          tag="h1"
-          text="O contexto do seu código, na mão do seu agente de IA."
-          className="mx-auto mt-7 max-w-4xl font-titulo text-[clamp(2.5rem,5.6vw,4.4rem)] leading-[1.03]"
-          textAlign="center"
-          splitType="words"
-          delay={40}
-          duration={0.7}
-          from={{ opacity: 0, y: 24 }}
-          to={{ opacity: 1, y: 0 }}
-        />
+        <h1 className="mx-auto mt-7 max-w-4xl font-titulo text-[clamp(2.6rem,6vw,4.5rem)] leading-[1.05] tracking-[-0.035em]">
+          {LINES.map((line, i) => (
+            <Fragment key={line}>
+              {i > 0 && " "}
+              <motion.span
+                className={`block ${i === 1 ? "text-muted-foreground" : ""}`}
+                initial={{ opacity: 0, y: 18, filter: "blur(10px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.9, delay: 0.1 + i * 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {line}
+              </motion.span>
+            </Fragment>
+          ))}
+        </h1>
 
         <AnimatedContent distance={20} duration={0.8} delay={0.3}>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">

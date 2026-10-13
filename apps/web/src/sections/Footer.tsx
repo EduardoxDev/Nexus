@@ -1,4 +1,5 @@
 import { Bento } from "@/components/Bento";
+import { GithubIcon } from "@/components/icons";
 import { DownloadButton } from "@/components/Cta";
 import Magnet from "@/components/Magnet";
 import { Separator } from "@/components/ui/separator";
@@ -36,8 +37,31 @@ export function Footer() {
             <Logo className="size-7" />
             <span className="font-titulo text-base text-foreground">Nexus</span>
           </div>
-          <p>
-            Licença MIT{site.maker.name ? `, feita com carinho por ${site.maker.name}` : ""}. 2026.
+          <p className="flex flex-wrap items-center gap-x-1">
+            Licença MIT
+            {site.maker.name && (
+              <>
+                , feita com carinho por{" "}
+                <a
+                  href={site.maker.url}
+                  rel="noopener"
+                  className="text-foreground underline-offset-4 hover:underline"
+                >
+                  {site.maker.name}
+                </a>
+              </>
+            )}
+            . 2026.
+            {site.githubUrl && (
+              <a
+                href={site.githubUrl}
+                rel="noopener"
+                className="ml-3 inline-flex items-center gap-1.5 text-foreground underline-offset-4 hover:underline"
+              >
+                <GithubIcon className="size-4" />
+                Código no GitHub
+              </a>
+            )}
           </p>
         </div>
       </div>

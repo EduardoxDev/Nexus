@@ -10,11 +10,11 @@ export const site = {
   description:
     "A NEXUS indexa seus projetos no seu computador e entrega aos seus agentes de IA busca com evidências, Context Packs e a memória do projeto — sem nada sair da sua máquina.",
   /** Repositório no GitHub, ex.: "https://github.com/usuario/nexus". */
-  githubUrl: "",
+  githubUrl: "https://github.com/EduardoxDev/Nexus",
   /** Download do instalador; padrão: a última release do GitHub. */
   downloadUrl: "",
   /** Quem fez: aparece na seção "Feito com o coração" e no rodapé. */
-  maker: { name: "", url: "" },
+  maker: { name: "EduardoDev", url: "https://github.com/EduardoxDev" },
 } as const;
 
 export const downloadHref =

@@ -129,10 +129,43 @@ fn real(path: &Path) -> PathBuf {
     dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
+/// Pastas do sistema no Linux/macOS. No Windows, vêm das variáveis `SystemRoot`, `ProgramFiles`...
+/// `/home`, `/Users`, `/tmp` e `/var` inteira ficam de fora: projetos e a pasta temporária do
+/// macOS (`/private/var/folders`) vivem dentro delas.
+const UNIX_SYSTEM_DIRS: &[&str] = &[
+    "/usr",
+    "/etc",
+    "/bin",
+    "/sbin",
+    "/lib",
+    "/var/lib",
+    "/var/log",
+    "/opt",
+    "/proc",
+    "/sys",
+    "/dev",
+    "/boot",
+    "/System",
+    "/Library",
+    "/Applications",
+    "/private/etc",
+    "/private/var/db",
+];
+
 /// Pastas que nunca podem ser autorizadas como projeto inteiro.
 fn forbidden_reason(path: &Path, data_dir: &Path) -> Option<String> {
     if path.parent().is_none() {
         return Some("a raiz de um disco não pode ser um projeto".into());
+    }
+    for dir in UNIX_SYSTEM_DIRS.iter().filter(|_| cfg!(unix)) {
+        let dir = real(Path::new(dir));
+        // A pasta e qualquer coisa dentro dela; as acima (ex.: a raiz) já foram tratadas.
+        if is_within(path, &dir) {
+            return Some(format!(
+                "pastas do sistema não podem ser indexadas ({})",
+                dir.display()
+            ));
+        }
     }
     if let Some(home) = dirs::home_dir().and_then(|h| dunce::canonicalize(h).ok())
         && is_within(&home, path)

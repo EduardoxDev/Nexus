@@ -12,6 +12,7 @@ Cada fase termina com aplicação executável e testes aprovados. Critérios de 
 | 5    | MCP e CLI                    | concluída                                      |
 | 6    | Inteligência avançada        | concluída                                      |
 | 7    | Hardening e release          | concluída (assinatura e atualização pendentes) |
+| v0.2 | Multiplataforma e expansão   | em andamento                                   |
 
 ## Fase 0 — Reconhecimento e arquitetura
 
@@ -147,6 +148,19 @@ Critérios de aceitação (verificados em 2026-10-12):
 - [x] CI com formatação, clippy, testes (Rust e frontend), E2E no Windows, auditoria de dependências (`cargo audit`, `pnpm audit`) e instalador sob demanda.
 - [x] Demonstração reproduzível (`scripts/demo.ps1`) sobre a fixture ou qualquer repositório.
 - [ ] **Pendente**: assinatura de código (certificado), atualização automática (chaves e endpoint), `cargo audit` local, licença de uso do ícone (ver [release.md](release.md)).
+
+## v0.2 — Multiplataforma e expansão
+
+Plano: [superpowers/plans/2026-10-13-v0.2.md](superpowers/plans/2026-10-13-v0.2.md). Etapas: multiplataforma, atualização automática (opcional, perguntada na 1ª abertura), mais agentes (Codex, Cursor, VS Code, Claude Desktop), Go/Java/C#, bot do Discord etapa 2, release v0.2.0.
+
+Etapa 1 — multiplataforma:
+
+- [x] Pastas do sistema no Linux/macOS recusadas como projeto, comparadas pelo caminho real (`rejects_unix_system_folders`); pasta de dados por caminho não canônico recusada (`rejects_data_dir_given_by_a_non_canonical_path`).
+- [x] Links: a varredura e as releituras já recusam symlinks em todos os sistemas (testes com symlink real no Ubuntu).
+- [x] CI Rust em Windows, Ubuntu e macOS.
+- [x] Release em matriz (Windows x64, Linux x64 `.deb`/`.AppImage`, macOS arm64/x64 `.dmg`) com fumaça da CLI (`scripts/smoke-cli.mjs`) e um rascunho único com `SHA256SUMS.txt`.
+- [ ] Rodar o workflow numa tag `-rc` e conferir os pacotes dos três sistemas.
+- [ ] Interface no Linux/macOS: teste manual pendente (sem máquina disponível).
 
 ## Riscos
 

@@ -88,7 +88,7 @@ function Hero() {
       {/* Brilho da marca: decorativo. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_100%_0%,var(--accent-glow),transparent_60%),radial-gradient(40%_90%_at_0%_100%,var(--accent-glow),transparent_70%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_110%_at_100%_0%,var(--accent-glow),transparent_65%)]"
       />
       <div className="relative flex flex-wrap items-center gap-x-8 gap-y-5">
         <div className="flex min-w-0 flex-1 items-center gap-5">
@@ -100,8 +100,11 @@ function Hero() {
             draggable={false}
           />
           <div className="min-w-0">
-            <p className="font-display text-3xl font-bold tracking-tight text-fg">{t.app.name}</p>
-            <p className="text-base font-medium text-accent-text">{t.app.slogan}</p>
+            <p className="font-display text-3xl font-semibold tracking-[-0.03em] text-fg">
+              {t.app.name}
+            </p>
+            {/* Duas cores, como os títulos do site: nome em branco, slogan em cinza. */}
+            <p className="text-lg font-medium tracking-[-0.01em] text-fg-muted">{t.app.slogan}</p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-fg-muted">
               <span>{t.app.tagline}</span>
               <span aria-hidden="true">·</span>

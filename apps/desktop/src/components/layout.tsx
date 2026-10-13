@@ -16,7 +16,9 @@ export function Page({ title, description, actions, children }: PageProps) {
     <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-8 pt-7 pb-10">
       <header className="flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-fg">{title}</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-[-0.03em] text-fg">
+            {title}
+          </h1>
           <p className="mt-1 text-sm text-fg-muted">{description}</p>
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

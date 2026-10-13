@@ -1,6 +1,6 @@
 /*
  * Design tokens do NEXUS.
- * Tema escuro (grafite azulado) é o padrão; tema claro completo. O azul da marca é usado só
+ * Tema escuro (grafite neutro, quase preto, como o site) é o padrão; tema claro completo. O azul da marca é usado só
  * para foco, ação primária, seleção e destaques de identidade. Superfícies em camadas:
  * canvas (bg) < barra lateral < cartões (surface-1) < controles (surface-2/3).
  * Contraste verificado em src/styles/tokens.test.ts.
@@ -48,17 +48,18 @@
 
 .dark {
   color-scheme: dark;
-  --bg: oklch(0.158 0.008 265);
-  --surface-sidebar: oklch(0.172 0.009 265);
-  --surface-1: oklch(0.196 0.01 265);
-  --surface-2: oklch(0.226 0.011 265);
-  --surface-3: oklch(0.262 0.012 265);
-  --border: oklch(0.276 0.011 265);
-  --border-strong: oklch(0.355 0.013 265);
+  /* Grafite neutro, quase preto (o mesmo do site): o azul fica só nos destaques. */
+  --bg: oklch(0.141 0.005 286);
+  --surface-sidebar: oklch(0.158 0.005 286);
+  --surface-1: oklch(0.183 0.006 286);
+  --surface-2: oklch(0.21 0.006 286);
+  --surface-3: oklch(0.245 0.008 286);
+  --border: oklch(0.262 0.008 286);
+  --border-strong: oklch(0.335 0.009 286);
 
-  --fg: oklch(0.96 0.004 265);
-  --fg-muted: oklch(0.77 0.01 265);
-  --fg-subtle: oklch(0.66 0.012 265);
+  --fg: oklch(0.967 0.001 286);
+  --fg-muted: oklch(0.74 0.012 286);
+  --fg-subtle: oklch(0.66 0.012 286);
 
   --accent: oklch(0.56 0.2 266);
   --accent-hover: oklch(0.61 0.19 266);
@@ -84,11 +85,11 @@
 }
 
 :root {
+  /* Inter embutida no app (@fontsource-variable/inter), a mesma do site; sem rede. */
   --font-sans:
-    "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+    "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Arial,
     sans-serif;
-  --font-display:
-    "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Inter Variable", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --font-mono:
     "Cascadia Mono", "Cascadia Code", Consolas, "JetBrains Mono", "SF Mono", ui-monospace, monospace;
   --radius-sm: 5px;

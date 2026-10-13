@@ -3,8 +3,8 @@
 use std::collections::BTreeSet;
 
 /// Versão do indexador (chunking + texto do FTS + análise de código). Mudou ⇒ arquivos são
-/// reprocessados. 2: símbolos e imports (Fase 6).
-pub const INDEXER_VERSION: i64 = 2;
+/// reprocessados. 2: símbolos e imports (Fase 6). 3: Go, Java e C# (v0.2).
+pub const INDEXER_VERSION: i64 = 3;
 
 const MAX_CHUNK_LINES: usize = 60;
 const MAX_CHUNK_BYTES: usize = 8 * 1024;

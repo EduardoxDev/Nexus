@@ -6,6 +6,11 @@
 //! - Rust: `mod x;`, `crate::`, `self::`, `super::` e o nome do próprio crate (Cargo.toml),
 //!   pelo maior prefixo do caminho que corresponde a um arquivo de módulo.
 //!
+//! - Go: o caminho do import dentro de um `module` do go.mod aponta para **todos** os arquivos
+//!   `.go` da pasta do pacote (sem `_test.go`).
+//! - Java: `a.b.C` → arquivo da classe `C` declarado em `package a.b`; `a.b.*` → o pacote.
+//! - C#: `using X.Y` → arquivos que declaram `namespace X.Y`; `using static X.Y.Z` → o tipo `Z`.
+//!
 //! O que não resolve para um arquivo vira dependência **externa** (pacote/crate) ou fica
 //! **não resolvido** (caminho relativo que não existe) — nunca é inventado.
 
@@ -16,6 +21,8 @@ use super::{Import, ImportKind};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Target {
     File(String),
+    /// Pacote/namespace com vários arquivos (Go, Java `.*`, C#), em ordem.
+    Files(Vec<String>),
     External(String),
     Unresolved,
 }
@@ -88,6 +95,30 @@ pub struct Resolver<'a> {
     tsconfigs: Vec<TsConfig>,
     /// Nome do crate (com `_`) → pasta do Cargo.toml.
     crates: HashMap<String, String>,
+    /// (module do go.mod, pasta), o mais longo primeiro.
+    go_modules: Vec<(String, String)>,
+    /// Pasta → arquivos `.go` (sem testes) diretamente nela.
+    go_dirs: HashMap<String, Vec<String>>,
+    /// `package` Java → arquivos.
+    java_packages: HashMap<String, Vec<String>>,
+    /// `namespace` C# → arquivos.
+    cs_namespaces: HashMap<String, Vec<String>>,
+}
+
+/// Nome do arquivo sem pasta e sem extensão.
+fn stem(path: &str) -> &str {
+    let name = path.rsplit('/').next().unwrap_or(path);
+    name.rsplit_once('.').map_or(name, |(s, _)| s)
+}
+
+/// Vários arquivos, tirando o próprio importador; só ele = auto-import.
+fn files_target(from: &str, files: &[String]) -> Target {
+    let others: Vec<String> = files.iter().filter(|f| *f != from).cloned().collect();
+    match others.len() {
+        0 => Target::File(from.to_owned()),
+        1 => Target::File(others.into_iter().next().unwrap_or_default()),
+        _ => Target::Files(others),
+    }
 }
 
 fn dir_of(path: &str) -> &str {
@@ -119,7 +150,53 @@ impl<'a> Resolver<'a> {
             files,
             tsconfigs,
             crates,
+            go_modules: Vec::new(),
+            go_dirs: HashMap::new(),
+            java_packages: HashMap::new(),
+            cs_namespaces: HashMap::new(),
         }
+    }
+
+    /// Módulos Go: (caminho do `module`, pasta do go.mod).
+    #[must_use]
+    pub fn with_go_modules(mut self, mut modules: Vec<(String, String)>) -> Self {
+        modules.sort_by_key(|(m, _)| std::cmp::Reverse(m.len()));
+        self.go_modules = modules;
+        let mut dirs: HashMap<String, Vec<String>> = HashMap::new();
+        for f in self.files {
+            if f.ends_with(".go") && !f.ends_with("_test.go") {
+                dirs.entry(dir_of(f).to_owned())
+                    .or_default()
+                    .push(f.clone());
+            }
+        }
+        for list in dirs.values_mut() {
+            list.sort();
+        }
+        self.go_dirs = dirs;
+        self
+    }
+
+    /// Declarações de pacote/namespace: (linguagem, nome, arquivo).
+    #[must_use]
+    pub fn with_namespaces(mut self, decls: Vec<(String, String, String)>) -> Self {
+        for (language, name, path) in decls {
+            let map = match language.as_str() {
+                "java" => &mut self.java_packages,
+                "csharp" => &mut self.cs_namespaces,
+                _ => continue,
+            };
+            map.entry(name).or_default().push(path);
+        }
+        for list in self
+            .java_packages
+            .values_mut()
+            .chain(self.cs_namespaces.values_mut())
+        {
+            list.sort();
+            list.dedup();
+        }
+        self
     }
 
     fn exists(&self, p: &str) -> bool {
@@ -131,8 +208,85 @@ impl<'a> Resolver<'a> {
             "typescript" | "tsx" | "javascript" | "jsx" => self.resolve_ts(from, &import.specifier),
             "python" => self.resolve_python(from, &import.specifier),
             "rust" => self.resolve_rust(from, import),
+            "go" => self.resolve_go(from, &import.specifier),
+            "java" => self.resolve_java(from, &import.specifier),
+            "csharp" => self.resolve_csharp(from, &import.specifier),
             _ => Target::Unresolved,
         }
+    }
+
+    // ---- Go ----------------------------------------------------------------------------
+
+    fn resolve_go(&self, from: &str, spec: &str) -> Target {
+        for (module, dir) in &self.go_modules {
+            let rel = if spec == module {
+                ""
+            } else if let Some(r) = spec
+                .strip_prefix(module.as_str())
+                .and_then(|r| r.strip_prefix('/'))
+            {
+                r
+            } else {
+                continue;
+            };
+            let pkg = match (dir.is_empty(), rel.is_empty()) {
+                (true, _) => rel.to_owned(),
+                (false, true) => dir.clone(),
+                (false, false) => format!("{dir}/{rel}"),
+            };
+            return self
+                .go_dirs
+                .get(&pkg)
+                .map_or(Target::Unresolved, |files| files_target(from, files));
+        }
+        Target::External(spec.to_owned())
+    }
+
+    // ---- Java --------------------------------------------------------------------------
+
+    fn resolve_java(&self, from: &str, spec: &str) -> Target {
+        if let Some(pkg) = spec.strip_suffix(".*") {
+            return self.java_packages.get(pkg).map_or_else(
+                || Target::External(pkg.to_owned()),
+                |f| files_target(from, f),
+            );
+        }
+        // `a.b.Externa.Interna`: tenta o pacote mais longo que tenha o arquivo da classe.
+        let segs: Vec<&str> = spec.split('.').collect();
+        for cut in (1..segs.len()).rev() {
+            let pkg = segs[..cut].join(".");
+            let class = segs[cut];
+            if let Some(file) = self
+                .java_packages
+                .get(&pkg)
+                .and_then(|files| files.iter().find(|f| stem(f) == class))
+            {
+                return Target::File(file.clone());
+            }
+        }
+        Target::External(
+            spec.rsplit_once('.')
+                .map_or(spec, |(pkg, _)| pkg)
+                .to_owned(),
+        )
+    }
+
+    // ---- C# ----------------------------------------------------------------------------
+
+    fn resolve_csharp(&self, from: &str, spec: &str) -> Target {
+        if let Some(files) = self.cs_namespaces.get(spec) {
+            return files_target(from, files);
+        }
+        // `using static X.Y.Tipo` / `using A = X.Y.Tipo`: o arquivo do tipo no namespace.
+        if let Some((ns, ty)) = spec.rsplit_once('.')
+            && let Some(files) = self.cs_namespaces.get(ns)
+        {
+            return files
+                .iter()
+                .find(|f| stem(f) == ty)
+                .map_or_else(|| files_target(from, files), |f| Target::File(f.clone()));
+        }
+        Target::External(spec.to_owned())
     }
 
     // ---- TS/JS -------------------------------------------------------------------------

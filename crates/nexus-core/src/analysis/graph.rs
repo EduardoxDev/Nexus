@@ -182,6 +182,7 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
     // Configurações lidas do disco (só as indexadas; nunca arquivos ignorados).
     let mut tsconfigs = Vec::new();
     let mut crates = HashMap::new();
+    let mut go_modules = Vec::new();
     for (path, _, _) in &files {
         let name = path.rsplit('/').next().unwrap_or(path);
         let dir = path.rsplit_once('/').map_or("", |(d, _)| d);
@@ -197,9 +198,26 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
             && let Some(n) = read().and_then(|t| crate_name(&t))
         {
             crates.insert(n, dir.to_owned());
+        } else if name == "go.mod"
+            && let Some(m) = read().and_then(|t| super::go::module_path(&t))
+        {
+            go_modules.push((m, dir.to_owned()));
         }
     }
-    let resolver = Resolver::new(&all_paths, tsconfigs, crates);
+    // `package` (Java) e `namespace` (C#) já analisados: resolvem imports por nome.
+    let namespaces: Vec<(String, String, String)> = db.read(|c| {
+        let mut stmt = c.prepare(
+            "SELECT f.language, s.name, f.rel_path FROM files f
+             JOIN symbols s ON s.project_id = f.project_id AND s.content_hash = f.content_hash
+             WHERE f.project_id = ?1 AND f.status = 'indexed' AND s.kind = 'module'
+               AND f.language IN ('java', 'csharp')",
+        )?;
+        let rows = stmt.query_map([project_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    })?;
+    let resolver = Resolver::new(&all_paths, tsconfigs, crates)
+        .with_go_modules(go_modules)
+        .with_namespaces(namespaces);
 
     let mut stats = GraphStats {
         index_generation: generation,
@@ -214,29 +232,37 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
         };
         stats.files += 1;
         for imp in list {
-            let (to, ext) = match resolver.resolve(path, lang, imp) {
-                Target::File(f) if f != *path => {
-                    stats.resolved += 1;
-                    (Some(f), None)
-                }
-                Target::File(_) => continue, // auto-import (ex.: `use self::X` no próprio arquivo)
-                Target::External(e) => {
-                    stats.external += 1;
-                    (None, Some(e))
-                }
-                Target::Unresolved => {
-                    stats.unresolved += 1;
-                    (None, None)
-                }
-            };
-            edges.push((
-                path.clone(),
-                imp.line,
-                imp.specifier.clone(),
-                imp.kind.as_str(),
-                to,
-                ext,
-            ));
+            // Um import pode apontar para vários arquivos (pacote Go, namespace C#).
+            let targets: Vec<(Option<String>, Option<String>)> =
+                match resolver.resolve(path, lang, imp) {
+                    Target::File(f) if f != *path => {
+                        stats.resolved += 1;
+                        vec![(Some(f), None)]
+                    }
+                    Target::File(_) => continue, // auto-import (ex.: `use self::X` no próprio arquivo)
+                    Target::Files(files) => {
+                        stats.resolved += 1;
+                        files.into_iter().map(|f| (Some(f), None)).collect()
+                    }
+                    Target::External(e) => {
+                        stats.external += 1;
+                        vec![(None, Some(e))]
+                    }
+                    Target::Unresolved => {
+                        stats.unresolved += 1;
+                        vec![(None, None)]
+                    }
+                };
+            for (to, ext) in targets {
+                edges.push((
+                    path.clone(),
+                    imp.line,
+                    imp.specifier.clone(),
+                    imp.kind.as_str(),
+                    to,
+                    ext,
+                ));
+            }
         }
     }
     stats.edges = edges.len() as i64;
@@ -245,11 +271,12 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
         tx.execute("DELETE FROM edges WHERE project_id = ?1", [project_id])?;
         {
             let mut ins = tx.prepare_cached(
-                "INSERT OR IGNORE INTO edges (project_id, from_path, line, specifier, kind, to_path, external)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT OR IGNORE INTO edges (project_id, from_path, line, specifier, kind, to_path, external, target)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             )?;
             for (from, line, spec, kind, to, ext) in &edges {
-                ins.execute(params![project_id, from, line, spec, kind, to, ext])?;
+                let target = to.as_deref().or(ext.as_deref()).unwrap_or("");
+                ins.execute(params![project_id, from, line, spec, kind, to, ext, target])?;
             }
         }
         stats.duration_ms = i64::try_from(started.elapsed().as_millis()).unwrap_or(i64::MAX);

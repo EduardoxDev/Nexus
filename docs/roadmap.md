@@ -171,6 +171,13 @@ Etapa 2 — atualização automática:
 - [ ] Teste real de atualização entre duas versões publicadas (rc.1 → rc.2).
 - [ ] Teste instável a corrigir: `MemoryAndFreshness` "aviso de conflito" falhou uma vez sob carga (passa isolado e nas repetições).
 
+Etapa 4 — Go, Java e C#:
+
+- [x] Analisadores `go`, `java`, `csharp` com cobertura declarada; testes de unidade por linguagem.
+- [x] Resolução: `go.mod` → pacote (todos os arquivos), `package` Java, `namespace` C#; um import pode gerar várias arestas (migration v6, com teste de atualização v5 → v6).
+- [x] Fixtures `go-service`, `java-app`, `csharp-lib` com gabarito à mão: 100% de precisão e revocação.
+- [x] Desempenho comparado com o `main` nas mesmas condições ([benchmarks.md](benchmarks.md)).
+
 Etapa 5 — bot do Discord, etapa 2:
 
 - [x] Anúncio de versão nova (release publicada no GitHub), uma vez por tag, com downloads por sistema; a 1ª execução só registra.

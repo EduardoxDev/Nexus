@@ -6,7 +6,10 @@
 //! (chaves) ou de indentação (Python). Não há AST: a precisão é medida contra respostas
 //! conferidas à mão (`tests/analysis.rs`) para decidir se um parser real se justifica.
 
+mod csharp;
+pub mod go;
 pub mod graph;
+mod java;
 pub mod lexer;
 mod python;
 pub mod query;
@@ -18,7 +21,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// Versão dos analisadores. Mudou ⇒ conteúdos são reanalisados (via `INDEXER_VERSION`).
-pub const ANALYZER_VERSION: i64 = 1;
+/// 2: Go, Java e C# (v0.2).
+pub const ANALYZER_VERSION: i64 = 2;
 /// Máximo de símbolos e imports guardados por arquivo (arquivos gerados enormes).
 const MAX_ITEMS: usize = 2_000;
 
@@ -225,6 +229,60 @@ pub fn coverage() -> Vec<Coverage> {
             ]),
         },
         Coverage {
+            language: "go".into(),
+            symbols: s(&[
+                "func e métodos (contêiner = tipo do receptor)",
+                "type struct/interface/alias, também em grupos type ( )",
+                "const e var de nível superior, também em grupos",
+            ]),
+            imports: s(&[
+                "import \"x\" e grupos import ( )",
+                "apelidos (x, _, .)",
+                "pacotes do go.mod → todos os arquivos .go da pasta (sem _test.go)",
+            ]),
+            not_covered: s(&[
+                "campos de struct e métodos de interface",
+                "funções anônimas",
+                "build tags e arquivos gerados por go:generate",
+            ]),
+        },
+        Coverage {
+            language: "java".into(),
+            symbols: s(&[
+                "package (como módulo)",
+                "class, interface, enum, record, @interface (também aninhados)",
+                "métodos, construtores e campos public (static final = constante)",
+            ]),
+            imports: s(&[
+                "import a.b.C",
+                "import a.b.* (o pacote inteiro)",
+                "import static a.b.C.m (depende de a.b.C)",
+            ]),
+            not_covered: s(&[
+                "campos não públicos e constantes de enum",
+                "classes anônimas e lambdas",
+                "text blocks (\"\"\") com chaves desbalanceadas",
+            ]),
+        },
+        Coverage {
+            language: "c#".into(),
+            symbols: s(&[
+                "namespace (com bloco ou file-scoped) como módulo",
+                "class, interface, struct, record, enum (também aninhados)",
+                "métodos, construtores, propriedades e campos public (const = constante)",
+            ]),
+            imports: s(&[
+                "using X.Y (arquivos que declaram o namespace)",
+                "using static X.Y.Tipo e using A = X.Y.Tipo",
+                "global using",
+            ]),
+            not_covered: s(&[
+                "membros não públicos (exceto métodos)",
+                "eventos, indexadores e operadores",
+                "strings verbatim (@\"\") com chaves desbalanceadas",
+            ]),
+        },
+        Coverage {
             language: "rust".into(),
             symbols: s(&[
                 "fn (pub, async, const, unsafe)",
@@ -251,6 +309,9 @@ pub fn analyzer_for(language: Option<&str>) -> Option<&'static dyn Analyzer> {
         "typescript" | "tsx" | "javascript" | "jsx" => Some(&typescript::TypeScript),
         "python" => Some(&python::Python),
         "rust" => Some(&rust_lang::Rust),
+        "go" => Some(&go::Go),
+        "java" => Some(&java::Java),
+        "csharp" => Some(&csharp::CSharp),
         _ => None,
     }
 }
@@ -433,8 +494,8 @@ mod tests {
 
     #[test]
     fn unknown_languages_are_not_analyzed() {
-        assert!(analyze(Some("go"), "func X() {}").is_none());
+        assert!(analyze(Some("kotlin"), "fun x() {}").is_none());
         assert!(analyze(None, "x").is_none());
-        assert_eq!(coverage().len(), 3);
+        assert_eq!(coverage().len(), 6);
     }
 }

@@ -11,6 +11,10 @@ updates:
     groups:
       rust-minor-patch:
         update-types: [minor, patch]
+    # Tauri 3 ainda é alpha (docs/roadmap.md, Riscos): só atualizações dentro da 2.x.
+    ignore:
+      - dependency-name: "tauri*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /
@@ -21,6 +25,13 @@ updates:
     groups:
       frontend-minor-patch:
         update-types: [minor, patch]
+    # TypeScript 7 quebra o typescript-eslint 8 e Tauri 3 ainda é alpha (docs/roadmap.md, Riscos):
+    # essas trocas de versão maior são feitas à mão, quando houver suporte.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@tauri-apps/*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /

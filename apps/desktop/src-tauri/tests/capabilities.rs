@@ -42,7 +42,7 @@ fn capabilities_allow_exactly_the_declared_commands() {
 
     // Nenhum plugin com acesso amplo pode ser exposto ao webview.
     for p in &permissions {
-        for forbidden in ["fs:", "shell:", "http:", "process:", "opener:"] {
+        for forbidden in ["fs:", "shell:", "http:", "process:", "opener:", "updater:"] {
             assert!(!p.starts_with(forbidden), "permissão proibida: {p}");
         }
     }

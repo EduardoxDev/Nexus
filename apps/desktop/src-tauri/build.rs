@@ -47,6 +47,8 @@ const COMMANDS: &[&str] = &[
     "get_integration_info",
     "get_analysis_overview",
     "get_file_analysis",
+    "check_for_update",
+    "install_update",
 ];
 
 fn main() {

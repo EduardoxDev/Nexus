@@ -52,6 +52,7 @@ use nexus_core::search::{
 };
 use nexus_core::settings::{MotionPreference, SettingKey, Settings, ThemePreference};
 use nexus_core::storage::AppliedMigration;
+use nexus_core::updates::{UpdateCheck, UpdateInfo, UpdateStatus};
 use nexus_core::{ErrorCode, ErrorInfo};
 use ts_rs::{Config, TS};
 
@@ -158,6 +159,9 @@ fn generate() -> BTreeMap<String, String> {
     render::<ScanReport>(&cfg, &mut files);
     render::<FreshnessSummary>(&cfg, &mut files);
     render::<McpToolInfo>(&cfg, &mut files);
+    render::<UpdateCheck>(&cfg, &mut files);
+    render::<UpdateInfo>(&cfg, &mut files);
+    render::<UpdateStatus>(&cfg, &mut files);
     render::<SetupKind>(&cfg, &mut files);
     render::<ClientSetup>(&cfg, &mut files);
     render::<IntegrationInfo>(&cfg, &mut files);

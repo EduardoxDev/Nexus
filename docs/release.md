@@ -59,9 +59,14 @@ No CI, o job `bundle` (disparo manual com `bundle: true`) gera o instalador Wind
 6. **Assinar** o instalador e o executável — _pendente_: requer certificado de assinatura de código (OV/EV ou Azure Trusted Signing) e configuração de `bundle.windows.signCommand`/`certificateThumbprint`.
 7. Publicar notas de versão com mudanças de schema (migrations) e limitações conhecidas.
 
-## Atualização segura (pendente)
+## Atualização automática (v0.2)
 
-O plugin de atualização do Tauri exige um par de chaves de assinatura de updates e um endpoint de distribuição. Nada disso existe ainda; o app **não** verifica atualizações.
+- **Plugin** `tauri-plugin-updater` 2.x, usado só pelo Rust (`commands/updates.rs`); o webview não recebe permissões do plugin (teste em `tests/capabilities.rs`).
+- **Endpoint**: `https://github.com/EduardoxDev/Nexus/releases/latest/download/latest.json`. Rascunhos e pre-releases não contam como "latest": a atualização só chega depois que a release é **publicada** como normal.
+- **Assinatura**: par minisign gerado com `tauri signer generate`. A chave pública está em `tauri.conf.json` (`plugins.updater.pubkey`); a privada e a senha ficam só nos segredos do GitHub (`TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) e com quem mantém o projeto. **Perder a chave privada impede atualizar quem já instalou** (seria preciso reinstalar à mão).
+- **Pacotes**: com a chave no ambiente, `scripts/release.ps1` acrescenta `tauri.updater.conf.json` (`createUpdaterArtifacts`) e o build gera `.sig` para o instalador NSIS, o `.AppImage` e o `.app.tar.gz` do macOS. O job final roda `scripts/latest-json.mjs`, que monta o `latest.json` (falha se faltar assinatura). O `.deb` não se atualiza sozinho.
+- **Política** (`nexus_core::updates`): pergunta na 1ª abertura; automática só com permissão e no máximo 1×/24 h; manual sempre que a pessoa pedir; instalação só por clique, com reinício.
+- **Primeiro teste real**: a v0.1.0 não tem o atualizador; o primeiro update automático possível é de uma versão ≥ 0.2.0-rc.1 para a seguinte.
 
 ## Reprodutibilidade
 

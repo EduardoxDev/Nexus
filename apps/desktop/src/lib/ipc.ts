@@ -18,6 +18,7 @@ import type {
   FileAnalysisView,
   ImportReport,
   IntegrationInfo,
+  UpdateStatus,
   IssueQuery,
   Memory,
   MemoryCounts,
@@ -105,6 +106,8 @@ export interface Commands {
   reveal_project_dir: { args: ProjectArgs; result: null };
   get_startup_status: { args: undefined; result: StartupStatus };
   get_integration_info: { args: undefined; result: IntegrationInfo };
+  check_for_update: { args: { manual: boolean }; result: UpdateStatus };
+  install_update: { args: undefined; result: null };
   get_analysis_overview: { args: ProjectArgs; result: AnalysisOverview };
   get_file_analysis: { args: ProjectArgs & { relPath: string }; result: FileAnalysisView };
   get_app_info: { args: undefined; result: AppInfo };

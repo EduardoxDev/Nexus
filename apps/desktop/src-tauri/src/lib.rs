@@ -146,6 +146,8 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         // Usado apenas pelo Rust (seletor de pastas); o webview não recebe permissões do plugin.
         .plugin(tauri_plugin_dialog::init())
+        // Atualizações: usado só pelo Rust (commands::updates), sem permissões para o webview.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
         .setup(move |app| {
             create_main_window(app)?;
@@ -192,6 +194,8 @@ pub fn run() {
             commands::diagnostics::list_operations,
             commands::settings::get_settings,
             commands::settings::set_setting,
+            commands::updates::check_for_update,
+            commands::updates::install_update,
             commands::projects::list_projects,
             commands::projects::get_project_overview,
             commands::projects::pick_project_folder,

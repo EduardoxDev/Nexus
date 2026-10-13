@@ -22,6 +22,7 @@ pub mod sensitive;
 pub mod settings;
 pub mod storage;
 pub mod time_util;
+pub mod updates;
 
 use std::path::Path;
 use std::time::Instant;

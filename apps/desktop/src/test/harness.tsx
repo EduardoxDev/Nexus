@@ -33,6 +33,9 @@ export const defaultSettings: Settings = {
   indexingThreads: 0,
   maxFileSizeKb: 1024,
   watchProjects: true,
+  // Já respondido nos testes em geral; o aviso de "ask" tem teste próprio.
+  updateCheck: "off",
+  updateLastCheckMs: 0,
 };
 
 export const appInfo: AppInfo = {

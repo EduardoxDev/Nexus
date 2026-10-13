@@ -37,6 +37,9 @@ pub mod kinds {
     pub const FRESHNESS_SCAN: &str = "freshness.scan";
     pub const MCP_SESSION: &str = "mcp.session";
     pub const MCP_TOOL: &str = "mcp.tool";
+    /// Consulta ao GitHub por versão nova (única conexão de rede do app, opcional).
+    pub const UPDATE_CHECK: &str = "updates.check";
+    pub const UPDATE_INSTALL: &str = "updates.install";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

@@ -6,6 +6,8 @@
   "permissions": [
     "core:event:default",
     "allow-get-startup-status",
+    "allow-check-for-update",
+    "allow-install-update",
     "allow-get-app-info",
     "allow-get-diagnostics",
     "allow-run-integrity-check",

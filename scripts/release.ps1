@@ -9,7 +9,9 @@
      /usr/bin/nexus no .deb), onde a tela Integrações a encontra.
   3. Confere a CLI com scripts/smoke-cli.mjs (--version e handshake MCP), quando o alvo roda
      nesta máquina.
-  Nada é assinado (veja docs/release.md).
+  Com TAURI_SIGNING_PRIVATE_KEY no ambiente (o CI tem), gera também os pacotes do atualizador
+  assinados (.sig) via tauri.updater.conf.json. Sem a chave, os pacotes saem normais.
+  O código não é assinado (veja docs/release.md).
 
   Funciona no Windows PowerShell 5.1 e no PowerShell 7 (pwsh) do Linux e do macOS.
 
@@ -73,8 +75,13 @@ if ($triple -eq $hostTriple) {
 Push-Location $desktop
 try {
   $runner = if (Get-Command pnpm -ErrorAction SilentlyContinue) { "pnpm" } else { "npx" }
+  $configs = @("--config", "src-tauri/tauri.release.conf.json")
+  if ($env:TAURI_SIGNING_PRIVATE_KEY) {
+    $configs += @("--config", "src-tauri/tauri.updater.conf.json")
+    Write-Host "Chave do atualizador encontrada: gerando pacotes assinados para atualização."
+  }
   Invoke-Step "tauri build" {
-    & $runner tauri build --config src-tauri/tauri.release.conf.json --bundles $Bundles @targetArgs
+    & $runner tauri build @configs --bundles $Bundles @targetArgs
   }
 } finally { Pop-Location }
 

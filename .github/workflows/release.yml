@@ -21,11 +21,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: windows-x64, os: windows-latest, target: x86_64-pc-windows-msvc, test: true }
-          - { name: linux-x64, os: ubuntu-22.04, target: x86_64-unknown-linux-gnu, test: true }
-          - { name: macos-arm64, os: macos-latest, target: aarch64-apple-darwin, test: true }
+          - { name: windows-x64, os: windows-latest, target: x86_64-pc-windows-msvc, arch: x64, test: true }
+          - { name: linux-x64, os: ubuntu-22.04, target: x86_64-unknown-linux-gnu, arch: x64, test: true }
+          - { name: macos-arm64, os: macos-latest, target: aarch64-apple-darwin, arch: aarch64, test: true }
           # Compilado no runner Apple Silicon; os testes já rodaram no job acima.
-          - { name: macos-x64, os: macos-latest, target: x86_64-apple-darwin, test: false }
+          - { name: macos-x64, os: macos-latest, target: x86_64-apple-darwin, arch: x64, test: false }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -48,8 +48,11 @@ jobs:
       - name: Testes antes de empacotar
         if: matrix.test
         run: cargo test --workspace --locked
-      - name: Pacotes com a CLI embutida (inclui a fumaça da CLI)
+      - name: Pacotes com a CLI embutida (inclui a fumaça da CLI e as assinaturas do atualizador)
         shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: ./scripts/release.ps1 -Target ${{ matrix.target }}
       - name: O .deb leva a CLI
         if: runner.os == 'Linux'
@@ -58,9 +61,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force out | Out-Null
-          Get-ChildItem target/${{ matrix.target }}/release/bundle -Recurse -File |
-            Where-Object { $_.Extension -in ".exe", ".deb", ".AppImage", ".dmg" } |
+          $bundle = "target/${{ matrix.target }}/release/bundle"
+          Get-ChildItem $bundle -Recurse -File |
+            Where-Object { $_.Extension -in ".exe", ".deb", ".AppImage", ".dmg" -or $_.Name -match '\.(exe|AppImage)\.sig$' } |
             Copy-Item -Destination out
+          # macOS: o pacote do atualizador tem o mesmo nome nas duas arquiteturas; leva a arquitetura.
+          foreach ($f in Get-ChildItem "$bundle/macos" -Filter "*.app.tar.gz*" -File -ErrorAction SilentlyContinue) {
+            Copy-Item $f.FullName (Join-Path out ($f.Name -replace '\.app\.tar\.gz', '_${{ matrix.arch }}.app.tar.gz'))
+          }
           Get-ChildItem out
       - uses: actions/upload-artifact@v7
         with:
@@ -81,10 +89,12 @@ jobs:
         with:
           path: out
           merge-multiple: true
+      - name: latest.json (atualizador)
+        run: node scripts/latest-json.mjs out "${{ github.ref_name }}" "${{ github.repository }}"
       - name: SHA256SUMS
         working-directory: out
         run: |
-          sha256sum * > SHA256SUMS.txt
+          sha256sum $(ls | grep -v '\.sig$') > SHA256SUMS.txt
           cat SHA256SUMS.txt
       - name: Criar o rascunho
         env:

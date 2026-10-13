@@ -19,6 +19,7 @@ import { CommandPalette } from "@/features/palette/CommandPalette";
 import { ShortcutsDialog } from "@/features/palette/ShortcutsDialog";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import type { Settings } from "@/lib/bindings";
+import { useStartupUpdateCheck } from "@/features/updates/updates";
 import { useIndexingEvents } from "@/lib/events";
 import { useSetSetting } from "@/lib/queries";
 import { useApplyAppearance } from "@/lib/theme";
@@ -52,6 +53,7 @@ export function AppShell({ settings }: { settings: Settings }) {
   const setSetting = useSetSetting();
   const appearance = useApplyAppearance(settings.theme, settings.reducedMotion);
   useIndexingEvents();
+  useStartupUpdateCheck(settings);
 
   const toggleSidebar = useCallback(() => {
     setSetting.mutate({ key: "ui.sidebar_collapsed", value: !settings.sidebarCollapsed });

@@ -6,6 +6,7 @@ use ts_rs::TS;
 
 use crate::error::{Error, Result};
 use crate::time_util::now_ms;
+use crate::updates::UpdateCheck;
 
 /// Chaves aceitas. Qualquer outra chave é rejeitada na desserialização.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -22,16 +23,22 @@ pub enum SettingKey {
     MaxFileSizeKb,
     #[serde(rename = "indexing.watch")]
     WatchProjects,
+    #[serde(rename = "updates.check")]
+    UpdatesCheck,
+    #[serde(rename = "updates.last_check_ms")]
+    UpdatesLastCheckMs,
 }
 
 impl SettingKey {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 8] = [
         Self::UiTheme,
         Self::UiReducedMotion,
         Self::UiSidebarCollapsed,
         Self::IndexingThreads,
         Self::MaxFileSizeKb,
         Self::WatchProjects,
+        Self::UpdatesCheck,
+        Self::UpdatesLastCheckMs,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -42,6 +49,8 @@ impl SettingKey {
             Self::IndexingThreads => "indexing.threads",
             Self::MaxFileSizeKb => "indexing.max_file_size_kb",
             Self::WatchProjects => "indexing.watch",
+            Self::UpdatesCheck => "updates.check",
+            Self::UpdatesLastCheckMs => "updates.last_check_ms",
         }
     }
 
@@ -86,6 +95,10 @@ pub struct Settings {
     pub max_file_size_kb: u32,
     /// Reindexar automaticamente quando arquivos dos projetos mudam.
     pub watch_projects: bool,
+    /// Consultar o GitHub em busca de versões novas (`Ask` até a pessoa responder).
+    pub update_check: UpdateCheck,
+    /// Última verificação automática (ms desde a época); 0 = nunca.
+    pub update_last_check_ms: i64,
 }
 
 impl Default for Settings {
@@ -97,6 +110,8 @@ impl Default for Settings {
             indexing_threads: 0,
             max_file_size_kb: 1024,
             watch_projects: true,
+            update_check: UpdateCheck::default(),
+            update_last_check_ms: 0,
         }
     }
 }
@@ -134,6 +149,18 @@ impl Settings {
             }
             SettingKey::WatchProjects => {
                 self.watch_projects = serde_json::from_value(value).map_err(invalid)?;
+            }
+            SettingKey::UpdatesCheck => {
+                self.update_check = serde_json::from_value(value).map_err(invalid)?;
+            }
+            SettingKey::UpdatesLastCheckMs => {
+                let ms: i64 = serde_json::from_value(value).map_err(invalid)?;
+                if ms < 0 {
+                    return Err(Error::InvalidInput(
+                        "updates.last_check_ms não pode ser negativo".into(),
+                    ));
+                }
+                self.update_last_check_ms = ms;
             }
         }
         Ok(())

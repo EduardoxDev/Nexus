@@ -51,7 +51,7 @@ _Capturas reais do executável sobre a fixture `tests/fixtures/saas-app`, gerada
 
 ## Instalação
 
-Ainda não há release publicada. Para gerar o instalador localmente (Windows):
+Baixe em [Releases](https://github.com/EduardoxDev/Nexus/releases) ou pelo [site](https://eduardoxdev.github.io/Nexus/). Para gerar o instalador localmente (Windows; Linux e macOS com `pwsh scripts/release.ps1`, veja [release.md](docs/release.md)):
 
 ```bash
 corepack pnpm install

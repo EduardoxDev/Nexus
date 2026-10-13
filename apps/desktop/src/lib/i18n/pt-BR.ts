@@ -581,17 +581,16 @@ export const ptBR = {
   integrations: {
     description:
       "Conecte agentes de programação ao NEXUS pelo protocolo MCP. O servidor roda localmente pela CLI `nexus` e usa o mesmo banco deste app.",
-    claudeTitle: "Claude Code",
-    claudeCommandLabel: "Comando para registrar no Claude Code",
-    claudeDescription: "Rode este comando uma vez num terminal para registrar o servidor.",
-    claudeHint:
-      "O Claude Code inicia o servidor sozinho quando precisa. Ao usar pela primeira vez, ele pede sua aprovação para as ferramentas.",
+    connectTitle: "Conectar um agente",
+    connectDescription:
+      "Escolha o agente e use a configuração pronta, com os caminhos desta instalação. O NEXUS não grava nada nos arquivos dos agentes.",
+    clientsLabel: "Agente",
+    commandLabel: (name: string) => `Comando para registrar no ${name}`,
+    configLabel: (name: string) => `Configuração para o ${name}`,
     cliMissing: "A CLI `nexus` não foi encontrada ao lado do aplicativo.",
     buildCli: "Compilar a CLI",
     cliMissingHint:
-      "Compile a CLI a partir do repositório e use o caminho de target/release/nexus. O instalador ainda não inclui a CLI (previsto para a Fase 7).",
-    otherTitle: "Outros clientes MCP",
-    otherDescription: "Configuração genérica (stdio) para clientes que leem um arquivo mcpServers.",
+      "O instalador traz a CLI ao lado do app. Em builds de desenvolvimento, compile-a e use o caminho de target/release/nexus.",
     protocol: (modern: string, legacy: string) =>
       `Protocolo MCP ${modern}; clientes antigos são atendidos via initialize (${legacy}).`,
     toolsTitle: "Ferramentas",

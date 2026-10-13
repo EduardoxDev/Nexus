@@ -34,6 +34,25 @@ fn rejects_invalid_or_dangerous_folders() {
     }
 }
 
+/// Pastas do sistema no Linux/macOS (no Windows vêm de `SystemRoot`, `ProgramFiles`...).
+#[cfg(unix)]
+#[test]
+fn rejects_unix_system_folders() {
+    let tmp = tempfile::tempdir().unwrap();
+    let core = core(&tmp);
+    for dir in ["/usr", "/etc", "/bin", "/var/log", "/usr/share"] {
+        if std::path::Path::new(dir).is_dir() {
+            assert_eq!(
+                core.add_project(std::path::Path::new(dir))
+                    .unwrap_err()
+                    .code(),
+                ErrorCode::InvalidInput,
+                "{dir}"
+            );
+        }
+    }
+}
+
 /// A pasta de dados chega por um caminho não canônico (`..`, nome curto 8.3 do Windows, como
 /// `RUNNER~1` no CI): a proteção precisa comparar o caminho real, não o texto.
 #[test]

@@ -1,17 +1,34 @@
 # Processo de release
 
-> Estado: **nenhuma release publicada.** Assinatura de código e atualização automática **não estão configuradas**.
+> Estado: **v0.1.0** com tag e rascunho no GitHub (só Windows). A partir da v0.2, pacotes para Windows, Linux e macOS. Assinatura de código e atualização automática **não estão configuradas**.
 
-## Gerar o instalador (Windows)
+## Gerar os pacotes
 
 ```bash
 corepack pnpm install --frozen-lockfile
+# Windows (PowerShell 5.1)
 powershell -ExecutionPolicy Bypass -File scripts/release.ps1
+# Linux / macOS (PowerShell 7)
+pwsh scripts/release.ps1
+# Outro alvo, ex.: Intel num Mac com Apple Silicon
+pwsh scripts/release.ps1 -Target x86_64-apple-darwin
 ```
 
-O script compila a CLI `nexus` em release, copia-a como sidecar (`src-tauri/binaries/nexus-<alvo>.exe`, fora do git) e roda `tauri build --config src-tauri/tauri.release.conf.json`, que adiciona `bundle.externalBin`. A CLI fica fora da configuração base de propósito: o `tauri-build` exige o sidecar já na compilação, o que quebraria `cargo test`. No fim, o script imprime caminho, tamanho e SHA-256 do instalador.
+O script compila a CLI `nexus` em release, copia-a como sidecar (`src-tauri/binaries/nexus-<alvo>[.exe]`, fora do git), confere a CLI com `scripts/smoke-cli.mjs` (`--version` e handshake MCP real, quando o alvo roda na máquina) e roda `tauri build --config src-tauri/tauri.release.conf.json`, que adiciona `bundle.externalBin`. A CLI fica fora da configuração base de propósito: o `tauri-build` exige o sidecar já na compilação, o que quebraria `cargo test`. No fim, o script imprime caminho, tamanho e SHA-256 de cada pacote.
 
-Saída: `target/release/bundle/nsis/NEXUS_<versão>_x64-setup.exe`.
+| Sistema              | Formatos              | Saída (`target/[<alvo>/]release/bundle/`) | CLI instalada em                  |
+| -------------------- | --------------------- | ----------------------------------------- | --------------------------------- |
+| Windows x64          | NSIS                  | `nsis/NEXUS_<versão>_x64-setup.exe`       | ao lado de `nexus-desktop.exe`    |
+| Linux x64            | `.deb`, `.AppImage`   | `deb/`, `appimage/`                       | `/usr/bin/nexus` (no `.deb`)      |
+| macOS (arm64 e x64)  | `.app`, `.dmg`        | `macos/`, `dmg/`                          | `NEXUS.app/Contents/MacOS/nexus`  |
+
+### Abrir sem assinatura
+
+- **Windows**: o SmartScreen mostra "O Windows protegeu o computador" → "Mais informações" → "Executar assim mesmo".
+- **macOS**: o app tem só assinatura ad-hoc (`signingIdentity: "-"`, exigida no Apple Silicon). Baixado da internet, o Gatekeeper o bloqueia ("está danificado" ou "não pode ser aberto"). Depois de arrastar para Aplicativos: `xattr -dr com.apple.quarantine /Applications/NEXUS.app`, ou clique com o botão direito → Abrir.
+- **Linux**: `.deb` com `sudo apt install ./nexus_<versão>_amd64.deb`; `.AppImage` com `chmod +x` e executar (requer `libfuse2` em distribuições recentes).
+
+A interface no Linux e no macOS é validada pelo build e pela fumaça da CLI/MCP no CI; o teste manual da janela depende de quem tiver o sistema.
 
 Características do instalador (configuradas em `apps/desktop/src-tauri/tauri.conf.json`):
 
@@ -29,7 +46,7 @@ O ícone e o banner vieram do usuário em 2026-10-12. O ícone foi extraído de 
 
 > **Pendência de licença:** a imagem de origem do ícone tem a assinatura de um designer ("design30club", t.me/beslanalaudinov). Antes de distribuir ou publicar o instalador, confirme que há direito de uso (licença ou autorização do autor) ou substitua o ícone.
 
-No CI, o job `bundle` (disparo manual com `bundle: true`) gera o mesmo instalador **não assinado** como artefato. Uma tag `v*` dispara `.github/workflows/release.yml`: testes, instalador com a CLI, `SHA256SUMS.txt` e um **rascunho** de release (nada é publicado sem revisão).
+No CI, o job `bundle` (disparo manual com `bundle: true`) gera o instalador Windows **não assinado** como artefato. Uma tag `v*` dispara `.github/workflows/release.yml`: em matriz (Windows x64, Linux x64, macOS arm64 e x64), testes, pacotes com a CLI e fumaça; depois um job junta tudo com `SHA256SUMS.txt` num **rascunho** de release (nada é publicado sem revisão).
 
 ## Checklist de release (a cumprir)
 

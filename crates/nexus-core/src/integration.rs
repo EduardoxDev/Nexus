@@ -14,6 +14,29 @@ pub struct McpToolInfo {
     pub read_only: bool,
 }
 
+/// Como a configuração de um agente é aplicada pela pessoa.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum SetupKind {
+    /// Comando para rodar uma vez num terminal.
+    Command,
+    /// Trecho JSON para colar no arquivo de configuração do agente.
+    Json,
+}
+
+/// Configuração pronta de um agente (cliente MCP), com os caminhos desta instalação.
+/// O NEXUS só mostra; quem aplica é a pessoa (o app não escreve em arquivos de outros programas).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientSetup {
+    pub id: String,
+    pub name: String,
+    pub kind: SetupKind,
+    pub text: String,
+    /// Onde rodar ou colar.
+    pub where_hint: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegrationInfo {
@@ -24,6 +47,8 @@ pub struct IntegrationInfo {
     pub serve_args: Vec<String>,
     /// Comando pronto para registrar no Claude Code (quando a CLI foi encontrada).
     pub claude_command: Option<String>,
+    /// Agentes suportados (vazio quando a CLI não foi encontrada).
+    pub clients: Vec<ClientSetup>,
     /// Revisão moderna e revisões legadas aceitas.
     pub protocol_versions: Vec<String>,
     pub tools: Vec<McpToolInfo>,

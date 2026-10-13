@@ -1,10 +1,11 @@
 import { ArrowDown } from "lucide-react";
 import { motion } from "motion/react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import AnimatedContent from "@/components/AnimatedContent";
 import { Bento, Shot } from "@/components/Bento";
 import ClickSpark from "@/components/ClickSpark";
+import FaultyTerminal from "@/components/FaultyTerminal";
 import { DownloadButton, GhostButton } from "@/components/Cta";
 import { GithubIcon } from "@/components/icons";
 import Magnet from "@/components/Magnet";
@@ -16,10 +17,42 @@ import { asset } from "@/lib/asset";
 
 const LINES = ["O contexto do seu código,", "na mão do seu agente de IA."];
 
+/** Fundo WebGL só no navegador (o HTML pré-renderizado sai sem ele). */
+function useMounted() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
+}
+
 export function Hero() {
   const theme = useTheme();
+  const mounted = useMounted();
   return (
     <section className="relative isolate overflow-hidden">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 -z-10 h-[760px]">
+        {mounted && (
+          <FaultyTerminal
+            tint={theme === "light" ? "#2348ce" : "#4f6fff"}
+            lightMode={theme === "light"}
+            glyphs="blocks"
+            scale={1.5}
+            digitSize={1.2}
+            timeScale={0.5}
+            brightness={theme === "light" ? 0.35 : 0.55}
+            glow={0.5}
+            persistence={0.5}
+            mouseStrength={0.5}
+            mouseGlow={0.6}
+            curvature={0.1}
+            vignette={0.25}
+            scanlineIntensity={0.3}
+            clickEffect="glitch"
+          />
+        )}
+        {/* Clareia o meio (onde está o texto) e funde com o fundo sólido embaixo. */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_50%_42%,var(--background)_15%,transparent_75%)] opacity-80" />
+        <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-b from-transparent to-background" />
+      </div>
       <div className="mx-auto max-w-6xl px-5 pt-20 text-center sm:pt-28">
         <AnimatedContent distance={20} duration={0.7}>
           <Badge variant="secondary" className="rounded-full px-3 py-1 text-[13px]">

@@ -12,7 +12,9 @@ describe("site da NEXUS", () => {
     render(<App />);
     const h1 = screen.getAllByRole("heading", { level: 1 });
     expect(h1).toHaveLength(1);
-    expect(h1[0]).toHaveAccessibleName(/O contexto do seu código, na mão dos seus agentes\./);
+    expect(h1[0]).toHaveAccessibleName(
+      "Seu agente de IA não conhece o seu projeto. A Nexus conhece.",
+    );
   });
 
   it("every in-page link points to an existing section", () => {
@@ -40,15 +42,14 @@ describe("site da NEXUS", () => {
     for (const img of container.querySelectorAll("img")) {
       expect(img.hasAttribute("alt"), img.getAttribute("src") ?? "").toBe(true);
     }
-    expect(screen.getAllByRole("img", { name: /Visão geral do app NEXUS/ }).length).toBeGreaterThan(
-      0,
-    );
+    expect(screen.getAllByRole("img", { name: /Busca com motivos/ }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("img", { name: /nuvem da NEXUS/ })).toBeInTheDocument();
   });
 
   it("every image file the page references exists in public/", () => {
     const { container } = render(<App />);
     const srcs = [...container.querySelectorAll("img")].map((i) => i.getAttribute("src")!);
-    expect(srcs.length).toBeGreaterThan(5);
+    expect(srcs).toEqual(expect.arrayContaining(["/logo.png", "/screens/busca-com-previa.webp"]));
     for (const src of new Set(srcs)) {
       expect(existsSync(resolve(process.cwd(), "public", src.slice(1))), src).toBe(true);
     }
@@ -57,15 +58,16 @@ describe("site da NEXUS", () => {
   it("main navigation reaches the key sections", () => {
     render(<App />);
     const nav = screen.getByRole("navigation", { name: "Principal" });
-    for (const name of ["Recursos", "Como funciona", "Privacidade", "Perguntas"]) {
+    for (const name of ["O que faz", "Como começar", "Privacidade", "Perguntas"]) {
       expect(within(nav).getByRole("link", { name })).toBeInTheDocument();
     }
   });
 
   it("prerendered HTML carries the content (search engines and no-JS visitors)", () => {
     const html = renderStatic();
-    expect(html).toContain("Seu código não sai da sua máquina.");
-    expect(html).toContain("Perguntas frequentes");
+    expect(html).toContain("Seu código fica no seu computador.");
+    expect(html).toContain("Perguntas que sempre aparecem");
+    expect(html).toContain("src/checkout/shipping.ts");
     expect(html).toContain("claude mcp add nexus -- nexus mcp serve");
   });
 });

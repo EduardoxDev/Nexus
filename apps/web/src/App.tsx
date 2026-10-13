@@ -1,38 +1,33 @@
 import { MotionConfig } from "motion/react";
 
-import { FinalCta, Footer } from "@/sections/Closing";
+import { AppShot } from "@/sections/AppShot";
 import { Faq } from "@/sections/Faq";
-import { Features } from "@/sections/Features";
+import { Footer } from "@/sections/Footer";
+import { GetStarted } from "@/sections/GetStarted";
 import { Hero } from "@/sections/Hero";
-import { HowItWorks } from "@/sections/HowItWorks";
+import { Letter } from "@/sections/Letter";
 import { Nav } from "@/sections/Nav";
-import { Numbers } from "@/sections/Numbers";
 import { Privacy } from "@/sections/Privacy";
-import { Problem } from "@/sections/Problem";
-import { Showcase } from "@/sections/Showcase";
-import { Story } from "@/sections/Story";
+import { WhatItDoes } from "@/sections/WhatItDoes";
 
 export function App() {
   return (
     <MotionConfig reducedMotion="user">
       <a
         href="#conteudo"
-        className="sr-only z-[60] rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        className="sr-only z-[60] rounded-md bg-azul px-4 py-2 text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
         Pular para o conteúdo
       </a>
       <Nav />
       <main id="conteudo">
         <Hero />
-        <Problem />
-        <Features />
-        <HowItWorks />
-        <Showcase />
-        <Numbers />
+        <WhatItDoes />
+        <GetStarted />
+        <AppShot />
         <Privacy />
-        <Story />
+        <Letter />
         <Faq />
-        <FinalCta />
       </main>
       <Footer />
     </MotionConfig>

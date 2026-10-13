@@ -4,52 +4,56 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Tokens no padrão shadcn/ui. Neutros levemente azulados; o azul da marca (#2348CE) é a cor
- * primária. O tema escuro é o padrão visual; o claro tem o mesmo cuidado.
+ * Tema shadcn/ui com a paleta da NEXUS: noite azul profunda (padrão), o azul da marca como cor
+ * primária e o amarelo de marca-texto só para evidência (linhas citadas). Tema claro completo.
  */
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.99 0.003 265);
-  --foreground: oklch(0.19 0.02 265);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.02 265);
-  --muted: oklch(0.965 0.006 265);
-  --muted-foreground: oklch(0.47 0.02 265);
-  --border: oklch(0.915 0.008 265);
-  --input: oklch(0.915 0.008 265);
-  --primary: oklch(0.5 0.21 266);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.012 266);
-  --secondary-foreground: oklch(0.25 0.04 266);
-  --accent: oklch(0.95 0.03 266);
-  --accent-foreground: oklch(0.38 0.17 266);
-  --ring: oklch(0.6 0.19 266);
-  --success: oklch(0.55 0.14 155);
-  --glow: oklch(0.6 0.22 266 / 0.18);
-  --glow-2: oklch(0.62 0.2 300 / 0.12);
-  --grid: oklch(0.19 0.02 265 / 0.06);
+  --radius: 0.9rem;
+  --background: #f5f7fd;
+  --foreground: #12193a;
+  --card: #ffffff;
+  --card-foreground: #12193a;
+  --popover: #ffffff;
+  --popover-foreground: #12193a;
+  --primary: #2348ce;
+  --primary-foreground: #ffffff;
+  --secondary: #e7ecfb;
+  --secondary-foreground: #1b2a6b;
+  --muted: #edf1fb;
+  --muted-foreground: #56618a;
+  --accent: #e3e9ff;
+  --accent-foreground: #1b2a6b;
+  --destructive: #d9483b;
+  --border: #dbe2f3;
+  --input: #dbe2f3;
+  --ring: #4c6bff;
+  --grifo: #ffe27a;
+  --codigo: #0d1530;
+  --codigo-texto: #dbe4ff;
 }
 
 .dark {
-  --background: oklch(0.145 0.01 265);
-  --foreground: oklch(0.965 0.004 265);
-  --card: oklch(0.175 0.012 265);
-  --card-foreground: oklch(0.965 0.004 265);
-  --muted: oklch(0.21 0.013 265);
-  --muted-foreground: oklch(0.71 0.015 265);
-  --border: oklch(0.27 0.014 265);
-  --input: oklch(0.27 0.014 265);
-  --primary: oklch(0.62 0.2 266);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.23 0.02 266);
-  --secondary-foreground: oklch(0.92 0.02 266);
-  --accent: oklch(0.27 0.06 266);
-  --accent-foreground: oklch(0.85 0.1 266);
-  --ring: oklch(0.7 0.16 266);
-  --success: oklch(0.75 0.15 155);
-  --glow: oklch(0.6 0.22 266 / 0.32);
-  --glow-2: oklch(0.6 0.2 300 / 0.2);
-  --grid: oklch(1 0 0 / 0.045);
+  --background: #060a1c;
+  --foreground: #eef2ff;
+  --card: #0c1330;
+  --card-foreground: #eef2ff;
+  --popover: #0c1330;
+  --popover-foreground: #eef2ff;
+  --primary: #4f6fff;
+  --primary-foreground: #ffffff;
+  --secondary: #141d44;
+  --secondary-foreground: #dbe4ff;
+  --muted: #111a3d;
+  --muted-foreground: #9aa6cf;
+  --accent: #18234f;
+  --accent-foreground: #dbe4ff;
+  --destructive: #ef6a5e;
+  --border: #1b2654;
+  --input: #1b2654;
+  --ring: #7d9bff;
+  --grifo: #ffe27a;
+  --codigo: #070c22;
+  --codigo-texto: #dbe4ff;
 }
 
 @theme inline {
@@ -57,134 +61,100 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-success: var(--success);
+  --color-grifo: var(--grifo);
+  --color-codigo: var(--codigo);
+  --color-codigo-texto: var(--codigo-texto);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 10px);
-  --font-sans:
-    "Segoe UI Variable Text", "SF Pro Text", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-display:
-    "Segoe UI Variable Display", "SF Pro Display", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Cascadia Code", "JetBrains Mono", "SF Mono", ui-monospace, monospace;
-
-  --animate-aurora: aurora 18s ease-in-out infinite alternate;
-  --animate-shine: shine 5s linear infinite;
-  --animate-marquee: marquee 40s linear infinite;
-  --animate-beam: beam 6s linear infinite;
-
-  @keyframes aurora {
-    0% {
-      transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
-    }
-    50% {
-      transform: translate3d(4%, -3%, 0) scale(1.08) rotate(6deg);
-    }
-    100% {
-      transform: translate3d(-3%, 2%, 0) scale(0.98) rotate(-4deg);
-    }
-  }
-  @keyframes shine {
-    from {
-      background-position: 200% center;
-    }
-    to {
-      background-position: -200% center;
-    }
-  }
-  @keyframes marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
-  @keyframes beam {
-    to {
-      --beam-angle: 360deg;
-    }
-  }
-}
-
-@property --beam-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
+  /* Recursive (variável): casual nos títulos, linear no texto, mono no código. */
+  --font-sans: "Recursive Variable", "Segoe UI Variable Text", system-ui, sans-serif;
+  --font-mono: "Recursive Variable", "Cascadia Code", ui-monospace, monospace;
 }
 
 @layer base {
   * {
-    border-color: var(--border);
+    @apply border-border outline-ring/50;
   }
   html {
-    scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
   body {
-    background: var(--background);
-    color: var(--foreground);
+    @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    font-variation-settings:
+      "CASL" 0,
+      "MONO" 0;
+    font-size: 17px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
   ::selection {
-    background: oklch(0.6 0.2 266 / 0.3);
-  }
-  :focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 3px;
-    border-radius: 6px;
+    background: var(--grifo);
+    color: #12193a;
   }
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;
     }
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
-    }
   }
 }
 
-@utility font-display {
-  font-family: var(--font-display);
+/* Títulos: o lado "casual" da Recursive, mais cheio. */
+@utility font-titulo {
+  font-variation-settings:
+    "CASL" 0.55,
+    "MONO" 0;
+  font-weight: 780;
   letter-spacing: -0.025em;
 }
 
-/* Grade de fundo que some nas bordas. */
-@utility bg-grid {
-  background-image:
-    linear-gradient(to right, var(--grid) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 30%, transparent 75%);
+@utility font-nota {
+  font-variation-settings:
+    "CASL" 1,
+    "MONO" 0;
+  font-weight: 520;
 }
 
-/* Texto com degradê da marca. */
-@utility text-gradient {
-  background: linear-gradient(
-    100deg,
-    var(--foreground) 10%,
-    oklch(0.72 0.15 266) 55%,
-    oklch(0.7 0.17 300) 90%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+@utility font-codigo {
+  font-family: var(--font-mono);
+  /* Sem ligaduras: em código, ">=" tem que aparecer como ">=". */
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "calt" 0,
+    "liga" 0;
+  font-variation-settings:
+    "CASL" 0,
+    "MONO" 1;
+}
+
+/* Grifo de marca-texto (só em evidências). */
+@utility grifo {
+  background-image: linear-gradient(var(--grifo), var(--grifo));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
 }

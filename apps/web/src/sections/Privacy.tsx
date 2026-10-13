@@ -1,63 +1,60 @@
-import { EyeOff, FileLock2, Link2Off, ShieldCheck, WifiOff, type LucideIcon } from "lucide-react";
+import { EyeOff, FileLock2, Link2Off, WifiOff, type LucideIcon } from "lucide-react";
 
-import { Reveal } from "@/components/fx";
+import AnimatedContent from "@/components/AnimatedContent";
+import SpotlightCard from "@/components/SpotlightCard";
+import { useTheme } from "@/lib/useTheme";
 
-const ITEMS: { icon: LucideIcon; title: string; body: string }[] = [
+const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: WifiOff,
-    title: "Sem rede, sem nuvem",
-    body: "O índice, a memória e as buscas ficam num banco local. Não existe servidor da NEXUS.",
+    title: "Sem servidor",
+    body: "Não existe servidor da Nexus. O índice e a memória ficam num arquivo no seu computador.",
   },
   {
     icon: EyeOff,
     title: "Sem telemetria",
-    body: "Nenhum dado de uso é coletado. Os logs locais nunca guardam o conteúdo dos arquivos.",
+    body: "Nenhum dado de uso é coletado. Os registros locais nunca guardam o conteúdo dos arquivos.",
   },
   {
     icon: FileLock2,
     title: "Segredos ficam de fora",
-    body: "Chaves, tokens e .env são detectados e nunca têm o conteúdo indexado — nem se aparecerem depois.",
+    body: "Senhas, chaves e .env são reconhecidos e ignorados, mesmo se aparecerem depois.",
   },
   {
     icon: Link2Off,
     title: "Só o que você autorizou",
-    body: "Links e junctions para fora do projeto nunca são seguidos, nem na indexação nem nas releituras.",
+    body: "Atalhos que apontam para fora do projeto nunca são seguidos.",
   },
 ];
 
 export function Privacy() {
+  const theme = useTheme();
   return (
-    <section id="privacidade" className="relative scroll-mt-20 py-16 sm:py-20">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-[1fr_1.1fr]">
-        <Reveal>
-          <span className="flex size-14 items-center justify-center rounded-2xl border border-success/30 bg-success/10 text-success">
-            <ShieldCheck className="size-7" aria-hidden="true" />
-          </span>
-          <h2 className="mt-6 font-display text-4xl font-bold sm:text-5xl">
-            Seu código não sai da sua máquina.
+    <section id="privacidade" className="scroll-mt-20">
+      <div className="mx-auto grid max-w-6xl gap-12 px-5 py-24 lg:grid-cols-[0.9fr_1.1fr]">
+        <AnimatedContent distance={40} duration={0.8}>
+          <h2 className="font-titulo text-[clamp(2.2rem,4.4vw,3.4rem)] leading-[1.04]">
+            Seu código fica no seu computador.
           </h2>
-          <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
-            Privacidade não é uma opção nas configurações — é a arquitetura. A NEXUS roda inteira no
-            seu computador e entrega aos agentes só o que você autorizou, marcado como dado, nunca
-            como instrução.
-          </p>
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
             Quando você usa um agente na nuvem, ele envia ao provedor o que ler — como já faz hoje.
-            A tela Integrações mostra cada consulta do agente: qual ferramenta, quando e o
-            resultado.
+            A Nexus só entrega o que você autorizou, e a tela Integrações mostra cada consulta: qual
+            ferramenta, quando e o resultado.
           </p>
-        </Reveal>
+        </AnimatedContent>
         <div className="grid gap-4 sm:grid-cols-2">
-          {ITEMS.map((it, i) => (
-            <Reveal
-              key={it.title}
-              delay={i * 0.08}
-              className="rounded-2xl border border-border bg-card p-6 transition-colors hover:border-success/30"
-            >
-              <it.icon className="size-5 text-success" aria-hidden="true" />
-              <h3 className="mt-4 font-semibold">{it.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{it.body}</p>
-            </Reveal>
+          {POINTS.map((p, i) => (
+            <AnimatedContent key={p.title} distance={40} delay={i * 0.08} duration={0.7}>
+              <SpotlightCard
+                theme={theme}
+                spotlightColor="rgba(79, 111, 255, 0.28)"
+                className="h-full rounded-2xl p-6"
+              >
+                <p.icon className="size-6 text-primary" aria-hidden="true" />
+                <h3 className="mt-4 font-titulo text-lg">{p.title}</h3>
+                <p className="mt-1.5 leading-relaxed text-muted-foreground">{p.body}</p>
+              </SpotlightCard>
+            </AnimatedContent>
           ))}
         </div>
       </div>

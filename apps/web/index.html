@@ -17,7 +17,7 @@
     />
     <meta property="og:image" content="/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#0f1117" />
+    <meta name="theme-color" content="#060a1c" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script>
@@ -25,9 +25,8 @@
       (function () {
         try {
           var saved = localStorage.getItem("theme");
-          var dark = saved
-            ? saved === "dark"
-            : !matchMedia("(prefers-color-scheme: light)").matches;
+          // Padrão: escuro (a identidade da marca); a escolha salva vale mais.
+          var dark = saved ? saved === "dark" : true;
           document.documentElement.classList.toggle("dark", dark);
         } catch (e) {}
       })();

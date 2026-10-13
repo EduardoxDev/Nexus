@@ -29,4 +29,16 @@ if (typeof window.matchMedia !== "function") {
     }) as MediaQueryList;
 }
 
+// jsdom não tem a API de fontes (usada pelo SplitText do React Bits).
+if (!("fonts" in document)) {
+  Object.defineProperty(document, "fonts", {
+    value: {
+      status: "loaded",
+      ready: Promise.resolve(),
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    },
+  });
+}
+
 afterEach(() => cleanup());

@@ -9,21 +9,18 @@
     <style>
       /* Tela de abertura: aparece antes do JavaScript e é trocada pelo app (mesmo visual de
          <Splash /> em src/app/App.tsx). Só CSS local: a CSP não permite nada remoto. */
+      /* O fundo fica só na tela de abertura: no <html>/<body> ele venceria o tema do app (este
+         CSS não está em camada), deixando a página escura com o tema claro. */
       html,
       body {
         margin: 0;
         height: 100%;
-        background: #111317;
-      }
-      @media (prefers-color-scheme: light) {
-        html:not(.dark),
-        html:not(.dark) body {
-          background: #f6f7fa;
-        }
       }
       .nx-splash {
+        position: fixed;
+        inset: 0;
+        background: #111317;
         display: flex;
-        height: 100%;
         flex-direction: column;
         align-items: center;
         justify-content: center;

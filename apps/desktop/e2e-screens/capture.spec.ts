@@ -52,7 +52,8 @@ async function shot(page: Page, name: string) {
     .locator("body")
     .click({ position: { x: 1, y: 1 }, force: true })
     .catch(() => undefined);
-  await page.waitForTimeout(400);
+  // Espera as animações de entrada e a contagem dos indicadores (600 ms) terminarem.
+  await page.waitForTimeout(1000);
   await page.screenshot({ path: join(OUT, `${name}.png`), animations: "disabled" });
 }
 

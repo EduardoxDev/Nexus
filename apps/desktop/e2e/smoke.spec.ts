@@ -101,3 +101,19 @@ test("tema e movimento reduzido persistem após fechar e reabrir o app", async (
   await expect(page.getByRole("radio", { name: "Claro" })).toBeChecked();
   await expect(page.getByRole("radio", { name: "Reduzir" })).toBeChecked();
 });
+
+test("tema claro pinta a página inteira mesmo com o Windows no modo escuro", async () => {
+  app = await launchApp(data.dir);
+  const { page } = app;
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .getByRole("button", { name: "Configurações" })
+    .click();
+  await page.getByRole("radio", { name: "Claro" }).click();
+  await expect(page.locator("html")).toHaveClass(/light/);
+
+  // O fundo da página segue o tema do app, não o do sistema (claro: lab(97…), oklch(0.97…) ou rgb(24x…)).
+  const LIGHT = /lab\(9\d|oklch\(0\.9\d|rgb\(2[3-5]\d, 2[3-5]\d, 2[3-5]\d\)/;
+  await expect(page.locator("body")).toHaveCSS("background-color", LIGHT);
+});

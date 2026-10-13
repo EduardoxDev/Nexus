@@ -72,6 +72,12 @@ jobs:
         run: pnpm test
       - name: Build
         run: pnpm build
+      - name: Site (tipos, testes e build pré-renderizado)
+        working-directory: .
+        run: |
+          pnpm --filter @nexus/web typecheck
+          pnpm --filter @nexus/web test
+          pnpm --filter @nexus/web build
       - name: Bot do Discord (tipos e testes; o teste com a CLI real roda no job E2E)
         working-directory: .
         run: |

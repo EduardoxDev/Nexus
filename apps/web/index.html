@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>NEXUS — O contexto do seu código, na mão dos seus agentes</title>
+    <meta
+      name="description"
+      content="A NEXUS indexa seus projetos no seu computador e entrega ao Claude Code e a outros agentes busca com evidências, Context Packs e a memória do projeto. Local, sem telemetria, código aberto."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NEXUS — contexto local para engenharia com IA" />
+    <meta
+      property="og:description"
+      content="Busca com evidências, Context Packs e memória do projeto para o seu agente de IA — 100% local."
+    />
+    <meta property="og:image" content="/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0f1117" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script>
+      // Tema antes da primeira pintura: escolha salva, senão a preferência do sistema.
+      (function () {
+        try {
+          var saved = localStorage.getItem("theme");
+          var dark = saved
+            ? saved === "dark"
+            : !matchMedia("(prefers-color-scheme: light)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"><!--app--></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

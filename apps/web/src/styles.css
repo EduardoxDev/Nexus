@@ -1,0 +1,190 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Tokens no padrão shadcn/ui. Neutros levemente azulados; o azul da marca (#2348CE) é a cor
+ * primária. O tema escuro é o padrão visual; o claro tem o mesmo cuidado.
+ */
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.99 0.003 265);
+  --foreground: oklch(0.19 0.02 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.02 265);
+  --muted: oklch(0.965 0.006 265);
+  --muted-foreground: oklch(0.47 0.02 265);
+  --border: oklch(0.915 0.008 265);
+  --input: oklch(0.915 0.008 265);
+  --primary: oklch(0.5 0.21 266);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.012 266);
+  --secondary-foreground: oklch(0.25 0.04 266);
+  --accent: oklch(0.95 0.03 266);
+  --accent-foreground: oklch(0.38 0.17 266);
+  --ring: oklch(0.6 0.19 266);
+  --success: oklch(0.55 0.14 155);
+  --glow: oklch(0.6 0.22 266 / 0.18);
+  --glow-2: oklch(0.62 0.2 300 / 0.12);
+  --grid: oklch(0.19 0.02 265 / 0.06);
+}
+
+.dark {
+  --background: oklch(0.145 0.01 265);
+  --foreground: oklch(0.965 0.004 265);
+  --card: oklch(0.175 0.012 265);
+  --card-foreground: oklch(0.965 0.004 265);
+  --muted: oklch(0.21 0.013 265);
+  --muted-foreground: oklch(0.71 0.015 265);
+  --border: oklch(0.27 0.014 265);
+  --input: oklch(0.27 0.014 265);
+  --primary: oklch(0.62 0.2 266);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.23 0.02 266);
+  --secondary-foreground: oklch(0.92 0.02 266);
+  --accent: oklch(0.27 0.06 266);
+  --accent-foreground: oklch(0.85 0.1 266);
+  --ring: oklch(0.7 0.16 266);
+  --success: oklch(0.75 0.15 155);
+  --glow: oklch(0.6 0.22 266 / 0.32);
+  --glow-2: oklch(0.6 0.2 300 / 0.2);
+  --grid: oklch(1 0 0 / 0.045);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --font-sans:
+    "Segoe UI Variable Text", "SF Pro Text", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-display:
+    "Segoe UI Variable Display", "SF Pro Display", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  --animate-shine: shine 5s linear infinite;
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-beam: beam 6s linear infinite;
+
+  @keyframes aurora {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    }
+    50% {
+      transform: translate3d(4%, -3%, 0) scale(1.08) rotate(6deg);
+    }
+    100% {
+      transform: translate3d(-3%, 2%, 0) scale(0.98) rotate(-4deg);
+    }
+  }
+  @keyframes shine {
+    from {
+      background-position: 200% center;
+    }
+    to {
+      background-position: -200% center;
+    }
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes beam {
+    to {
+      --beam-angle: 360deg;
+    }
+  }
+}
+
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: oklch(0.6 0.2 266 / 0.3);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+/* Grade de fundo que some nas bordas. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 30%, transparent 75%);
+}
+
+/* Texto com degradê da marca. */
+@utility text-gradient {
+  background: linear-gradient(
+    100deg,
+    var(--foreground) 10%,
+    oklch(0.72 0.15 266) 55%,
+    oklch(0.7 0.17 300) 90%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

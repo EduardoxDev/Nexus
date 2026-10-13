@@ -35,3 +35,6 @@ Thumbs.db
 
 # CLI copiada para o instalador (scripts/release.ps1)
 apps/desktop/src-tauri/binaries/
+
+# Rascunhos e registros locais de agentes
+.superpowers/

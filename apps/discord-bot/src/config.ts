@@ -1,6 +1,8 @@
 /** Configuração do bot: segredos e caminhos no ambiente (.env), regras de acesso em JSON. */
 import { readFileSync } from "node:fs";
 
+import { sameProject } from "./access.ts";
+
 export type Visibility = "public" | "team";
 
 export interface BotConfig {
@@ -9,6 +11,23 @@ export interface BotConfig {
   /** Projetos da equipe: só nos canais de `teamChannelIds` (e threads deles). */
   teamProjects: string[];
   teamChannelIds: string[];
+  /** Canal onde versões novas são anunciadas (opcional: sem ele, não anuncia). */
+  announceChannelId: string | null;
+  /** Canal da equipe para avisos internos da NEXUS (opcional). Precisa ser canal da equipe. */
+  teamAlertsChannelId: string | null;
+  /** Repositório das releases, `dono/nome`. */
+  githubRepo: string;
+}
+
+const DEFAULT_REPO = "EduardoxDev/Nexus";
+
+/** ID de canal opcional: ausente/vazio = desligado; senão só dígitos. */
+function channelId(path: string, field: string, v: unknown): string | null {
+  if (v === undefined || v === null || v === "") return null;
+  if (typeof v !== "string" || !/^\d{1,25}$/.test(v)) {
+    throw new Error(`${path}: ${field} deve ser o ID de um canal (só números)`);
+  }
+  return v;
 }
 
 export interface Env {
@@ -55,15 +74,27 @@ export function loadConfig(path: string): BotConfig {
   if (!isStringArray(raw.teamChannelIds)) {
     throw new Error(`${path}: teamChannelIds deve ser uma lista de IDs de canais`);
   }
-  const pub = raw.publicProject.toLowerCase();
-  if (raw.teamProjects.some((p) => p.toLowerCase() === pub)) {
+  const pub = raw.publicProject;
+  if (raw.teamProjects.some((p) => sameProject(p, pub))) {
     throw new Error(
       `${path}: "${raw.publicProject}" não pode ser público e da equipe ao mesmo tempo`,
     );
+  }
+  const teamAlertsChannelId = channelId(path, "teamAlertsChannelId", raw.teamAlertsChannelId);
+  // Avisos falam de projetos da equipe: só podem ir para um canal da equipe.
+  if (teamAlertsChannelId !== null && !raw.teamChannelIds.includes(teamAlertsChannelId)) {
+    throw new Error(`${path}: teamAlertsChannelId precisa estar também em teamChannelIds`);
+  }
+  const repo = raw.githubRepo ?? DEFAULT_REPO;
+  if (typeof repo !== "string" || !/^[\w.-]+\/[\w.-]+$/.test(repo)) {
+    throw new Error(`${path}: githubRepo deve ser "dono/nome"`);
   }
   return {
     publicProject: raw.publicProject,
     teamProjects: raw.teamProjects,
     teamChannelIds: raw.teamChannelIds,
+    announceChannelId: channelId(path, "announceChannelId", raw.announceChannelId),
+    teamAlertsChannelId,
+    githubRepo: repo,
   };
 }

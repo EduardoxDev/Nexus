@@ -12,8 +12,18 @@ Desenho: [docs/superpowers/specs/2026-10-12-discord-bot-design.md](../../docs/su
 | `/nexus buscar <texto> [projeto]` | qualquer canal (projetos da equipe só em canais da equipe) | até 3 trechos com arquivo, linhas, motivos e atualidade      |
 | `/nexus pack <tarefa> [projeto]`  | idem                                                       | resumo e fontes na mensagem; o Context Pack inteiro em `.md` |
 | `/nexus status`                   | qualquer canal                                             | índice dos projetos visíveis naquele canal                   |
+| `/nexus versao`                   | qualquer canal                                             | versão da NEXUS em uso pelo bot e a última publicada         |
 
-Sem `projeto`, o bot usa o projeto da equipe em canais da equipe e o público nos demais.
+Sem `projeto`, o bot usa o projeto da equipe em canais da equipe e o público nos demais. Cada comando tem um prazo total de 30 s.
+
+## Anúncios e avisos (etapa 2)
+
+A cada 15 minutos, se configurado:
+
+- **Versão nova** (`announceChannelId`): consulta a última release **publicada** no GitHub (`githubRepo`, padrão `EduardoxDev/Nexus`; rascunhos não contam) e anuncia uma vez, com as notas e os downloads por sistema. Na primeira vez que o bot roda, só registra a versão atual — não anuncia uma release antiga.
+- **Avisos da equipe** (`teamAlertsChannelId`, precisa ser um canal da equipe): alertas de atualidade novos dos projetos da equipe (documento citando arquivo que sumiu, decisão superada, contradições), indexação que falhou e pasta do projeto ausente. Cada alerta é avisado uma vez; se for resolvido e voltar, é avisado de novo. Na primeira execução, só registra o que já existe.
+
+O que já foi avisado fica em `bot.db`, ao lado da pasta de dados do bot (não dentro dela). A única chamada de rede além do Discord é a API pública do GitHub.
 
 ## Segurança
 
@@ -34,7 +44,7 @@ Sem `projeto`, o bot usa o projeto da equipe em canais da equipe e o público no
    ```
 
 3. **`.env`**: copie `.env.example` para `.env` e preencha (token, Application ID, ID do servidor, caminho do `nexus.exe`, a pasta de dados acima).
-4. **`bot.config.json`**: copie `bot.config.example.json` e ajuste — `publicProject` é o nome do projeto da NEXUS na pasta de dados, `teamProjects` os da equipe e `teamChannelIds` os IDs dos canais da equipe (Discord: modo desenvolvedor → botão direito no canal → Copiar ID).
+4. **`bot.config.json`**: copie `bot.config.example.json` e ajuste — `publicProject` é o nome do projeto da NEXUS na pasta de dados, `teamProjects` os da equipe e `teamChannelIds` os IDs dos canais da equipe (Discord: modo desenvolvedor → botão direito no canal → Copiar ID). Opcionais: `announceChannelId` (anúncios de versão) e `teamAlertsChannelId` (avisos; precisa estar em `teamChannelIds`).
 5. Registrar os comandos e iniciar:
 
    ```bash

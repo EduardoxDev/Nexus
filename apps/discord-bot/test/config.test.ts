@@ -49,9 +49,41 @@ describe("bot.config.json", () => {
     return path;
   };
 
-  it("reads a valid file", () => {
-    const cfg = { publicProject: "nexus", teamProjects: ["otimiza"], teamChannelIds: ["100"] };
-    expect(loadConfig(write(cfg))).toEqual(cfg);
+  const base = { publicProject: "nexus", teamProjects: ["otimiza"], teamChannelIds: ["100"] };
+
+  it("reads a valid file; announcements are off without channel IDs", () => {
+    expect(loadConfig(write(base))).toEqual({
+      ...base,
+      announceChannelId: null,
+      teamAlertsChannelId: null,
+      githubRepo: "EduardoxDev/Nexus",
+    });
+  });
+
+  it("reads the announcement channels", () => {
+    const cfg = loadConfig(
+      write({
+        ...base,
+        announceChannelId: "200000",
+        teamAlertsChannelId: "100",
+        githubRepo: "a/b",
+      }),
+    );
+    expect(cfg.announceChannelId).toBe("200000");
+    expect(cfg.teamAlertsChannelId).toBe("100");
+    expect(cfg.githubRepo).toBe("a/b");
+  });
+
+  it("team alerts only go to a team channel", () => {
+    expect(() => loadConfig(write({ ...base, teamAlertsChannelId: "999999" }))).toThrow(
+      /teamChannelIds/,
+    );
+  });
+
+  it("refuses channel IDs that are not numbers", () => {
+    expect(() => loadConfig(write({ ...base, announceChannelId: "#anuncios" }))).toThrow(
+      /announceChannelId/,
+    );
   });
 
   it("names the invalid field", () => {

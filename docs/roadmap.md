@@ -178,6 +178,14 @@ Etapa 4 — Go, Java e C#:
 - [x] Fixtures `go-service`, `java-app`, `csharp-lib` com gabarito à mão: 100% de precisão e revocação.
 - [x] Desempenho comparado com o `main` nas mesmas condições ([benchmarks.md](benchmarks.md)).
 
+Etapa 5 — bot do Discord, etapa 2:
+
+- [x] Anúncio de versão nova (release publicada no GitHub), uma vez por tag, com downloads por sistema; a 1ª execução só registra.
+- [x] Avisos da equipe: alertas de atualidade novos, indexação que falhou e pasta ausente, uma vez cada (de novo se voltarem).
+- [x] Estado do bot em SQLite (`node:sqlite`), `/nexus versao`, prazo total de 30 s por comando.
+- [x] Correções da etapa 1: nomes comparados como a NEXUS (só A–Z), cortes de mensagem sempre em linha inteira e sem crase aberta.
+- [ ] Rodar no servidor com os canais de anúncio e de avisos (IDs pendentes).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

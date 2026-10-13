@@ -8,7 +8,9 @@ import { resolve } from "node:path";
 
 import { escapeMarkdown, type APIEmbed } from "discord.js";
 
+import type { Notice } from "./alerts.ts";
 import type { PackResult, ProjectStatus, SearchHit, SearchResult } from "./nexus/types.ts";
+import { downloads, type Release } from "./releases.ts";
 
 /** Azul da marca (#2348CE) e vermelho de erro. */
 export const BRAND_COLOR = 0x2348ce;
@@ -136,13 +138,40 @@ export function formatSearch(query: string, r: SearchResult, max = 3): BotMessag
   };
 }
 
+/**
+ * Linhas inteiras até caber em `max` (nunca corta uma linha no meio, o que deixaria crases
+ * abertas); o que sobra vira a linha `more(n)`.
+ */
+function fitLines(lines: string[], max: number, more: (omitted: number) => string): string {
+  for (let shown = lines.length; shown >= 0; shown--) {
+    const tail = more(lines.length - shown);
+    const text = [...lines.slice(0, shown), ...(tail ? [tail] : [])].join("\n");
+    if (text.length <= max) return text;
+  }
+  return clip(more(lines.length), max);
+}
+
+/** Corta o resumo numa quebra de linha e sem deixar código (crases) aberto. */
+function clipSummary(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const note = "\n…(resumo completo no anexo)";
+  let cut = s.slice(0, max - note.length);
+  const lastBreak = cut.lastIndexOf("\n");
+  if (lastBreak > 0) cut = cut.slice(0, lastBreak);
+  // Crases em número ímpar: o trecho de código ficaria aberto; volta até antes da última.
+  if ((cut.match(/`/g) ?? []).length % 2 === 1) cut = cut.slice(0, cut.lastIndexOf("`")).trimEnd();
+  return `${cut}${note}`;
+}
+
 /** Context Pack: resumo, orçamento e fontes no embed; o pack completo como anexo Markdown. */
 export function formatPack(task: string, p: PackResult): BotMessage {
-  const sources = p.sources
+  const lines = p.sources
     .slice(0, MAX_PACK_SOURCES)
     .map((s) => `• \`${clip(s.relPath, 80, true)}:${s.startLine}-${s.endLine}\``);
-  const rest = p.sources.length - MAX_PACK_SOURCES;
-  if (rest > 0) sources.push(`+${rest} fonte(s) no anexo`);
+  const hidden = Math.max(0, p.sources.length - MAX_PACK_SOURCES);
+  const sources = fitLines(lines, LIMIT.fieldValue, (omitted) =>
+    omitted + hidden > 0 ? `+${omitted + hidden} fonte(s) no anexo` : "",
+  );
   return {
     embeds: [
       {
@@ -150,7 +179,7 @@ export function formatPack(task: string, p: PackResult): BotMessage {
         title: "📦 Context Pack",
         description: clip(userText(task), 1000),
         fields: [
-          { name: "Resumo", value: clip(p.summary || "—", LIMIT.fieldValue) },
+          { name: "Resumo", value: clipSummary(p.summary || "—", LIMIT.fieldValue) },
           {
             name: "Orçamento",
             value: `~${p.estimatedTokens} de ${p.tokenBudget} tokens estimados`,
@@ -159,7 +188,7 @@ export function formatPack(task: string, p: PackResult): BotMessage {
           { name: "Arquivo", value: "`context-pack.md` em anexo", inline: true },
           {
             name: `Fontes (${p.sources.length})`,
-            value: clip(sources.join("\n") || "—", LIMIT.fieldValue),
+            value: sources || "—",
           },
         ],
         footer: { text: DATA_NOTICE },
@@ -201,6 +230,115 @@ export function formatError(message: string): BotMessage {
         description: clip(message, LIMIT.description),
       },
     ],
+    files: [logo()],
+  };
+}
+
+/**
+ * Notas da release como escritas no GitHub (quem publica é quem mantém o projeto): a formatação
+ * fica, mas links mascarados (`[texto](endereço)`) viram texto, para nenhum link se disfarçar.
+ */
+function releaseNotes(notes: string): string {
+  return escapeMarkdown(notes.trim(), {
+    codeBlock: false,
+    inlineCode: false,
+    bold: false,
+    italic: false,
+    underline: false,
+    strikethrough: false,
+    spoiler: false,
+    maskedLink: true,
+  });
+}
+
+/** Anúncio de versão nova: notas resumidas e downloads por sistema. */
+export function formatRelease(r: Release): BotMessage {
+  const links = downloads(r.assets).map((d) => `[${d.label}](${d.url})`);
+  return {
+    embeds: [
+      {
+        ...header("Nova versão"),
+        title: clip(`🚀 ${r.name}`, LIMIT.title),
+        url: r.url,
+        description: clipSummary(releaseNotes(r.notes) || "Veja as notas da release.", 1500),
+        fields: [
+          {
+            name: "Baixar",
+            value:
+              fitLines(links, LIMIT.fieldValue, (n) =>
+                n > 0 ? `+${n} na página da release` : "",
+              ) || `[Página da release](${r.url})`,
+          },
+        ],
+        footer: {
+          text: "Pacotes não assinados: o Windows e o macOS podem alertar na primeira vez.",
+        },
+      },
+    ],
+    files: [logo()],
+  };
+}
+
+const MAX_NOTICE_ISSUES = 5;
+
+/** Avisos para a equipe: um embed por projeto com novidades. */
+export function formatNotices(notices: Notice[]): BotMessage {
+  const embeds: APIEmbed[] = notices.slice(0, 10).map((n) => {
+    const fields: APIEmbed["fields"] = [];
+    if (n.rootMissing) {
+      fields.push({
+        name: "⚠️ Pasta do projeto não encontrada",
+        value: "A NEXUS não consegue indexar até a pasta voltar.",
+      });
+    }
+    if (n.failedJob) {
+      const when =
+        n.failedJob.finishedAt !== null
+          ? ` <t:${Math.floor(n.failedJob.finishedAt / 1000)}:R>`
+          : "";
+      fields.push({
+        name: "❌ Indexação falhou",
+        value: `A última indexação terminou com erro${when}. Veja o Diagnóstico no app.`,
+      });
+    }
+    for (const issue of n.issues.slice(0, MAX_NOTICE_ISSUES)) {
+      const where = issue.sources
+        .slice(0, 2)
+        .map((s) => `\`${clip(s.relPath, 80, true)}${s.line !== null ? `:${s.line}` : ""}\``)
+        .join(" · ");
+      fields.push({
+        name: clip(`${issue.severity === "warning" ? "⚠️" : "ℹ️"} ${issue.title}`, LIMIT.fieldName),
+        value: clip(
+          [escapeMarkdown(issue.reason), where, `→ ${escapeMarkdown(issue.recommendation)}`]
+            .filter(Boolean)
+            .join("\n"),
+          LIMIT.fieldValue,
+        ),
+      });
+    }
+    const rest = n.issues.length - MAX_NOTICE_ISSUES;
+    return {
+      ...header(`Avisos · ${n.project}`),
+      title: clip(`🛎️ Novidades em ${n.project}`, LIMIT.title),
+      ...(rest > 0 ? { description: `+${rest} alerta(s) — veja Atualidade no app.` } : {}),
+      fields,
+      footer: { text: DATA_NOTICE },
+    };
+  });
+  return { embeds, files: [logo()] };
+}
+
+/** `/nexus versao`: a versão que o bot usa e a última publicada. */
+export function formatVersion(installed: string | null, latest: Release | null): BotMessage {
+  const lines = [
+    `**Em uso pelo bot:** ${installed ? `v${installed}` : "desconhecida"}`,
+    `**Última publicada:** ${latest ? `[${latest.tag}](${latest.url})` : "nenhuma ainda"}`,
+  ];
+  if (installed && latest && latest.tag.replace(/^v/, "") !== installed) {
+    lines.push("Há uma versão mais nova para baixar.");
+  }
+  return {
+    embeds: [{ ...header("Versão"), title: "🏷️ Versão da NEXUS", description: lines.join("\n") }],
     files: [logo()],
   };
 }

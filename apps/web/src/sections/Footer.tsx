@@ -1,10 +1,8 @@
-import { Download } from "lucide-react";
-
 import { Bento } from "@/components/Bento";
+import { DownloadButton } from "@/components/Cta";
 import Magnet from "@/components/Magnet";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { downloadHref, site } from "@/site";
+import { site } from "@/site";
 
 import { Logo } from "./Nav";
 
@@ -20,13 +18,8 @@ function FinalCall() {
           <p className="mt-1 text-muted-foreground">{site.slogan}</p>
         </div>
       </div>
-      <Magnet padding={50} magnetStrength={4}>
-        <Button size="lg" className="h-12 rounded-xl px-6 text-base" asChild>
-          <a href={downloadHref || "#comecar"}>
-            <Download className="size-5" />
-            Baixar para Windows
-          </a>
-        </Button>
+      <Magnet padding={50} magnetStrength={5}>
+        <DownloadButton />
       </Magnet>
     </div>
   );

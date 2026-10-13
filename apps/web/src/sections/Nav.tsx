@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { GithubIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { downloadHref, site } from "@/site";
 
 const LINKS = [
@@ -39,15 +40,16 @@ function ThemeToggle() {
       // sem armazenamento: o tema vale só nesta visita
     }
   };
+  const label = dark ? "Usar tema claro" : "Usar tema escuro";
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={toggle}
-      aria-label={dark ? "Usar tema claro" : "Usar tema escuro"}
-    >
-      {dark ? <Sun /> : <Moon />}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" onClick={toggle} aria-label={label}>
+          {dark ? <Sun /> : <Moon />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

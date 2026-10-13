@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Bento, type BentoItem } from "@/components/Bento";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const COMMAND = "claude mcp add nexus -- nexus mcp serve";
 
@@ -26,10 +28,17 @@ function CopyCommand() {
       <code className="font-codigo min-w-0 flex-1 overflow-x-auto text-[15px] whitespace-nowrap">
         {COMMAND}
       </code>
-      <Button size="sm" variant="secondary" onClick={copy} aria-label="Copiar comando">
-        {copied ? <Check /> : <Copy />}
-        {copied ? "Copiado" : "Copiar"}
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button size="sm" variant="secondary" onClick={copy} aria-label="Copiar comando">
+            {copied ? <Check /> : <Copy />}
+            {copied ? "Copiado" : "Copiar"}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          Depois cole no terminal com <Kbd>Ctrl</Kbd> <Kbd>V</Kbd>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }

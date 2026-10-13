@@ -1,15 +1,17 @@
-import { Download } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import { motion } from "motion/react";
 import { Fragment } from "react";
 
 import AnimatedContent from "@/components/AnimatedContent";
 import { Bento, Shot } from "@/components/Bento";
+import ClickSpark from "@/components/ClickSpark";
+import { DownloadButton, GhostButton } from "@/components/Cta";
 import { GithubIcon } from "@/components/icons";
 import Magnet from "@/components/Magnet";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useTheme } from "@/lib/useTheme";
-import { downloadHref, site } from "@/site";
+import { site } from "@/site";
 
 const LINES = ["O contexto do seu código,", "na mão do seu agente de IA."];
 
@@ -24,7 +26,7 @@ export function Hero() {
           </Badge>
         </AnimatedContent>
 
-        <h1 className="mx-auto mt-7 max-w-4xl font-titulo text-[clamp(2.6rem,6vw,4.5rem)] leading-[1.05] tracking-[-0.035em]">
+        <h1 className="mx-auto mt-7 max-w-5xl font-titulo text-[clamp(2.5rem,5.4vw,4.1rem)] leading-[1.05] tracking-[-0.035em]">
           {LINES.map((line, i) => (
             <Fragment key={line}>
               {i > 0 && " "}
@@ -42,41 +44,49 @@ export function Hero() {
 
         <AnimatedContent distance={20} duration={0.8} delay={0.3}>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            A Nexus lê seus repositórios no seu computador e entrega ao Claude Code o trecho certo,
-            a linha exata e as decisões do time. Seu código não sai da sua máquina.
+            A Nexus lê seus repositórios no seu computador e entrega ao{" "}
+            <HoverCard openDelay={150}>
+              <HoverCardTrigger asChild>
+                <a
+                  href="https://claude.com/claude-code"
+                  rel="noopener"
+                  className="text-foreground underline decoration-primary/60 decoration-dotted underline-offset-4 hover:decoration-primary"
+                >
+                  Claude Code
+                </a>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80 text-left">
+                <p className="font-medium text-foreground">Claude Code</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  O agente de IA da Anthropic que trabalha no seu terminal. Ele conversa com a Nexus
+                  pelo MCP, o protocolo aberto para dar ferramentas a agentes.
+                </p>
+              </HoverCardContent>
+            </HoverCard>{" "}
+            o trecho certo, a linha exata e as decisões do time. Seu código não sai da sua máquina.
           </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Magnet padding={60} magnetStrength={4}>
-              <Button size="lg" className="h-12 rounded-xl px-6 text-base" asChild>
-                <a href={downloadHref || "#comecar"}>
-                  <Download className="size-5" />
-                  Baixar para Windows
-                </a>
-              </Button>
-            </Magnet>
-            {site.githubUrl ? (
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-xl px-6 text-base"
-                asChild
-              >
-                <a href={site.githubUrl} rel="noopener">
-                  <GithubIcon className="size-5" />
+          <ClickSpark
+            sparkColor={["#4f6fff", "#9fb4ff", "#ffffff"]}
+            sparkCount={10}
+            sparkRadius={26}
+          >
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <Magnet padding={60} magnetStrength={5}>
+                <DownloadButton />
+              </Magnet>
+              {site.githubUrl ? (
+                <GhostButton href={site.githubUrl} rel="noopener">
+                  <GithubIcon className="size-[18px]" />
                   Ver o código
-                </a>
-              </Button>
-            ) : (
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-xl px-6 text-base"
-                asChild
-              >
-                <a href="#o-que-faz">Ver o que ela faz</a>
-              </Button>
-            )}
-          </div>
+                </GhostButton>
+              ) : (
+                <GhostButton href="#o-que-faz">
+                  Ver o que ela faz
+                  <ArrowDown className="size-4" />
+                </GhostButton>
+              )}
+            </div>
+          </ClickSpark>
           <p className="mt-5 text-[15px] text-muted-foreground">Grátis e de código aberto.</p>
         </AnimatedContent>
       </div>

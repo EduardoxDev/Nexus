@@ -28,6 +28,12 @@ allow = [
   "Unicode-3.0",
   "MPL-2.0",
 ]
+# CDLA-Permissive-2.0 (licença permissiva de dados): a lista de autoridades certificadoras da
+# Mozilla em webpki-root-certs, que chega pelo HTTPS do atualizador (reqwest/rustls). Liberada só
+# para esse pacote.
+exceptions = [
+  { allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs" },
+]
 
 [bans]
 multiple-versions = "allow"

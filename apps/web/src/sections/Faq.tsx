@@ -1,11 +1,10 @@
-import AnimatedContent from "@/components/AnimatedContent";
+import { SectionHeader } from "@/components/SectionHeader";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Card } from "@/components/ui/card";
 
 const FAQ = [
   {
@@ -38,12 +37,8 @@ export function Faq() {
   return (
     <section id="perguntas" className="scroll-mt-20">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-24 lg:grid-cols-[0.8fr_1.2fr]">
-        <AnimatedContent distance={40} duration={0.8}>
-          <h2 className="font-titulo text-[clamp(2rem,3.8vw,3rem)] leading-[1.08]">
-            Perguntas que sempre aparecem
-          </h2>
-        </AnimatedContent>
-        <Card className="rounded-2xl px-6 py-2">
+        <SectionHeader title="Perguntas que sempre aparecem" />
+        <div className="rounded-[20px] border border-border bg-card px-6 py-2">
           <Accordion type="single" collapsible>
             {FAQ.map((f) => (
               <AccordionItem key={f.q} value={f.q}>
@@ -54,7 +49,7 @@ export function Faq() {
               </AccordionItem>
             ))}
           </Accordion>
-        </Card>
+        </div>
       </div>
     </section>
   );

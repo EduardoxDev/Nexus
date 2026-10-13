@@ -12,9 +12,7 @@ describe("site da NEXUS", () => {
     render(<App />);
     const h1 = screen.getAllByRole("heading", { level: 1 });
     expect(h1).toHaveLength(1);
-    expect(h1[0]).toHaveAccessibleName(
-      "Seu agente de IA não conhece o seu projeto. A Nexus conhece.",
-    );
+    expect(h1[0]).toHaveAccessibleName("O contexto do seu código, na mão do seu agente de IA.");
   });
 
   it("every in-page link points to an existing section", () => {
@@ -43,7 +41,13 @@ describe("site da NEXUS", () => {
       expect(img.hasAttribute("alt"), img.getAttribute("src") ?? "").toBe(true);
     }
     expect(screen.getAllByRole("img", { name: /Busca com motivos/ }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("img", { name: /nuvem da NEXUS/ })).toBeInTheDocument();
+  });
+
+  it("no button or link is hidden from screen readers", () => {
+    const { container } = render(<App />);
+    for (const el of container.querySelectorAll("a, button")) {
+      expect(el.closest('[aria-hidden="true"]'), el.textContent ?? "").toBeNull();
+    }
   });
 
   it("every image file the page references exists in public/", () => {
@@ -65,9 +69,9 @@ describe("site da NEXUS", () => {
 
   it("prerendered HTML carries the content (search engines and no-JS visitors)", () => {
     const html = renderStatic();
-    expect(html).toContain("Seu código fica no seu computador.");
+    expect(html).toContain("Seu código fica no seu computador");
     expect(html).toContain("Perguntas que sempre aparecem");
-    expect(html).toContain("src/checkout/shipping.ts");
+    expect(html).toContain("O que ela faz por você");
     expect(html).toContain("claude mcp add nexus -- nexus mcp serve");
   });
 });

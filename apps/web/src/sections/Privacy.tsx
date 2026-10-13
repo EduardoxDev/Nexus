@@ -1,61 +1,98 @@
-import { EyeOff, FileLock2, Link2Off, WifiOff, type LucideIcon } from "lucide-react";
+import { EyeOff, FileLock2, Gauge, Link2Off, Timer, WifiOff, Wrench, Zap } from "lucide-react";
 
-import AnimatedContent from "@/components/AnimatedContent";
-import SpotlightCard from "@/components/SpotlightCard";
-import { useTheme } from "@/lib/useTheme";
+import { Bento, type BentoItem } from "@/components/Bento";
+import CountUp from "@/components/CountUp";
+import { SectionHeader } from "@/components/SectionHeader";
 
-const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
+const PRIVACY: BentoItem[] = [
   {
-    icon: WifiOff,
     title: "Sem servidor",
-    body: "Não existe servidor da Nexus. O índice e a memória ficam num arquivo no seu computador.",
+    description: "O índice e a memória ficam num arquivo no seu computador.",
+    icon: <WifiOff className="size-5" />,
   },
   {
-    icon: EyeOff,
     title: "Sem telemetria",
-    body: "Nenhum dado de uso é coletado. Os registros locais nunca guardam o conteúdo dos arquivos.",
+    description: "Nenhum dado de uso é coletado. Os registros locais nunca guardam conteúdo.",
+    icon: <EyeOff className="size-5" />,
   },
   {
-    icon: FileLock2,
     title: "Segredos ficam de fora",
-    body: "Senhas, chaves e .env são reconhecidos e ignorados, mesmo se aparecerem depois.",
+    description: "Senhas, chaves e .env são reconhecidos e ignorados, mesmo se aparecerem depois.",
+    icon: <FileLock2 className="size-5" />,
   },
   {
-    icon: Link2Off,
     title: "Só o que você autorizou",
-    body: "Atalhos que apontam para fora do projeto nunca são seguidos.",
+    description: "Atalhos que apontam para fora do projeto nunca são seguidos.",
+    icon: <Link2Off className="size-5" />,
+  },
+];
+
+function Number({
+  to,
+  prefix = "",
+  suffix = "",
+  decimals = 0,
+}: {
+  to: number;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+}) {
+  return (
+    <p className="font-titulo text-5xl text-primary">
+      {prefix}
+      {decimals > 0 ? (
+        to.toLocaleString("pt-BR", { minimumFractionDigits: decimals })
+      ) : (
+        <CountUp to={to} duration={1.6} />
+      )}
+      {suffix}
+    </p>
+  );
+}
+
+/** Medições reais (docs/benchmarks.md, docs/evaluation.md). */
+const NUMBERS: BentoItem[] = [
+  {
+    title: "para indexar 10 mil arquivos",
+    visual: <Number to={3} prefix="~" suffix=" s" />,
+    icon: <Zap className="size-5" />,
+  },
+  {
+    title: "para atualizar depois de salvar",
+    visual: <Number to={0.4} suffix=" s" decimals={1} />,
+    icon: <Timer className="size-5" />,
+  },
+  {
+    title: "por busca, na mediana",
+    visual: <Number to={37} suffix=" ms" />,
+    icon: <Gauge className="size-5" />,
+  },
+  {
+    title: "ferramentas para agentes",
+    visual: <Number to={13} />,
+    icon: <Wrench className="size-5" />,
   },
 ];
 
 export function Privacy() {
-  const theme = useTheme();
   return (
     <section id="privacidade" className="scroll-mt-20">
-      <div className="mx-auto grid max-w-6xl gap-12 px-5 py-24 lg:grid-cols-[0.9fr_1.1fr]">
-        <AnimatedContent distance={40} duration={0.8}>
-          <h2 className="font-titulo text-[clamp(2.2rem,4.4vw,3.4rem)] leading-[1.04]">
-            Seu código fica no seu computador.
-          </h2>
-          <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground">
-            Quando você usa um agente na nuvem, ele envia ao provedor o que ler — como já faz hoje.
-            A Nexus só entrega o que você autorizou, e a tela Integrações mostra cada consulta: qual
-            ferramenta, quando e o resultado.
-          </p>
-        </AnimatedContent>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {POINTS.map((p, i) => (
-            <AnimatedContent key={p.title} distance={40} delay={i * 0.08} duration={0.7}>
-              <SpotlightCard
-                theme={theme}
-                spotlightColor="rgba(79, 111, 255, 0.28)"
-                className="h-full rounded-2xl p-6"
-              >
-                <p.icon className="size-6 text-primary" aria-hidden="true" />
-                <h3 className="mt-4 font-titulo text-lg">{p.title}</h3>
-                <p className="mt-1.5 leading-relaxed text-muted-foreground">{p.body}</p>
-              </SpotlightCard>
-            </AnimatedContent>
-          ))}
+      <div className="mx-auto max-w-6xl px-5 py-24">
+        <SectionHeader title="Seu código fica no seu computador">
+          Quando você usa um agente na nuvem, ele envia ao provedor o que ler — como já faz hoje. A
+          Nexus só entrega o que você autorizou.
+        </SectionHeader>
+        <div className="mt-12">
+          <Bento items={PRIVACY} columns={4} rowHeight={190} />
+        </div>
+        <div className="mt-14">
+          <SectionHeader title="Rápida de verdade">
+            Medido num PC comum com Windows. Os scripts estão no repositório.
+          </SectionHeader>
+          <div className="mt-12">
+            <Bento items={NUMBERS} columns={4} rowHeight={190} />
+          </div>
         </div>
       </div>
     </section>

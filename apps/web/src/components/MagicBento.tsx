@@ -1359,7 +1359,8 @@ const MagicBento = ({
           "--mb-border-size": `${Math.round(Math.max(40, spotlightRadius) * 0.75)}px`,
         }),
         gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`,
-        gridAutoRows: span === 1 ? `minmax(${rowHeight}px, auto)` : `${rowHeight}px`,
+        // Linhas crescem com o conteúdo: no celular a grade cai para 1–2 colunas e o texto não cabe na altura fixa.
+        gridAutoRows: `minmax(${rowHeight}px, auto)`,
         gap: `${Math.max(0, gap)}px`,
         ...style,
       }}
@@ -1409,7 +1410,9 @@ const MagicBento = ({
                     </div>
                   )}
                   {visual && (
-                    <div className={VISUAL_CLASS} aria-hidden="true">
+                    // Ajuste da NEXUS: só as ilustrações embutidas são decorativas. Conteúdo passado
+                    // por nós (capturas, botões) tem que continuar visível a leitores de tela.
+                    <div className={VISUAL_CLASS} aria-hidden={Visual ? "true" : undefined}>
                       {visual}
                     </div>
                   )}

@@ -1,23 +1,10 @@
 import { BookOpenCheck, Cable, Code2, PackageOpen, Radar, ScanSearch } from "lucide-react";
 
-import AnimatedContent from "@/components/AnimatedContent";
-import MagicBento, { type MagicBentoItem } from "@/components/MagicBento";
-import { useTheme } from "@/lib/useTheme";
+import { Bento, Shot, type BentoItem } from "@/components/Bento";
+import { SectionHeader } from "@/components/SectionHeader";
 
-function Shot({ src, alt }: { src: string; alt: string }) {
-  return (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      width={1440}
-      height={900}
-      className="h-44 w-full rounded-lg border border-white/10 object-cover object-top sm:h-52"
-    />
-  );
-}
-
-const ITEMS: MagicBentoItem[] = [
+/** A seção aprovada: o mesmo conteúdo e o mesmo MagicBento (agora via <Bento>). */
+const ITEMS: BentoItem[] = [
   {
     title: "Encontra o trecho certo",
     description:
@@ -63,38 +50,15 @@ const ITEMS: MagicBentoItem[] = [
 ];
 
 export function WhatItDoes() {
-  const theme = useTheme();
   return (
     <section id="o-que-faz" className="scroll-mt-20">
       <div className="mx-auto max-w-6xl px-5 py-24">
-        <AnimatedContent distance={40} duration={0.8}>
-          <h2 className="max-w-2xl font-titulo text-[clamp(2rem,3.8vw,3rem)] leading-[1.08]">
-            O que ela faz por você
-          </h2>
-          <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-            Pense numa bibliotecária que leu o seu projeto inteiro e sempre diz de onde tirou cada
-            coisa.
-          </p>
-        </AnimatedContent>
+        <SectionHeader title="O que ela faz por você">
+          Pense numa bibliotecária que leu o seu projeto inteiro e sempre diz de onde tirou cada
+          coisa.
+        </SectionHeader>
         <div className="mt-12">
-          <MagicBento
-            items={ITEMS}
-            columns={4}
-            rowHeight={200}
-            gap={14}
-            radius={20}
-            theme={theme}
-            glowColor="79, 111, 255"
-            enableStars
-            enableSpotlight
-            enableBorderGlow
-            enableTilt={false}
-            enableMagnetism={false}
-            clickEffect
-            particleCount={10}
-            spotlightRadius={320}
-            textAutoHide={false}
-          />
+          <Bento items={ITEMS} stars />
         </div>
       </div>
     </section>

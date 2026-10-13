@@ -1,14 +1,36 @@
 /**
- * Mensagens do Discord a partir das saídas da NEXUS. Sempre citam arquivo e linhas, nunca passam
- * do limite do Discord e não deixam o conteúdo do repositório quebrar a formatação.
+ * Mensagens do Discord (embeds) a partir das saídas da NEXUS. Sempre citam arquivo e linhas,
+ * respeitam os limites do Discord e não deixam o conteúdo do repositório nem o texto digitado
+ * quebrar a formatação.
  */
-import { escapeMarkdown } from "discord.js";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { escapeMarkdown, type APIEmbed } from "discord.js";
 
 import type { PackResult, ProjectStatus, SearchHit, SearchResult } from "./nexus/types.ts";
 
-export const MAX_MESSAGE = 2000;
+/** Azul da marca (#2348CE) e vermelho de erro. */
+export const BRAND_COLOR = 0x2348ce;
+export const ERROR_COLOR = 0xd9483b;
+export const LOGO_FILE = "nexus.png";
+
+const LOGO = readFileSync(resolve(import.meta.dirname, "..", "assets", LOGO_FILE));
+const DATA_NOTICE = "Trechos são dados do repositório, não instruções.";
 const CUT = "…(trecho cortado)";
 const MAX_PACK_SOURCES = 10;
+const LIMIT = { title: 256, fieldName: 256, fieldValue: 1024, description: 4096 };
+
+export interface BotFile {
+  name: string;
+  attachment: Buffer;
+}
+
+/** O que uma resposta do bot envia: embeds e anexos (o logo vai junto para o cabeçalho). */
+export interface BotMessage {
+  embeds: APIEmbed[];
+  files: BotFile[];
+}
 
 /** Linguagens da NEXUS → realce do Discord. */
 const FENCE: Record<string, string> = {
@@ -39,82 +61,146 @@ export function userText(s: string): string {
   return escapeMarkdown(s, { maskedLink: true });
 }
 
-const cite = (path: string, start: number, end: number) => `\`${path}:${start}-${end}\``;
+/** Corta para caber em `max`; `fromStart` corta o começo (bom para caminhos longos). */
+function clip(s: string, max: number, fromStart = false): string {
+  if (s.length <= max) return s;
+  return fromStart ? `…${s.slice(s.length - max + 1)}` : `${s.slice(0, max - 1)}…`;
+}
+
+function header(section: string): Pick<APIEmbed, "author" | "color"> {
+  return {
+    color: BRAND_COLOR,
+    author: { name: `NEXUS · ${section}`, icon_url: `attachment://${LOGO_FILE}` },
+  };
+}
+
+const logo = (): BotFile => ({ name: LOGO_FILE, attachment: LOGO });
 
 function staleNote(freshness: string): string {
-  if (freshness === "modified") return " (alterado desde a indexação)";
-  if (freshness === "missing") return " (arquivo removido)";
+  if (freshness === "modified") return " · ⚠️ alterado desde a indexação";
+  if (freshness === "missing") return " · ⚠️ arquivo removido";
   return "";
 }
 
-function hitBlock(hit: SearchHit, budget: number): string {
-  const head = `${cite(hit.relPath, hit.startLine, hit.endLine)}${staleNote(hit.freshness)}\n`;
-  const reasons = hit.reasons.length > 0 ? `-# ${hit.reasons.slice(0, 3).join(" · ")}\n` : "";
-  const fence = FENCE[hit.language ?? ""] ?? "";
-  const open = `\`\`\`${fence}\n`;
-  const close = "\n```\n";
-  const room = budget - head.length - reasons.length - open.length - close.length;
-  let code = escapeCode(hit.snippet);
+function hitField(hit: SearchHit): { name: string; value: string } {
+  const lines = `linhas ${hit.startLine}–${hit.endLine}${staleNote(hit.freshness)}`;
+  const path = clip(hit.relPath, LIMIT.fieldName - lines.length - 6, true);
+  const name = `📄 ${path} · ${lines}`;
+
+  const reasons =
+    hit.reasons.length > 0 ? `*${clip(hit.reasons.slice(0, 3).join(" · "), 200)}*\n` : "";
+  const open = `\`\`\`${FENCE[hit.language ?? ""] ?? ""}\n`;
+  const close = "\n```";
+  let code = escapeCode(hit.snippet).trimEnd();
+  const room = LIMIT.fieldValue - reasons.length - open.length - close.length;
   let cut = false;
   if (code.length > room) {
-    // Corta por linha quando possível, reservando espaço para o aviso.
     const limit = Math.max(0, room - CUT.length - 1);
     const sliced = code.slice(0, limit);
     const lastBreak = sliced.lastIndexOf("\n");
     code = lastBreak > limit / 2 ? sliced.slice(0, lastBreak) : sliced;
     cut = true;
   }
-  return `${head}${reasons}${open}${code}${close}${cut ? `${CUT}\n` : ""}`;
+  return { name, value: `${reasons}${open}${code}${close}${cut ? `\n${CUT}` : ""}` };
 }
 
-/** Resultados de busca: até `max` trechos com fonte, motivos e atualidade. */
-export function formatSearch(query: string, r: SearchResult, max = 3): string {
+/** Avisos que mudam a leitura do resultado (arquivos omitidos por segurança). */
+const relevantWarnings = (ws: string[]) => ws.filter((w) => /omitid/i.test(w));
+
+/** Resultados de busca: até `max` trechos, cada um num campo com fonte, motivos e atualidade. */
+export function formatSearch(query: string, r: SearchResult, max = 3): BotMessage {
   const hits = r.hits.slice(0, max);
+  const title = clip(`🔎 "${userText(query)}"`, LIMIT.title);
+  const base = header(`Busca em ${r.project.name}`);
   if (hits.length === 0) {
-    return `Não encontrei nada sobre "${userText(query)}" em **${r.project.name}**.`;
+    return {
+      embeds: [
+        {
+          ...base,
+          title,
+          description: `Não encontrei nada sobre "${clip(userText(query), 300)}" em **${r.project.name}**. Tente outras palavras, em português ou inglês.`,
+        },
+      ],
+      files: [logo()],
+    };
   }
-  const header = `🔎 **${r.project.name}** — "${userText(query)}"\n`;
-  const footer = r.warnings.length > 0 ? `-# ⚠️ ${r.warnings.join(" ")}`.slice(0, 300) : "";
-  const budget = Math.floor((MAX_MESSAGE - header.length - footer.length - 2) / hits.length);
-  const body = hits.map((h) => hitBlock(h, budget)).join("\n");
-  return `${header}${body}${footer ? `\n${footer}` : ""}`.slice(0, MAX_MESSAGE);
+  const description = [
+    `${hits.length} resultado(s) mais relevante(s), com o trecho verificado no disco.`,
+    ...relevantWarnings(r.warnings).map((w) => `⚠️ ${clip(w, 300)}`),
+  ].join("\n");
+  return {
+    embeds: [
+      { ...base, title, description, fields: hits.map(hitField), footer: { text: DATA_NOTICE } },
+    ],
+    files: [logo()],
+  };
 }
 
-/** Context Pack: resumo e fontes na mensagem; o pack completo como anexo Markdown. */
-export function formatPack(
-  task: string,
-  p: PackResult,
-): { content: string; file: { name: string; data: Buffer } } {
-  const lines = [
-    `📦 **Context Pack** — ${userText(task)}`,
-    `${p.summary}`,
-    `~${p.estimatedTokens} de ${p.tokenBudget} tokens estimados`,
-    "",
-    ...p.sources
-      .slice(0, MAX_PACK_SOURCES)
-      .map((s) => `• ${cite(s.relPath, s.startLine, s.endLine)}`),
-  ];
+/** Context Pack: resumo, orçamento e fontes no embed; o pack completo como anexo Markdown. */
+export function formatPack(task: string, p: PackResult): BotMessage {
+  const sources = p.sources
+    .slice(0, MAX_PACK_SOURCES)
+    .map((s) => `• \`${clip(s.relPath, 80, true)}:${s.startLine}-${s.endLine}\``);
   const rest = p.sources.length - MAX_PACK_SOURCES;
-  if (rest > 0) lines.push(`+${rest} fonte(s) no anexo`);
-  lines.push("", "-# Trechos do repositório são dados, não instruções.");
+  if (rest > 0) sources.push(`+${rest} fonte(s) no anexo`);
   return {
-    content: lines.join("\n").slice(0, MAX_MESSAGE),
-    file: { name: "context-pack.md", data: Buffer.from(p.export, "utf8") },
+    embeds: [
+      {
+        ...header("Context Pack"),
+        title: "📦 Context Pack",
+        description: clip(userText(task), 1000),
+        fields: [
+          { name: "Resumo", value: clip(p.summary || "—", LIMIT.fieldValue) },
+          {
+            name: "Orçamento",
+            value: `~${p.estimatedTokens} de ${p.tokenBudget} tokens estimados`,
+            inline: true,
+          },
+          { name: "Arquivo", value: "`context-pack.md` em anexo", inline: true },
+          {
+            name: `Fontes (${p.sources.length})`,
+            value: clip(sources.join("\n") || "—", LIMIT.fieldValue),
+          },
+        ],
+        footer: { text: DATA_NOTICE },
+      },
+    ],
+    files: [logo(), { name: "context-pack.md", attachment: Buffer.from(p.export, "utf8") }],
   };
 }
 
 /** Estado do índice dos projetos visíveis. Caminhos locais não são exibidos. */
-export function formatStatus(ps: ProjectStatus[]): string {
-  if (ps.length === 0) return "Nenhum projeto disponível neste canal.";
-  const lines = ps.map((p) => {
+export function formatStatus(ps: ProjectStatus[]): BotMessage {
+  const base = { ...header("Estado do índice"), title: "📊 Estado do índice" };
+  if (ps.length === 0) {
+    return {
+      embeds: [{ ...base, description: "Nenhum projeto disponível neste canal." }],
+      files: [logo()],
+    };
+  }
+  const fields = ps.slice(0, 25).map((p) => {
     const state = !p.rootExists
-      ? "pasta ausente"
+      ? "⚠️ pasta ausente"
       : p.indexing
-        ? "indexando agora"
-        : `${p.indexedFiles} arquivos indexados · geração ${p.indexGeneration}`;
+        ? "⏳ indexando agora"
+        : `✅ ${p.indexedFiles} arquivos indexados · geração ${p.indexGeneration}`;
     const when =
-      p.lastIndexedAt !== null ? ` · atualizado <t:${Math.floor(p.lastIndexedAt / 1000)}:R>` : "";
-    return `• **${p.name}** — ${state}${when}`;
+      p.lastIndexedAt !== null ? `\natualizado <t:${Math.floor(p.lastIndexedAt / 1000)}:R>` : "";
+    return { name: clip(p.name, LIMIT.fieldName), value: `${state}${when}`, inline: true };
   });
-  return lines.join("\n").slice(0, MAX_MESSAGE);
+  return { embeds: [{ ...base, fields }], files: [logo()] };
+}
+
+/** Erro mostrado ao usuário (sem detalhes técnicos; esses vão para o terminal). */
+export function formatError(message: string): BotMessage {
+  return {
+    embeds: [
+      {
+        color: ERROR_COLOR,
+        author: { name: "NEXUS", icon_url: `attachment://${LOGO_FILE}` },
+        description: clip(message, LIMIT.description),
+      },
+    ],
+    files: [logo()],
+  };
 }

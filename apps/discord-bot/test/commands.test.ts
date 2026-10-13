@@ -66,7 +66,21 @@ function fakeInteraction(channel: ChannelRef, sub: string, opts: Record<string, 
       sent.push({ kind: "reply", payload: p });
     },
   };
-  const texts = () => sent.map((s) => s.payload?.content ?? "").join("\n");
+  // Todo o texto visível: conteúdo e embeds.
+  const texts = () =>
+    sent
+      .map((s) =>
+        [
+          s.payload?.content ?? "",
+          ...(s.payload?.embeds ?? []).flatMap((e) => [
+            e.author?.name,
+            e.title,
+            e.description,
+            ...(e.fields ?? []).flatMap((f) => [f.name, f.value]),
+          ]),
+        ].join("\n"),
+      )
+      .join("\n");
   return { i, sent, texts };
 }
 
@@ -88,7 +102,7 @@ describe("/nexus", () => {
         },
       },
     ]);
-    expect(texts()).toContain("`docs/mcp.md:5-20`");
+    expect(texts()).toContain("docs/mcp.md · linhas 5–20");
   });
 
   it("pergunta falls back to code when no docs match", async () => {
@@ -103,7 +117,7 @@ describe("/nexus", () => {
     await handleNexus(i, { tools, cfg });
     expect(calls).toHaveLength(2);
     expect(calls[1]?.kinds).toBeUndefined();
-    expect(texts()).toContain("`docs/mcp.md:5-20`");
+    expect(texts()).toContain("docs/mcp.md · linhas 5–20");
   });
 
   it("team project is refused outside team channels", async () => {
@@ -117,7 +131,7 @@ describe("/nexus", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]?.kind).toBe("reply");
     expect(sent[0]?.payload?.ephemeral).toBe(true);
-    expect(texts()).toBe("Este projeto não pode ser consultado neste canal.");
+    expect(texts()).toContain("Este projeto não pode ser consultado neste canal.");
     expect(texts()).not.toContain("otimiza");
   });
 
@@ -146,15 +160,15 @@ describe("/nexus", () => {
         sources: [{ relPath: "src/a.ts", startLine: 1, endLine: 9 }],
       },
     });
-    const { i, sent } = fakeInteraction(TEAM, "pack", { tarefa: "login com google" });
+    const { i, sent, texts } = fakeInteraction(TEAM, "pack", { tarefa: "login com google" });
     await handleNexus(i, { tools, cfg });
     expect(calls[0]).toEqual({
       name: "build_context_pack",
       args: { project: "otimiza", task: "login com google", format: "markdown" },
     });
     const last = sent.at(-1)?.payload;
-    expect(last?.files?.[0]?.name).toBe("context-pack.md");
-    expect(last?.content).toContain("`src/a.ts:1-9`");
+    expect(last?.files?.map((f) => f.name)).toContain("context-pack.md");
+    expect(texts()).toContain("src/a.ts:1-9");
   });
 
   it("status lists only visible projects", async () => {
@@ -195,13 +209,16 @@ describe("/nexus", () => {
     const { tools } = fakeTools({}, new McpUnavailableError("caiu"));
     const { i, sent } = fakeInteraction(COMMON, "pergunta", { texto: "x" });
     await handleNexus(i, { tools, cfg });
-    expect(sent.at(-1)?.payload?.content).toBe(
+    expect(sent.at(-1)?.payload?.embeds?.[0]?.description).toBe(
       "A NEXUS não respondeu agora. Tente de novo em instantes.",
     );
   });
 
   it("failures are logged with the reason, without user content", async () => {
-    const { tools } = fakeTools({}, new McpUnavailableError("o servidor MCP da NEXUS foi encerrado"));
+    const { tools } = fakeTools(
+      {},
+      new McpUnavailableError("o servidor MCP da NEXUS foi encerrado"),
+    );
     const logged: string[] = [];
     const { i } = fakeInteraction(COMMON, "pergunta", { texto: "pergunta-secreta" });
     await handleNexus(i, { tools, cfg, log: (line) => logged.push(line) });

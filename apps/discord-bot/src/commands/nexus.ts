@@ -2,11 +2,11 @@
  * `/nexus`: as funções da NEXUS pelo Discord. Toda consulta passa pela regra de acesso antes de
  * chegar à NEXUS; um projeto da equipe pedido fora de canal da equipe é recusado sem revelar nada.
  */
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, type APIEmbed } from "discord.js";
 
 import { canQuery, isTeamChannel, visibleProjects, type ChannelRef } from "../access.ts";
 import type { BotConfig } from "../config.ts";
-import { formatPack, formatSearch, formatStatus } from "../format.ts";
+import { formatError, formatPack, formatSearch, formatStatus, type BotMessage } from "../format.ts";
 import { McpToolError, McpUnavailableError } from "../mcp/client.ts";
 import type { PackResult, ProjectStatus, SearchResult } from "../nexus/types.ts";
 
@@ -16,7 +16,8 @@ export interface Tools {
 }
 
 export interface ReplyPayload {
-  content: string;
+  content?: string;
+  embeds?: APIEmbed[];
   files?: { name: string; attachment: Buffer }[];
   /** Sempre vazio: nada vindo do repositório ou do usuário pode notificar alguém. */
   allowedMentions: { parse: [] };
@@ -34,6 +35,9 @@ export interface NexusInteraction {
 }
 
 const NO_MENTIONS = { parse: [] } as { parse: [] };
+
+/** Toda resposta: embeds + anexos, sem menções. */
+const payload = (m: BotMessage): ReplyPayload => ({ ...m, allowedMentions: NO_MENTIONS });
 const MSG = {
   refused: "Este projeto não pode ser consultado neste canal.",
   unavailable: "A NEXUS não respondeu agora. Tente de novo em instantes.",
@@ -100,7 +104,7 @@ export async function handleNexus(
   const sub = i.subcommand;
   const project = sub === "pergunta" ? cfg.publicProject : resolveProject(i, cfg);
   if (sub !== "status" && !canQuery(cfg, i.channel, project)) {
-    await i.reply({ content: MSG.refused, allowedMentions: NO_MENTIONS, ephemeral: true });
+    await i.reply({ ...payload(formatError(MSG.refused)), ephemeral: true });
     return;
   }
 
@@ -113,7 +117,7 @@ export async function handleNexus(
       // Dúvidas da comunidade: documentação primeiro; código só se a documentação não responder.
       let r = sub === "pergunta" ? await search({ kinds: ["doc"] }) : await search();
       if (sub === "pergunta" && r.hits.length === 0) r = await search();
-      await i.editReply({ content: formatSearch(query, r), allowedMentions: NO_MENTIONS });
+      await i.editReply(payload(formatSearch(query, r)));
     } else if (sub === "pack") {
       const task = i.option("tarefa") ?? "";
       const p = await tools.callTool<PackResult>("build_context_pack", {
@@ -121,29 +125,24 @@ export async function handleNexus(
         task,
         format: "markdown",
       });
-      const out = formatPack(task, p);
-      await i.editReply({
-        content: out.content,
-        files: [{ name: out.file.name, attachment: out.file.data }],
-        allowedMentions: NO_MENTIONS,
-      });
+      await i.editReply(payload(formatPack(task, p)));
     } else {
       const r = await tools.callTool<{ projects: ProjectStatus[] }>("list_projects", {});
       const visible = visibleProjects(cfg, i.channel).map((p) => p.toLowerCase());
       const shown = r.projects.filter((p) => visible.includes(p.name.toLowerCase()));
-      await i.editReply({ content: formatStatus(shown), allowedMentions: NO_MENTIONS });
+      await i.editReply(payload(formatStatus(shown)));
     }
   } catch (e) {
     // Motivo técnico no terminal (sem o texto digitado nem conteúdo do repositório).
     const err = e as Error;
     log(`/nexus ${sub} falhou: ${err.name}: ${err.message}`);
-    const content =
+    const message =
       e instanceof McpUnavailableError
         ? MSG.unavailable
         : e instanceof McpToolError
-          ? `${MSG.failed} ${e.message}`.slice(0, 1900)
+          ? `${MSG.failed} ${e.message}`
           : MSG.failed;
-    await i.editReply({ content, allowedMentions: NO_MENTIONS });
+    await i.editReply(payload(formatError(message)));
   }
 }
 

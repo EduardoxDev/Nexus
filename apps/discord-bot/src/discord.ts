@@ -35,7 +35,8 @@ export function channelRef(i: ChatInputCommandInteraction | AutocompleteInteract
 
 function toDiscord(p: ReplyPayload) {
   return {
-    content: p.content,
+    ...(p.content !== undefined ? { content: p.content } : {}),
+    ...(p.embeds ? { embeds: p.embeds } : {}),
     allowedMentions: p.allowedMentions,
     ...(p.files ? { files: p.files.map((f) => ({ attachment: f.attachment, name: f.name })) } : {}),
   };

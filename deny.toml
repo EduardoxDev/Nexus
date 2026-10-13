@@ -3,7 +3,12 @@
 
 [advisories]
 # Avisos ignorados precisam de justificativa e data de revisão.
-ignore = []
+ignore = [
+  # proc-macro-error 1.0.4 sem manutenção: entra só por glib-macros -> gtk (Tauri no Linux).
+  # Macro de compilação, não vai para o instalador Windows; some quando o Tauri trocar o gtk-rs.
+  # Revisar em 2027-01-13.
+  { id = "RUSTSEC-2024-0370", reason = "gtk-rs via Tauri, só Linux, sem versão corrigida" },
+]
 
 [licenses]
 confidence-threshold = 0.9

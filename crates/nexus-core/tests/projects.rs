@@ -34,6 +34,21 @@ fn rejects_invalid_or_dangerous_folders() {
     }
 }
 
+/// A pasta de dados chega por um caminho não canônico (`..`, nome curto 8.3 do Windows, como
+/// `RUNNER~1` no CI): a proteção precisa comparar o caminho real, não o texto.
+#[test]
+fn rejects_data_dir_given_by_a_non_canonical_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let data = tmp.path().join("desvio").join("..").join("data");
+    let core = Core::open(DataPaths::at(&data)).unwrap();
+    let err = core.add_project(&tmp.path().join("data")).unwrap_err();
+    assert_eq!(err.code(), ErrorCode::InvalidInput);
+    assert_eq!(
+        core.add_project(tmp.path()).unwrap_err().code(),
+        ErrorCode::InvalidInput
+    );
+}
+
 fn dirs_home() -> Option<std::path::PathBuf> {
     std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(Into::into)
 }

@@ -123,6 +123,12 @@ fn is_within(child: &Path, parent: &Path) -> bool {
     c == p || c.starts_with(&format!("{p}/"))
 }
 
+/// Caminho real (sem `..`, links ou nomes curtos 8.3 do Windows) para comparar com `path`, que já
+/// chega canônico. Se a pasta não existe, compara o texto como veio.
+fn real(path: &Path) -> PathBuf {
+    dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
 /// Pastas que nunca podem ser autorizadas como projeto inteiro.
 fn forbidden_reason(path: &Path, data_dir: &Path) -> Option<String> {
     if path.parent().is_none() {
@@ -139,7 +145,7 @@ fn forbidden_reason(path: &Path, data_dir: &Path) -> Option<String> {
         "ProgramFiles(x86)",
         "ProgramData",
     ] {
-        if let Some(dir) = std::env::var_os(var).map(PathBuf::from)
+        if let Some(dir) = std::env::var_os(var).map(|d| real(Path::new(&d)))
             && (is_within(path, &dir) || is_within(&dir, path))
         {
             return Some(format!(
@@ -148,7 +154,8 @@ fn forbidden_reason(path: &Path, data_dir: &Path) -> Option<String> {
             ));
         }
     }
-    if is_within(path, data_dir) || is_within(data_dir, path) {
+    let data_dir = real(data_dir);
+    if is_within(path, &data_dir) || is_within(&data_dir, path) {
         return Some("a pasta de dados do NEXUS não pode ser indexada".into());
     }
     None

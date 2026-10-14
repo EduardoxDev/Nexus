@@ -20,6 +20,12 @@ interface UiState {
   /** Tarefa sugerida para o próximo Context Pack (ex.: vinda da Busca). */
   draftTask: string;
   setDraftTask: (task: string) => void;
+  /** Arquivo a abrir na prévia da Busca (ex.: clicado no Mapa). */
+  pendingFile: string | null;
+  /** Vai para a Busca com a prévia do arquivo aberta. */
+  openFile: (relPath: string) => void;
+  /** Lê e limpa o arquivo pendente (a Busca chama ao abrir). */
+  takePendingFile: () => string | null;
   /** Memória aberta na seção Memória (ex.: vinda de um alerta de atualidade). */
   selectedMemoryId: string | null;
   selectMemory: (id: string | null) => void;
@@ -43,6 +49,16 @@ export const useUi = create<UiState>()((set, get) => ({
   setDraftTask: (draftTask) => set({ draftTask }),
   selectedMemoryId: null,
   selectMemory: (selectedMemoryId) => set({ selectedMemoryId }),
+  pendingFile: null,
+  openFile: (pendingFile) => {
+    set({ pendingFile });
+    get().navigate("search");
+  },
+  takePendingFile: () => {
+    const file = get().pendingFile;
+    if (file !== null) set({ pendingFile: null });
+    return file;
+  },
   navigate: (route) => {
     if (!isAvailable(route)) return false;
     const current = get().route;
@@ -76,5 +92,6 @@ export function resetUi(): void {
     shortcutsOpen: false,
     selectedProjectId: null,
     draftTask: "",
+    pendingFile: null,
   });
 }

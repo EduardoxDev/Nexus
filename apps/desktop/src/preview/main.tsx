@@ -8,7 +8,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "@/app/App";
 import { Providers } from "@/app/providers";
-import type { Settings } from "@/lib/bindings";
+import type { MapRequest, Settings } from "@/lib/bindings";
 import "@fontsource-variable/inter/wght.css";
 import "@/styles/globals.css";
 
@@ -55,6 +55,7 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   get_integration_info: () => data.integration,
   check_for_update: () => ({ status: "upToDate", currentVersion: "0.2.0" }),
   get_analysis_overview: () => data.analysis,
+  get_project_map: (args) => data.projectMap(args.request as MapRequest),
 };
 
 mockIPC(

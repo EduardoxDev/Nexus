@@ -234,6 +234,7 @@ pub fn run() {
             commands::integrations::get_integration_info,
             commands::analysis::get_analysis_overview,
             commands::analysis::get_file_analysis,
+            commands::analysis::get_project_map,
             commands::analysis::get_file_history,
         ])
         .build(tauri::generate_context!());

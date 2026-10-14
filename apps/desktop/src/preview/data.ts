@@ -12,9 +12,12 @@ import type {
   FreshnessSummary,
   IndexJob,
   IntegrationInfo,
+  MapNode,
+  MapRequest,
   Memory,
   MemoryCounts,
   OperationRecord,
+  ProjectMap,
   ProjectOverview,
   ProjectSummary,
   SearchResponse,
@@ -419,3 +422,76 @@ export const analysis: AnalysisOverview = {
   ],
   coverage: [],
 };
+
+/** Grafo de exemplo para o Mapa: um app TS com serviços, rotas e um utilitário em Python. */
+export function projectMap(request: MapRequest): ProjectMap {
+  const folders = ["src/server/routes", "src/services", "src/db", "src/auth", "src/ui", "scripts"];
+  const files: { id: string; language: string }[] = [];
+  folders.forEach((folder, f) => {
+    const count = [9, 8, 4, 5, 10, 3][f] ?? 3;
+    for (let i = 0; i < count; i++) {
+      const python = folder === "scripts";
+      files.push({
+        id: `${folder}/${python ? "job" : "mod"}${i}.${python ? "py" : "ts"}`,
+        language: python ? "python" : "typescript",
+      });
+    }
+  });
+  const edges: { from: string; to: string }[] = [];
+  const pick = (folder: string, i: number) =>
+    files.filter((x) => x.id.startsWith(`${folder}/`))[i]?.id ?? "";
+  for (let i = 0; i < 9; i++) {
+    edges.push({ from: pick("src/server/routes", i), to: pick("src/services", i % 8) });
+    edges.push({ from: pick("src/server/routes", i), to: pick("src/auth", 0) });
+  }
+  for (let i = 0; i < 8; i++) {
+    edges.push({ from: pick("src/services", i), to: pick("src/db", i % 4) });
+    if (i % 3 === 0) edges.push({ from: pick("src/services", i), to: pick("src/services", 0) });
+  }
+  for (let i = 1; i < 5; i++) edges.push({ from: pick("src/auth", i), to: pick("src/db", 0) });
+  for (let i = 0; i < 10; i++) edges.push({ from: pick("src/ui", i), to: pick("src/ui", i % 3) });
+  for (let i = 0; i < 3; i++) edges.push({ from: pick("scripts", i), to: pick("src/db", 1) });
+  const real = edges.filter((e) => e.from && e.to && e.from !== e.to);
+  const inside = (id: string) => !request.folder || id.startsWith(`${request.folder}/`);
+  const key = (id: string) => (request.groupByFolder ? id.slice(0, id.lastIndexOf("/")) : id);
+  const weights = new Map<string, number>();
+  for (const e of real) {
+    if (!inside(e.from) || !inside(e.to) || key(e.from) === key(e.to)) continue;
+    const k = `${key(e.from)}\u0000${key(e.to)}`;
+    weights.set(k, (weights.get(k) ?? 0) + 1);
+  }
+  const ids = [
+    ...new Set(
+      real
+        .flatMap((e) => [e.from, e.to])
+        .filter(inside)
+        .map(key),
+    ),
+  ];
+  const inDeg = (id: string) => [...weights.keys()].filter((k) => k.endsWith(`\u0000${id}`)).length;
+  const outDeg = (id: string) =>
+    [...weights.keys()].filter((k) => k.startsWith(`${id}\u0000`)).length;
+  const nodes: MapNode[] = ids
+    .map((id) => ({
+      id,
+      folder: request.groupByFolder ? id : id.slice(0, id.lastIndexOf("/")),
+      language: files.find((x) => key(x.id) === id)?.language ?? null,
+      files: files.filter((x) => key(x.id) === id).length,
+      inDegree: inDeg(id),
+      outDegree: outDeg(id),
+      centrality: 0,
+    }))
+    .sort((a, b) => b.inDegree - a.inDegree || a.id.localeCompare(b.id));
+  const top = Math.max(1, nodes[0]?.inDegree ?? 1);
+  for (const n of nodes) n.centrality = n.inDegree / top;
+  return {
+    nodes,
+    edges: [...weights].map(([k, weight]) => {
+      const [from = "", to = ""] = k.split("\u0000");
+      return { from, to, weight };
+    }),
+    totalNodes: nodes.length,
+    totalEdges: weights.size,
+    grouped: request.groupByFolder,
+  };
+}

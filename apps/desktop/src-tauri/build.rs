@@ -47,6 +47,7 @@ const COMMANDS: &[&str] = &[
     "get_integration_info",
     "get_analysis_overview",
     "get_file_analysis",
+    "get_project_map",
     "get_file_history",
     "check_for_update",
     "install_update",

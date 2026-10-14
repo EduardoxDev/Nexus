@@ -17,6 +17,8 @@ import type {
   AnalysisOverview,
   FileAnalysisView,
   FileHistory,
+  MapRequest,
+  ProjectMap,
   ImportReport,
   IntegrationInfo,
   UpdateStatus,
@@ -111,6 +113,7 @@ export interface Commands {
   install_update: { args: undefined; result: null };
   get_analysis_overview: { args: ProjectArgs; result: AnalysisOverview };
   get_file_analysis: { args: ProjectArgs & { relPath: string }; result: FileAnalysisView };
+  get_project_map: { args: { request: MapRequest }; result: ProjectMap };
   get_file_history: { args: ProjectArgs & { relPath: string }; result: FileHistory };
   get_app_info: { args: undefined; result: AppInfo };
   get_diagnostics: { args: undefined; result: DiagnosticsReport };

@@ -1,5 +1,5 @@
 import { FolderGit2, Package, Search as SearchIcon, SearchX } from "lucide-react";
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 
 import { CodeBlock, FreshnessBadge } from "@/components/code";
 import { FileDependencies } from "@/features/search/FileDependencies";
@@ -26,7 +26,15 @@ export function SearchPage() {
   const [text, setText] = useState("");
   const [kinds, setKinds] = useState<FileKind[]>([]);
   const [request, setRequest] = useState<SearchRequest | null>(null);
-  const [selected, setSelected] = useState<SearchHit | null>(null);
+  // Vindo do Mapa: abre a prévia do arquivo direto, sem busca (o pedido é limpo depois).
+  const [selected, setSelected] = useState<SearchHit | null>(() => {
+    const file = useUi.getState().pendingFile;
+    return file === null ? null : fileHit(file);
+  });
+  const takePendingFile = useUi((st) => st.takePendingFile);
+  useEffect(() => {
+    takePendingFile();
+  }, [takePendingFile]);
   const search = useSearch(request);
 
   const submit = (query: string) => {
@@ -164,6 +172,25 @@ export function SearchPage() {
       )}
     </div>
   );
+}
+
+/** Resultado sintético para abrir a prévia de um arquivo inteiro (primeiras 400 linhas). */
+function fileHit(relPath: string): SearchHit {
+  return {
+    relPath,
+    language: null,
+    kind: "code",
+    startLine: 21,
+    endLine: 340,
+    snippet: "",
+    matchLines: [],
+    score: 0,
+    reasons: [],
+    freshness: "fresh",
+    contentHash: "",
+    indexedAt: 0,
+    alsoIn: [],
+  };
 }
 
 function Intro({ onPick }: { onPick: (q: string) => void }) {

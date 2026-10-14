@@ -102,15 +102,16 @@ Detalhes e justificativas em [ADR-0009](decisions/ADR-0009-indexacao-incremental
 
 ### Cobertura dos analisadores (honesta)
 
-| Recurso                                                           | Como                                                                       | Limitação                                                        |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Linguagem                                                         | extensão / nome do arquivo (~60 linguagens)                                | não lê shebang nem conteúdo                                      |
-| Tipo (código, teste, doc, config, manifesto, lockfile, CI, dados) | convenções de caminho e nome                                               | heurística; pastas fora do padrão podem ser mal classificadas    |
-| Busca textual                                                     | FTS5 + subpalavras de identificadores                                      | —                                                                |
-| Símbolos, imports, grafo                                          | análise léxica: TS/TSX/JS/JSX, Python, Rust (seção 14)                     | demais linguagens: só regex de declarações e busca textual       |
-| Git (HEAD)                                                        | leitura de `.git/HEAD`, refs e `packed-refs`                               | —                                                                |
-| Git (histórico)                                                   | `git log --follow` e `git blame` do `git` instalado, só leitura (ADR-0013) | sem `git` instalado, desligado; nada é gravado no banco          |
-| "Mais alterados"                                                  | mudanças de hash observadas pelo NEXUS                                     | não usa `git log`; começa a contar quando o projeto é adicionado |
+| Recurso                                                           | Como                                                                        | Limitação                                                        |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Linguagem                                                         | extensão / nome do arquivo (~60 linguagens)                                 | não lê shebang nem conteúdo                                      |
+| Tipo (código, teste, doc, config, manifesto, lockfile, CI, dados) | convenções de caminho e nome                                                | heurística; pastas fora do padrão podem ser mal classificadas    |
+| Busca textual                                                     | FTS5 + subpalavras de identificadores                                       | —                                                                |
+| Símbolos, imports, grafo                                          | análise léxica: TS/TSX/JS/JSX, Python, Rust (seção 14)                      | demais linguagens: só regex de declarações e busca textual       |
+| Mapa do código                                                    | `analysis::map`: imports internos, graus, PageRank, corte nos mais centrais | só imports resolvidos entram; calculado na hora, nada gravado    |
+| Git (HEAD)                                                        | leitura de `.git/HEAD`, refs e `packed-refs`                                | —                                                                |
+| Git (histórico)                                                   | `git log --follow` e `git blame` do `git` instalado, só leitura (ADR-0013)  | sem `git` instalado, desligado; nada é gravado no banco          |
+| "Mais alterados"                                                  | mudanças de hash observadas pelo NEXUS                                      | não usa `git log`; começa a contar quando o projeto é adicionado |
 
 ## 10. Pipeline de contexto
 

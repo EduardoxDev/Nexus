@@ -53,6 +53,7 @@
     "allow-get-integration-info",
     "allow-get-analysis-overview",
     "allow-get-file-analysis",
+    "allow-get-project-map",
     "allow-get-file-history"
   ]
 }

@@ -16,6 +16,10 @@ export const ptBR = {
       description: "Pastas autorizadas, indexação e estado do índice.",
     },
     search: { label: "Busca", description: "Busca híbrida em código e documentação com fontes." },
+    map: {
+      label: "Mapa",
+      description: "Quem importa quem: os arquivos mais centrais do projeto.",
+    },
     contextPacks: {
       label: "Context Packs",
       description: "Contexto verificável compilado para uma tarefa.",
@@ -640,6 +644,35 @@ export const ptBR = {
     callOk: "OK",
     callError: "Erro",
     session: (client: string) => `sessão iniciada por ${client}`,
+  },
+  map: {
+    folderLabel: "Filtrar por pasta",
+    folderPlaceholder: "Pasta, ex.: src/auth",
+    applyFolder: "Filtrar",
+    clearFolder: "Limpar filtro",
+    groupByFolder: "Agrupar por pasta",
+    showing: (shown: number, total: number, grouped: boolean) =>
+      `${shown} de ${total} ${grouped ? "pastas" : "arquivos"} (os mais centrais)`,
+    emptyTitle: "Nenhum import entre arquivos ainda",
+    emptyFolder: (folder: string) => `Nenhum import entre arquivos de ${folder}`,
+    emptyDescription:
+      "O mapa usa os imports resolvidos na indexação (TypeScript, JavaScript, Python, Rust, Go, Java e C#).",
+    legend: "Cores por linguagem",
+    otherLanguages: "outras",
+    noLanguage: "sem linguagem",
+    importedBy: (n: number) => (n === 1 ? "importado por 1" : `importado por ${n}`),
+    imports: (n: number) => (n === 1 ? "importa 1" : `importa ${n}`),
+    folderFiles: (n: number) => (n === 1 ? "1 arquivo" : `${n} arquivos`),
+    clickFile: "Clique para abrir na Busca.",
+    clickFolder: "Clique para ver os arquivos desta pasta.",
+    hint: "Roda: zoom · arrastar: mover · duplo clique: enquadrar",
+    canvasLabel: (nodes: number, edges: number) =>
+      `Mapa do código com ${nodes} nós e ${edges} ligações. A tabela ao lado traz os mesmos dados.`,
+    tableTitle: "Mais centrais",
+    colFile: "Arquivo",
+    colFolder: "Pasta",
+    colIn: "Importado por",
+    colOut: "Importa",
   },
   analysis: {
     title: "Análise de código",

@@ -6,6 +6,7 @@ import type {
   ExportFormat,
   ExportOptions,
   IssueQuery,
+  MapRequest,
   MemoryQuery,
   MemoryUpdate,
   NewMemory,
@@ -422,6 +423,17 @@ export function useAnalysisOverview(projectId: number) {
   return useQuery({
     queryKey: [...projectKeys.all, "analysis", projectId] as const,
     queryFn: () => call("get_analysis_overview", { projectId }),
+  });
+}
+
+export function useProjectMap(request: MapRequest | null) {
+  return useQuery({
+    queryKey: [...projectKeys.all, "map", request] as const,
+    queryFn: () => {
+      if (!request) throw new Error("sem projeto");
+      return call("get_project_map", { request });
+    },
+    enabled: request !== null,
   });
 }
 

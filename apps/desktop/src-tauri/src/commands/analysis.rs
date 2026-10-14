@@ -1,5 +1,6 @@
 //! Análise de código: cobertura por linguagem, grafo, dependências e histórico de um arquivo.
 
+use nexus_core::analysis::map::{MapRequest, ProjectMap};
 use nexus_core::analysis::query::{AnalysisOverview, FileAnalysisView};
 use nexus_core::git_history::FileHistory;
 use nexus_core::{ErrorCode, ErrorInfo};
@@ -15,6 +16,26 @@ pub async fn get_analysis_overview(
     project_id: i64,
 ) -> Result<AnalysisOverview, ErrorInfo> {
     blocking(&state, move |core| core.analysis_overview(project_id)).await
+}
+
+/// Mapa do código (imports internos, graus e centralidade), cortado nos nós mais centrais.
+#[tauri::command]
+pub async fn get_project_map(
+    state: State<'_, AppState>,
+    request: MapRequest,
+) -> Result<ProjectMap, ErrorInfo> {
+    if request
+        .folder
+        .as_ref()
+        .is_some_and(|f| f.len() > MAX_PATH_LEN)
+    {
+        return Err(ErrorInfo {
+            code: ErrorCode::InvalidInput,
+            message: "Pasta inválida.".to_owned(),
+            op_id: None,
+        });
+    }
+    blocking(&state, move |core| core.project_map(&request)).await
 }
 
 #[tauri::command]

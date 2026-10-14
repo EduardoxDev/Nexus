@@ -198,6 +198,13 @@ Etapa 1 — histórico do git ([ADR-0013](decisions/ADR-0013-historico-pelo-git-
 - [x] Seção "Mudanças recentes" nos Context Packs (Markdown, JSON e app), lida na hora.
 - [x] Histórico na prévia da busca do app.
 
+Etapa 2 — mapa do código:
+
+- [x] `analysis::map`: grafo dos imports internos com graus de entrada/saída e PageRank, corte nos 150 nós mais centrais (até 500), filtro por pasta e modo agrupado por pasta; nada novo é gravado.
+- [x] Tela "Mapa": layout de forças próprio em canvas (sem dependência nova), que para quando estabiliza; zoom, arraste, hover com vizinhos, clique abre o arquivo na Busca; cores por linguagem com legenda.
+- [x] Acessibilidade: tabela "Mais centrais" com os mesmos números do canvas.
+- [x] 10 000 arquivos e ~20 000 imports: 53 ms para montar o mapa (release, [benchmarks.md](benchmarks.md)).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

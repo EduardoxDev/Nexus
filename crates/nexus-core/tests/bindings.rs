@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use nexus_core::analysis::graph::{Edge, GraphStats};
+use nexus_core::analysis::map::{MapEdge, MapNode, MapRequest, ProjectMap};
 use nexus_core::analysis::query::{
     AnalysisOverview, CountItem, FileAnalysisView, LanguageAnalysis, SymbolHit,
 };
@@ -172,6 +173,10 @@ fn generate() -> BTreeMap<String, String> {
     render::<Edge>(&cfg, &mut files);
     render::<GraphStats>(&cfg, &mut files);
     render::<FileAnalysisView>(&cfg, &mut files);
+    render::<MapRequest>(&cfg, &mut files);
+    render::<MapNode>(&cfg, &mut files);
+    render::<MapEdge>(&cfg, &mut files);
+    render::<ProjectMap>(&cfg, &mut files);
     render::<Commit>(&cfg, &mut files);
     render::<BlameEntry>(&cfg, &mut files);
     render::<FileHistory>(&cfg, &mut files);

@@ -11,6 +11,7 @@ import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { OverviewPage } from "@/features/overview/OverviewPage";
 import { FreshnessPage } from "@/features/freshness/FreshnessPage";
 import { IntegrationsPage } from "@/features/integrations/IntegrationsPage";
+import { MapPage } from "@/features/map/MapPage";
 import { MemoryPage } from "@/features/memory/MemoryPage";
 import { ContextPacksPage } from "@/features/packs/ContextPacksPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
@@ -31,6 +32,7 @@ const PAGES: Partial<Record<RouteId, () => ReactNode>> = {
   overview: () => <OverviewPage />,
   projects: () => <ProjectsPage />,
   search: () => <SearchPage />,
+  map: () => <MapPage />,
   contextPacks: () => <ContextPacksPage />,
   memory: () => <MemoryPage />,
   freshness: () => <FreshnessPage />,
@@ -44,6 +46,7 @@ const FULL_HEIGHT = new Set<RouteId>([
   "diagnostics",
   "projects",
   "search",
+  "map",
   "contextPacks",
   "memory",
   "freshness",

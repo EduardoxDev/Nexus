@@ -475,6 +475,15 @@ impl Core {
         self.db.read(|c| analysis::query::overview(c, project_id))
     }
 
+    /// Mapa do código: imports internos com graus e centralidade, cortado nos nós centrais.
+    pub fn project_map(
+        &self,
+        req: &analysis::map::MapRequest,
+    ) -> Result<analysis::map::ProjectMap> {
+        self.project(req.project_id)?;
+        self.db.read(|c| analysis::map::project_map(c, req))
+    }
+
     /// Declarações com um nome (comparação normalizada).
     pub fn find_symbols(
         &self,

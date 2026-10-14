@@ -4,6 +4,7 @@ import {
   FolderGit2,
   HeartPulse,
   LayoutDashboard,
+  Network,
   PackageOpen,
   Radar,
   ScanSearch,
@@ -17,6 +18,7 @@ export type RouteId =
   | "overview"
   | "projects"
   | "search"
+  | "map"
   | "contextPacks"
   | "memory"
   | "freshness"
@@ -44,6 +46,7 @@ export const ROUTES: readonly RouteDef[] = [
   },
   { id: "projects", icon: FolderGit2, group: "workspace", plannedPhase: null, ...t.nav.projects },
   { id: "search", icon: ScanSearch, group: "workspace", plannedPhase: null, ...t.nav.search },
+  { id: "map", icon: Network, group: "workspace", plannedPhase: null, ...t.nav.map },
   {
     id: "contextPacks",
     icon: PackageOpen,

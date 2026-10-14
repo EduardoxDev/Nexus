@@ -32,11 +32,11 @@ Observações:
 
 Mesmo teste, `main` e a branch da etapa rodados em sequência para comparar nas mesmas condições (a máquina estava mais lenta que no dia da tabela acima: só gerar os arquivos levou 44–51 s):
 
-| Medida                             | `main` | Com Go/Java/C# |
-| ---------------------------------- | ------ | -------------- |
+| Medida                              | `main` | Com Go/Java/C# |
+| ----------------------------------- | ------ | -------------- |
 | Indexação inicial (10 000 arquivos) | 13,2 s | 15,5 s         |
-| Incremental sem mudanças           | 0,40 s | 0,40 s         |
-| Incremental com 1 arquivo alterado | 0,89 s | 0,91 s         |
+| Incremental sem mudanças            | 0,40 s | 0,40 s         |
+| Incremental com 1 arquivo alterado  | 0,89 s | 0,91 s         |
 
 A diferença na inicial está dentro da variação da máquina; as incrementais ficaram iguais. A resolução nova só roda para arquivos Go/Java/C#.
 
@@ -109,6 +109,10 @@ Os tempos da CLI incluem iniciar o processo e abrir o banco (~40–60 ms).
 ### Custo da análise de código
 
 Medido em memória, numa thread, sem disco (`tests/scale.rs`, release): analisar os 10 000 arquivos sintéticos (30 000 declarações) levou **96–99 ms**, contra **199–203 ms** para dividir em chunks e montar o texto do FTS. A análise custa cerca de metade do que o indexador já fazia por arquivo. A reconstrução do grafo (~250 ms) e a verificação de atualidade (~320 ms) rodam na finalização de cada indexação com mudanças, o que explica o "1 arquivo alterado" perto de 0,9–1 s.
+
+### Mapa do código (v0.3)
+
+Medido em memória, numa thread (`project_map_scales_to_ten_thousand_files` em `tests/analysis.rs`, release): montar o mapa de 10 000 arquivos e 19 962 imports (graus, PageRank com 30 iterações e corte nos 150 nós mais centrais) levou **53 ms**; em debug, 307 ms. A leitura das arestas no banco vem antes e não entra nessa conta. O layout do desenho roda no app, sobre no máximo 500 nós.
 
 ### Variação do tempo de parede
 

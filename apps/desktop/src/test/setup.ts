@@ -25,6 +25,10 @@ Object.assign(Element.prototype, {
   releasePointerCapture: () => undefined,
 });
 
+// jsdom não desenha em canvas: sem contexto, o mapa só monta o layout.
+HTMLCanvasElement.prototype.getContext = (() =>
+  null) as typeof HTMLCanvasElement.prototype.getContext;
+
 if (typeof window.matchMedia !== "function") {
   window.matchMedia = (query: string) =>
     ({

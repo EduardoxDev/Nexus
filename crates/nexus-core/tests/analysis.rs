@@ -498,3 +498,67 @@ fn report_for_real_repository() {
         println!("  {s}");
     }
 }
+
+#[test]
+fn project_map_of_a_fixture_ranks_shared_modules_first() {
+    use nexus_core::analysis::map::MapRequest;
+    let (_tmp, _root, core, pid) = open("saas-app");
+    let m = core
+        .project_map(&MapRequest {
+            project_id: pid,
+            ..Default::default()
+        })
+        .unwrap();
+    assert!(!m.nodes.is_empty() && !m.edges.is_empty());
+    // Toda aresta liga nós do mapa, e os graus batem com o grafo do índice.
+    let ids: BTreeSet<&str> = m.nodes.iter().map(|n| n.id.as_str()).collect();
+    assert!(
+        m.edges
+            .iter()
+            .all(|e| ids.contains(e.from.as_str()) && ids.contains(e.to.as_str()))
+    );
+    let top = &m.nodes[0];
+    assert!(top.in_degree > 0, "o mais central é importado por alguém");
+    let importers = core.file_analysis(pid, &top.id).unwrap().imported_by;
+    let distinct: BTreeSet<_> = importers.iter().map(|e| e.from_path.as_str()).collect();
+    assert_eq!(top.in_degree, distinct.len() as i64);
+
+    let grouped = core
+        .project_map(&MapRequest {
+            project_id: pid,
+            group_by_folder: true,
+            ..Default::default()
+        })
+        .unwrap();
+    assert!(grouped.grouped && grouped.nodes.len() < m.nodes.len());
+    assert!(grouped.nodes.iter().all(|n| !n.id.ends_with(".ts")));
+}
+
+/// O mapa de 10 000 arquivos e ~20 000 imports é montado bem abaixo de 1 s (debug: alguns
+/// segundos no máximo). Medido em `docs/benchmarks.md` em release.
+#[test]
+fn project_map_scales_to_ten_thousand_files() {
+    use nexus_core::analysis::map::{MapRequest, build};
+    let n = 10_000usize;
+    let mut edges = Vec::with_capacity(2 * n);
+    for i in 1..n {
+        let file = |k: usize| format!("pkg{:03}/m{k}.ts", k / 100);
+        edges.push((file(i), file(i - 1)));
+        edges.push((file(i), file(i % 37)));
+    }
+    let started = std::time::Instant::now();
+    let m = build(
+        &edges,
+        &std::collections::HashMap::new(),
+        &MapRequest {
+            project_id: 1,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let took = started.elapsed();
+    eprintln!("mapa de {n} arquivos e {} arestas: {took:?}", m.total_edges);
+    assert_eq!(m.nodes.len(), 150);
+    assert_eq!(m.total_nodes, n as i64);
+    assert!(took.as_secs() < 10, "{took:?}");
+}

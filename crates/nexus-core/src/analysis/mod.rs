@@ -11,6 +11,7 @@ pub mod go;
 pub mod graph;
 mod java;
 pub mod lexer;
+pub mod map;
 mod python;
 pub mod query;
 pub mod resolve;

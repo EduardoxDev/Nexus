@@ -3,7 +3,7 @@
  * o secundário com um reflexo que passa no hover (GlareHover). Ambos do React Bits.
  */
 import { Download } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import GlareHover from "@/components/GlareHover";
 import StarBorder from "@/components/StarBorder";
@@ -12,7 +12,27 @@ import { downloadHref } from "@/site";
 
 const SIZE = "h-12 px-6 text-[15px] font-medium";
 
-export function DownloadButton({ label = "Baixar para Windows" }: { label?: string }) {
+/** `null` = celular/tablet ou sistema sem pacote: o botão fica genérico. */
+type System = "Windows" | "macOS" | "Linux" | null;
+
+/** Sistema de quem visita (só no navegador; o HTML pré-renderizado sai com "Windows"). */
+function useSystem(): System {
+  const [system, setSystem] = useState<System>("Windows");
+  useEffect(() => {
+    const p = `${navigator.platform} ${navigator.userAgent}`;
+    // Celulares e tablets primeiro: iPhone/iPad não são macOS, Android não é Linux de desktop.
+    if (/iPhone|iPad|iPod|Android|Mobi/i.test(p)) setSystem(null);
+    else if (/Mac/i.test(p)) setSystem("macOS");
+    else if (/Linux|X11/i.test(p)) setSystem("Linux");
+    else if (!/Win/i.test(p)) setSystem(null);
+  }, []);
+  return system;
+}
+
+/** Leva à última release publicada, que traz os pacotes de todos os sistemas. */
+export function DownloadButton({ label }: { label?: string }) {
+  const system = useSystem();
+  label ??= system ? `Baixar para ${system}` : "Baixar a NEXUS";
   return (
     <StarBorder
       as="a"

@@ -83,29 +83,39 @@ function Hero() {
   return (
     <section
       aria-label={t.app.name}
-      className="relative overflow-hidden rounded-2xl border border-border bg-surface-1 px-7 py-6 [box-shadow:var(--shadow-card),var(--highlight-top)]"
+      data-spotlight=""
+      className="relative overflow-hidden rounded-2xl border border-border bg-surface-1 px-8 py-7 [box-shadow:var(--shadow-card),var(--highlight-top)]"
     >
-      {/* Brilho da marca: decorativo. */}
+      {/* Fundo decorativo: pontilhado que some nas bordas e um brilho azul no canto. */}
+      <div aria-hidden="true" className="dot-grid pointer-events-none absolute inset-0" />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_110%_at_100%_0%,var(--accent-glow),transparent_65%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_120%_at_100%_0%,var(--accent-glow),transparent_70%)]"
       />
-      <div className="relative flex flex-wrap items-center gap-x-8 gap-y-5">
-        <div className="flex min-w-0 flex-1 items-center gap-5">
-          <img
-            src={logoUrl}
-            alt=""
-            aria-hidden="true"
-            className="size-16 shrink-0 rounded-2xl shadow-raised"
-            draggable={false}
-          />
+      <div className="relative flex flex-wrap items-center gap-x-8 gap-y-6">
+        <div className="flex min-w-0 flex-1 items-center gap-6">
+          <div className="relative shrink-0">
+            <div
+              aria-hidden="true"
+              className="absolute -inset-3 rounded-[28px] bg-[radial-gradient(closest-side,var(--accent-glow),transparent)] blur-md"
+            />
+            <img
+              src={logoUrl}
+              alt=""
+              aria-hidden="true"
+              className="relative size-[72px] rounded-[20px] ring-1 ring-white/10 shadow-raised"
+              draggable={false}
+            />
+          </div>
           <div className="min-w-0">
-            <p className="font-display text-3xl font-semibold tracking-[-0.03em] text-fg">
+            <p className="font-display text-[34px] leading-tight font-semibold tracking-[-0.035em] text-fg">
               {t.app.name}
             </p>
             {/* Duas cores, como os títulos do site: nome em branco, slogan em cinza. */}
-            <p className="text-lg font-medium tracking-[-0.01em] text-fg-muted">{t.app.slogan}</p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-fg-muted">
+            <p className="text-lg leading-snug font-medium tracking-[-0.015em] text-fg-muted">
+              {t.app.slogan}
+            </p>
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-fg-subtle">
               <span>{t.app.tagline}</span>
               <span aria-hidden="true">·</span>
               <span className="flex items-center gap-1">
@@ -115,7 +125,7 @@ function Hero() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button variant="primary" size="lg" onClick={() => navigate("search")}>
             <Search aria-hidden="true" />
             {t.overview.heroSearch}

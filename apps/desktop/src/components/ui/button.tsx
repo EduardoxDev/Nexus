@@ -9,10 +9,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Azul com leve degradê e brilho no hover (como o botão de download do site).
         primary:
-          "bg-accent text-accent-fg [box-shadow:inset_0_1px_0_oklch(1_0_0/0.18),0_1px_2px_oklch(0.3_0.15_266/0.35)] hover:bg-accent-hover",
+          "bg-[linear-gradient(180deg,oklch(0.64_0.19_268),var(--accent))] text-accent-fg [box-shadow:inset_0_1px_0_oklch(1_0_0/0.22),0_1px_2px_oklch(0.3_0.15_266/0.4)] hover:[box-shadow:inset_0_1px_0_oklch(1_0_0/0.25),0_8px_24px_-8px_var(--accent)] hover:brightness-110",
         secondary:
-          "border border-border bg-surface-1 text-fg shadow-card hover:border-border-strong hover:bg-surface-2",
+          "border border-border bg-surface-2 text-fg shadow-card hover:border-border-strong hover:bg-surface-3",
         ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
         danger: "bg-danger text-accent-fg shadow-card hover:opacity-90",
       },

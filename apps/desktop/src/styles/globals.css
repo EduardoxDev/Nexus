@@ -184,3 +184,56 @@
     stroke-width: 1.75;
   }
 }
+
+@layer components {
+  /*
+   * Cartões com holofote (o mesmo efeito dos cartões do site): um brilho azul suave segue o
+   * mouse por dentro do cartão e acende a borda perto do cursor. A posição vem de
+   * `useSpotlight` (um só listener para o app inteiro). Só aparece no hover.
+   */
+  [data-spotlight] {
+    position: relative;
+    isolation: isolate;
+  }
+  [data-spotlight]::before,
+  [data-spotlight]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 260ms ease;
+  }
+  [data-spotlight]::before {
+    z-index: -1;
+    background: radial-gradient(
+      420px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      var(--spot-fill),
+      transparent 45%
+    );
+  }
+  [data-spotlight]::after {
+    z-index: 1;
+    padding: 1px;
+    background: radial-gradient(
+      260px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      var(--spot-edge),
+      transparent 42%
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+  [data-spotlight]:hover::before,
+  [data-spotlight]:hover::after {
+    opacity: 1;
+  }
+
+  /* Pontilhado que some nas bordas (fundo do banner da Visão geral). */
+  .dot-grid {
+    background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+    background-size: 18px 18px;
+    mask-image: radial-gradient(ellipse 70% 90% at 75% 20%, #000 20%, transparent 75%);
+  }
+}

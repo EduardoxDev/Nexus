@@ -21,6 +21,7 @@ import { SettingsPage } from "@/features/settings/SettingsPage";
 import type { Settings } from "@/lib/bindings";
 import { useStartupUpdateCheck } from "@/features/updates/updates";
 import { useIndexingEvents } from "@/lib/events";
+import { useSpotlight } from "@/lib/spotlight";
 import { useSetSetting } from "@/lib/queries";
 import { useApplyAppearance } from "@/lib/theme";
 import { useUi } from "@/stores/ui";
@@ -54,6 +55,7 @@ export function AppShell({ settings }: { settings: Settings }) {
   const appearance = useApplyAppearance(settings.theme, settings.reducedMotion);
   useIndexingEvents();
   useStartupUpdateCheck(settings);
+  useSpotlight();
 
   const toggleSidebar = useCallback(() => {
     setSetting.mutate({ key: "ui.sidebar_collapsed", value: !settings.sidebarCollapsed });

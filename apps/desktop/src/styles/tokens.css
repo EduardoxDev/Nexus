@@ -44,6 +44,9 @@
   --highlight-top: inset 0 1px 0 oklch(1 0 0 / 0.18);
   --shadow-overlay:
     0 12px 32px -8px oklch(0.2 0.02 270 / 0.22), 0 2px 6px oklch(0.2 0.02 270 / 0.1);
+  --spot-fill: oklch(0.6 0.2 268 / 0.07);
+  --spot-edge: oklch(0.55 0.21 268 / 0.55);
+  --dot: oklch(0.55 0.02 268 / 0.22);
 }
 
 .dark {
@@ -65,7 +68,8 @@
   --accent-hover: oklch(0.61 0.19 266);
   --accent-fg: oklch(0.99 0 0);
   --accent-text: oklch(0.79 0.12 266);
-  --accent-subtle: oklch(0.27 0.06 266);
+  /* Seleção em listas: um toque de azul sobre o grafite, sem pesar. */
+  --accent-subtle: oklch(0.245 0.035 268);
   --accent-glow: oklch(0.56 0.2 266 / 0.22);
   --focus-ring: oklch(0.7 0.16 266);
 
@@ -82,6 +86,9 @@
   --shadow-raised: 0 10px 24px -6px oklch(0 0 0 / 0.5), 0 2px 4px oklch(0 0 0 / 0.3);
   --highlight-top: inset 0 1px 0 oklch(1 0 0 / 0.045);
   --shadow-overlay: 0 16px 40px -8px oklch(0 0 0 / 0.55), 0 2px 8px oklch(0 0 0 / 0.35);
+  --spot-fill: oklch(0.6 0.2 268 / 0.1);
+  --spot-edge: oklch(0.68 0.19 268 / 0.7);
+  --dot: oklch(0.7 0.02 268 / 0.2);
 }
 
 :root {

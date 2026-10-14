@@ -23,8 +23,9 @@ export function LanguageBars({ languages }: { languages: LanguageStat[] }) {
             title={`${l.language}: ${formatBytes(l.bytes)} · ${detail}`}
           >
             <div className="flex items-baseline justify-between gap-3">
-              <span className="truncate text-sm text-fg">{l.language}</span>
-              <span className="shrink-0 text-xs text-fg-muted">
+              {/* O nome da linguagem aparece inteiro; os detalhes é que cedem espaço. */}
+              <span className="shrink-0 text-sm font-medium text-fg">{l.language}</span>
+              <span className="min-w-0 truncate text-right text-xs text-fg-muted">
                 <span className="font-mono">{formatBytes(l.bytes)}</span> · {detail}
               </span>
             </div>

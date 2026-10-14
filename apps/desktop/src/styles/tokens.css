@@ -1,6 +1,6 @@
 /*
  * Design tokens do NEXUS.
- * Tema escuro (grafite azulado) é o padrão; tema claro completo. O azul da marca é usado só
+ * Tema escuro (grafite neutro, quase preto, como o site) é o padrão; tema claro completo. O azul da marca é usado só
  * para foco, ação primária, seleção e destaques de identidade. Superfícies em camadas:
  * canvas (bg) < barra lateral < cartões (surface-1) < controles (surface-2/3).
  * Contraste verificado em src/styles/tokens.test.ts.
@@ -44,27 +44,32 @@
   --highlight-top: inset 0 1px 0 oklch(1 0 0 / 0.18);
   --shadow-overlay:
     0 12px 32px -8px oklch(0.2 0.02 270 / 0.22), 0 2px 6px oklch(0.2 0.02 270 / 0.1);
+  --spot-fill: oklch(0.6 0.2 268 / 0.07);
+  --spot-edge: oklch(0.55 0.21 268 / 0.55);
+  --dot: oklch(0.55 0.02 268 / 0.22);
 }
 
 .dark {
   color-scheme: dark;
-  --bg: oklch(0.158 0.008 265);
-  --surface-sidebar: oklch(0.172 0.009 265);
-  --surface-1: oklch(0.196 0.01 265);
-  --surface-2: oklch(0.226 0.011 265);
-  --surface-3: oklch(0.262 0.012 265);
-  --border: oklch(0.276 0.011 265);
-  --border-strong: oklch(0.355 0.013 265);
+  /* Grafite neutro, quase preto (o mesmo do site): o azul fica só nos destaques. */
+  --bg: oklch(0.141 0.005 286);
+  --surface-sidebar: oklch(0.158 0.005 286);
+  --surface-1: oklch(0.183 0.006 286);
+  --surface-2: oklch(0.21 0.006 286);
+  --surface-3: oklch(0.245 0.008 286);
+  --border: oklch(0.262 0.008 286);
+  --border-strong: oklch(0.335 0.009 286);
 
-  --fg: oklch(0.96 0.004 265);
-  --fg-muted: oklch(0.77 0.01 265);
-  --fg-subtle: oklch(0.66 0.012 265);
+  --fg: oklch(0.967 0.001 286);
+  --fg-muted: oklch(0.74 0.012 286);
+  --fg-subtle: oklch(0.66 0.012 286);
 
   --accent: oklch(0.56 0.2 266);
   --accent-hover: oklch(0.61 0.19 266);
   --accent-fg: oklch(0.99 0 0);
   --accent-text: oklch(0.79 0.12 266);
-  --accent-subtle: oklch(0.27 0.06 266);
+  /* Seleção em listas: um toque de azul sobre o grafite, sem pesar. */
+  --accent-subtle: oklch(0.245 0.035 268);
   --accent-glow: oklch(0.56 0.2 266 / 0.22);
   --focus-ring: oklch(0.7 0.16 266);
 
@@ -81,14 +86,17 @@
   --shadow-raised: 0 10px 24px -6px oklch(0 0 0 / 0.5), 0 2px 4px oklch(0 0 0 / 0.3);
   --highlight-top: inset 0 1px 0 oklch(1 0 0 / 0.045);
   --shadow-overlay: 0 16px 40px -8px oklch(0 0 0 / 0.55), 0 2px 8px oklch(0 0 0 / 0.35);
+  --spot-fill: oklch(0.6 0.2 268 / 0.1);
+  --spot-edge: oklch(0.68 0.19 268 / 0.7);
+  --dot: oklch(0.7 0.02 268 / 0.2);
 }
 
 :root {
+  /* Inter embutida no app (@fontsource-variable/inter), a mesma do site; sem rede. */
   --font-sans:
-    "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+    "Inter Variable", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Arial,
     sans-serif;
-  --font-display:
-    "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Inter Variable", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --font-mono:
     "Cascadia Mono", "Cascadia Code", Consolas, "JetBrains Mono", "SF Mono", ui-monospace, monospace;
   --radius-sm: 5px;

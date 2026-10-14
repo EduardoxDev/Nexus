@@ -928,6 +928,8 @@ const HISTORY_COMMITS: u32 = 3;
 /// Completa o pack com os últimos commits dos arquivos principais (`git` instalado, só leitura).
 /// Sem git, fora de repositório ou com erro, a seção fica vazia: o pack não depende dela.
 pub fn attach_history(root: &Path, mut pack: ContextPack) -> ContextPack {
+    // O prazo começa antes de procurar o git: a 1ª verificação também conta.
+    let deadline = std::time::Instant::now() + HISTORY_BUDGET;
     if !git_history::available() {
         return pack;
     }
@@ -940,13 +942,11 @@ pub fn attach_history(root: &Path, mut pack: ContextPack) -> ContextPack {
         .map(|s| s.rel_path.as_str())
         .filter(|p| seen.insert(*p))
         .take(HISTORY_FILES);
-    let deadline = std::time::Instant::now() + HISTORY_BUDGET;
     for rel in paths {
-        let left = deadline.saturating_duration_since(std::time::Instant::now());
-        if left.is_zero() {
+        if std::time::Instant::now() >= deadline {
             break;
         }
-        match git_history::file_history_within(root, rel, HISTORY_COMMITS, left) {
+        match git_history::file_history_until(root, rel, HISTORY_COMMITS, deadline) {
             Ok(commits) if commits.is_empty() => {}
             Ok(commits) => pack.recent_changes.push(PackFileChanges {
                 rel_path: rel.to_owned(),

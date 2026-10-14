@@ -145,21 +145,59 @@ fn repo_git(root: &Path) -> Command {
     cmd
 }
 
-/// O arquivo está versionado num repositório git (fora de repositório ou não versionado: falso).
+/// Tempo que resta até o prazo (zero se já passou).
+fn remaining(deadline: Instant) -> Duration {
+    deadline.saturating_duration_since(Instant::now())
+}
+
+/// Há um `.git` (pasta, ou arquivo de worktree) na raiz ou acima: é assim que o git acha o
+/// repositório. Sem nenhum, a pasta não é repositório e não há histórico a mostrar.
+fn in_repository(root: &Path) -> bool {
+    root.ancestors().any(|dir| dir.join(".git").exists())
+}
+
+/// Se o arquivo está versionado; `None` quando o próprio git falha (repositório quebrado, prazo).
 /// Só consultado quando o comando principal falha, para não gastar um processo a mais sempre.
-fn tracked(root: &Path, rel: &str) -> bool {
+fn tracked(root: &Path, rel: &str, deadline: Instant) -> Option<bool> {
     let mut cmd = repo_git(root);
-    cmd.args(["ls-files", "--error-unmatch", "--"]).arg(rel);
-    run(cmd, TIMEOUT).is_ok()
+    cmd.args(["ls-files", "-z", "--"]).arg(rel);
+    run(cmd, remaining(deadline))
+        .ok()
+        .map(|out| !out.text.is_empty())
 }
 
 /// Falha do git: fora de repositório ou arquivo não versionado viram "sem histórico" (`None`);
-/// o resto (prazo, erro do git) é erro.
-fn failure(root: &Path, rel: &str, e: &std::io::Error, what: &str) -> Option<Error> {
-    if e.kind() != std::io::ErrorKind::TimedOut && !tracked(root, rel) {
+/// o resto (prazo, repositório quebrado, erro do git) é erro, para não parecer "sem commits".
+fn failure(
+    root: &Path,
+    rel: &str,
+    e: &std::io::Error,
+    what: &str,
+    deadline: Instant,
+) -> Option<Error> {
+    let error = Some(Error::Internal(format!("{what} de {rel}: {e}")));
+    if e.kind() == std::io::ErrorKind::TimedOut {
+        return error;
+    }
+    if !in_repository(root) {
         return None;
     }
-    Some(Error::Internal(format!("{what} de {rel}: {e}")))
+    match tracked(root, rel, deadline) {
+        Some(false) => None,
+        _ => error,
+    }
+}
+
+/// Roda dentro do prazo; sem tempo restante, nem começa.
+fn run_until(cmd: Command, deadline: Instant) -> std::io::Result<Output> {
+    let left = remaining(deadline).min(TIMEOUT);
+    if left.is_zero() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "o git passou do prazo",
+        ));
+    }
+    run(cmd, left)
 }
 
 fn unavailable() -> Error {
@@ -208,15 +246,16 @@ fn parse_commits(out: &str) -> Vec<Commit> {
 /// Commits que tocaram `rel` (seguindo renomeações), do mais novo ao mais antigo.
 /// Fora de um repositório, ou com o arquivo não versionado, a lista é vazia.
 pub fn file_history(root: &Path, rel: &str, limit: u32) -> Result<Vec<Commit>> {
-    file_history_within(root, rel, limit, TIMEOUT)
+    file_history_until(root, rel, limit, Instant::now() + TIMEOUT)
 }
 
-/// Como [`file_history`], com prazo menor (o pack divide um prazo total entre os arquivos).
-pub fn file_history_within(
+/// Como [`file_history`], com um prazo absoluto que vale para tudo, inclusive a conferência
+/// depois de uma falha (o pack divide um prazo total entre os arquivos).
+pub fn file_history_until(
     root: &Path,
     rel: &str,
     limit: u32,
-    timeout: Duration,
+    deadline: Instant,
 ) -> Result<Vec<Commit>> {
     if !available() {
         return Err(unavailable());
@@ -228,9 +267,16 @@ pub fn file_history_within(
         .arg("--format=%H%x00%an%x00%at%x00%s")
         .arg("--")
         .arg(rel);
-    match run(cmd, timeout.min(TIMEOUT)) {
-        Ok(out) => Ok(parse_commits(&out.text)),
-        Err(e) => failure(root, rel, &e, "histórico do git").map_or(Ok(Vec::new()), Err),
+    match run_until(cmd, deadline) {
+        Ok(out) => {
+            let mut commits = parse_commits(&out.text);
+            // Saída cortada no limite: o último registro pode ter o assunto pela metade.
+            if out.truncated {
+                commits.pop();
+            }
+            Ok(commits)
+        }
+        Err(e) => failure(root, rel, &e, "histórico do git", deadline).map_or(Ok(Vec::new()), Err),
     }
 }
 
@@ -251,13 +297,14 @@ pub fn blame(root: &Path, rel: &str, start: i64, end: i64) -> Result<Vec<BlameEn
         .arg(format!("-L{start},{end}"))
         .arg("--")
         .arg(rel);
-    match run(cmd, TIMEOUT) {
+    let deadline = Instant::now() + TIMEOUT;
+    match run_until(cmd, deadline) {
         // Autoria parcial seria enganosa: com a saída cortada, é erro.
         Ok(out) if out.truncated => Err(Error::Internal(format!(
             "autoria do git de {rel}: saída grande demais"
         ))),
         Ok(out) => Ok(parse_blame(&out.text)),
-        Err(e) => failure(root, rel, &e, "autoria do git").map_or(Ok(Vec::new()), Err),
+        Err(e) => failure(root, rel, &e, "autoria do git", deadline).map_or(Ok(Vec::new()), Err),
     }
 }
 

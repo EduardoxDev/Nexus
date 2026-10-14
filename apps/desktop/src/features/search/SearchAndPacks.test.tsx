@@ -467,7 +467,8 @@ describe("Histórico na prévia com erro", () => {
     expect(await within(history).findByText(/o git passou do prazo/)).toBeInTheDocument();
     fail = false;
     await user.click(within(history).getByRole("button", { name: "Tentar novamente" }));
-    expect(await within(history).findByText("Mudanças recentes (0)")).toBeInTheDocument();
+    // A seção é montada de novo depois do erro: procura dentro da prévia, não na antiga.
+    expect(await within(preview).findByText("Mudanças recentes (0)")).toBeInTheDocument();
     expect(calls.filter((c) => c.cmd === "get_file_history").length).toBeGreaterThan(1);
   });
 });

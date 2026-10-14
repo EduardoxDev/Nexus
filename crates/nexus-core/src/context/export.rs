@@ -92,8 +92,13 @@ fn inline_code(text: &str) -> String {
 }
 
 /// Texto do repositório (assunto, autor) como texto puro em Markdown: uma linha, sem links,
-/// ênfase, HTML ou código.
+/// ênfase, HTML ou código. Com URL ou e-mail (que o GFM transformaria em link sozinho), vai
+/// inteiro como código.
 fn escape_markdown(text: &str) -> String {
+    let lower = text.to_ascii_lowercase();
+    if lower.contains("://") || lower.contains("www.") || text.contains('@') {
+        return inline_code(text);
+    }
     let mut out = String::with_capacity(text.len());
     for ch in text.chars() {
         match ch {
@@ -514,10 +519,15 @@ mod tests {
     #[test]
     fn escape_markdown_keeps_commit_text_plain() {
         assert_eq!(
-            escape_markdown("[release](https://x.y) <b>\n`z`"),
-            r"\[release\]\(https://x.y\) \<b\> \`z\`"
+            escape_markdown("[release](docs) <b>\n`z`"),
+            r"\[release\]\(docs\) \<b\> \`z\`"
         );
         assert_eq!(escape_markdown("fix: frete"), "fix: frete");
+        assert_eq!(
+            escape_markdown("veja https://x.y e ana@x.y"),
+            "`veja https://x.y e ana@x.y`"
+        );
+        assert_eq!(escape_markdown("www.exemplo.com"), "`www.exemplo.com`");
     }
 
     #[test]

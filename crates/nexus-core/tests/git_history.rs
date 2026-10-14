@@ -209,3 +209,14 @@ fn paths_are_literal_not_patterns() {
     let subjects: Vec<_> = h.iter().map(|c| c.subject.as_str()).collect();
     assert_eq!(subjects, ["feat: colchetes"]);
 }
+
+/// Repositório quebrado é erro, não "arquivo sem commits".
+#[test]
+fn broken_repository_is_an_error_not_an_empty_history() {
+    if !available() {
+        return;
+    }
+    let tmp = repo();
+    std::fs::write(tmp.path().join(".git/HEAD"), "lixo\n").unwrap();
+    assert!(file_history(tmp.path(), "src/shipping.ts", 5).is_err());
+}

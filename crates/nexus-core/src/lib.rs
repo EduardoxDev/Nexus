@@ -433,6 +433,31 @@ impl Core {
             .map(|f| f.rel_path)
     }
 
+    /// Histórico para a interface: o caminho é conferido (indexado) antes de olhar se há git.
+    pub fn file_history_view(
+        &self,
+        project_id: i64,
+        rel_path: &str,
+        limit: u32,
+    ) -> Result<git_history::FileHistory> {
+        let project = self.project(project_id)?;
+        let rel = self.indexed_rel_path(project_id, rel_path)?;
+        if !git_history::available() {
+            return Ok(git_history::FileHistory {
+                git_available: false,
+                commits: Vec::new(),
+            });
+        }
+        Ok(git_history::FileHistory {
+            git_available: true,
+            commits: git_history::file_history(
+                std::path::Path::new(&project.root_path),
+                &rel,
+                limit,
+            )?,
+        })
+    }
+
     /// Commits que tocaram o arquivo, pelo `git` instalado (ADR-0013). Só leitura, só de arquivo indexado.
     pub fn file_history(
         &self,

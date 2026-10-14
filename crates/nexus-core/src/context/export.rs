@@ -91,6 +91,29 @@ fn inline_code(text: &str) -> String {
     }
 }
 
+/// Texto do repositório (assunto, autor) como texto puro em Markdown: uma linha, sem links,
+/// ênfase, HTML ou código. Com URL ou e-mail (que o GFM transformaria em link sozinho), vai
+/// inteiro como código.
+fn escape_markdown(text: &str) -> String {
+    let lower = text.to_ascii_lowercase();
+    if lower.contains("://") || lower.contains("www.") || text.contains('@') {
+        return inline_code(text);
+    }
+    let mut out = String::with_capacity(text.len());
+    for ch in text.chars() {
+        match ch {
+            '\n' | '\r' => out.push(' '),
+            '\\' | '`' | '*' | '_' | '[' | ']' | '(' | ')' | '<' | '>' | '!' | '#' | '|' | '~'
+            | '{' | '}' | '&' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
 fn role_title(role: SourceRole) -> &'static str {
     match role {
         SourceRole::Primary => "principal",
@@ -221,8 +244,8 @@ fn history_section(out: &mut String, changes: &[&PackFileChanges]) {
                 out,
                 "  - `{}` {} — {}, {}",
                 c.short_hash,
-                c.subject.replace(['\n', '\r'], " "),
-                c.author.replace(['\n', '\r'], " "),
+                escape_markdown(&c.subject),
+                escape_markdown(&c.author),
                 date.get(..10).unwrap_or(&date)
             );
         }
@@ -491,6 +514,20 @@ mod tests {
         assert_eq!(fence_for("sem crases"), "```");
         assert_eq!(fence_for("um ``` dentro"), "````");
         assert_eq!(fence_for("cinco ````` aqui"), "``````");
+    }
+
+    #[test]
+    fn escape_markdown_keeps_commit_text_plain() {
+        assert_eq!(
+            escape_markdown("[release](docs) <b>\n`z`"),
+            r"\[release\]\(docs\) \<b\> \`z\`"
+        );
+        assert_eq!(escape_markdown("fix: frete"), "fix: frete");
+        assert_eq!(
+            escape_markdown("veja https://x.y e ana@x.y"),
+            "`veja https://x.y e ana@x.y`"
+        );
+        assert_eq!(escape_markdown("www.exemplo.com"), "`www.exemplo.com`");
     }
 
     #[test]

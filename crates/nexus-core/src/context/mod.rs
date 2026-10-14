@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::classify::FileKind;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorCode, Result};
 use crate::freshness::{self, FreshnessIssue};
 use crate::git_history::{self, Commit};
 use crate::memory::{self, Memory, MemoryKind, MemoryStatus};
@@ -920,12 +920,16 @@ pub fn materialize(root: &Path, plan: ContextPackPlan) -> Result<ContextPack> {
 
 /// Arquivos principais com histórico consultado, no máximo.
 const HISTORY_FILES: usize = 5;
+/// Prazo total da seção "Mudanças recentes" (dividido entre os arquivos, não 5 s por arquivo).
+const HISTORY_BUDGET: std::time::Duration = std::time::Duration::from_secs(5);
 /// Commits por arquivo na seção "Mudanças recentes".
 const HISTORY_COMMITS: u32 = 3;
 
 /// Completa o pack com os últimos commits dos arquivos principais (`git` instalado, só leitura).
 /// Sem git, fora de repositório ou com erro, a seção fica vazia: o pack não depende dela.
 pub fn attach_history(root: &Path, mut pack: ContextPack) -> ContextPack {
+    // O prazo começa antes de procurar o git: a 1ª verificação também conta.
+    let deadline = std::time::Instant::now() + HISTORY_BUDGET;
     if !git_history::available() {
         return pack;
     }
@@ -939,13 +943,18 @@ pub fn attach_history(root: &Path, mut pack: ContextPack) -> ContextPack {
         .filter(|p| seen.insert(*p))
         .take(HISTORY_FILES);
     for rel in paths {
-        match git_history::file_history(root, rel, HISTORY_COMMITS) {
+        if std::time::Instant::now() >= deadline {
+            break;
+        }
+        match git_history::file_history_until(root, rel, HISTORY_COMMITS, deadline) {
             Ok(commits) if commits.is_empty() => {}
             Ok(commits) => pack.recent_changes.push(PackFileChanges {
                 rel_path: rel.to_owned(),
                 commits,
             }),
-            // Um erro (prazo, arquivo sumiu) tende a se repetir: não insiste nos demais.
+            // Problema só deste arquivo (apagado, virou link): segue para os demais.
+            Err(e) if matches!(e.code(), ErrorCode::NotFound | ErrorCode::InvalidInput) => {}
+            // Falha do git (prazo, erro): tende a se repetir, não insiste nos demais.
             Err(e) => {
                 tracing::warn!(error = %e, "histórico do git indisponível para o pack");
                 break;

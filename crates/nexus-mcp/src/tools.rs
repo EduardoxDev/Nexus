@@ -599,20 +599,12 @@ fn get_file_history(ctx: &ToolContext<'_>, args: &Map<String, Value>) -> Result<
     let limit = a.int_opt("limit", 1, 100)?.unwrap_or(20);
     let start = a.int_opt("startLine", 1, i64::from(u32::MAX))?;
     let end = a.int_opt("endLine", 1, i64::from(u32::MAX))?;
-    if !nexus_core::git_history::available() {
-        return Ok(json!({
-            "project": project_json(&project),
-            "relPath": path,
-            "gitAvailable": false,
-            "commits": [],
-            "blame": null,
-            "notice": NOTICE,
-        }));
-    }
-    let commits = ctx
-        .core
-        .file_history(project.id, path, u32::try_from(limit).unwrap_or(20))?;
+    // Confere o caminho (indexado, dentro do projeto) mesmo sem git instalado.
+    let history =
+        ctx.core
+            .file_history_view(project.id, path, u32::try_from(limit).unwrap_or(20))?;
     let blame = match (start, end) {
+        _ if !history.git_available => None,
         (None, None) => None,
         (s, e) => {
             let s = s.unwrap_or(1);
@@ -622,8 +614,8 @@ fn get_file_history(ctx: &ToolContext<'_>, args: &Map<String, Value>) -> Result<
     Ok(json!({
         "project": project_json(&project),
         "relPath": path,
-        "gitAvailable": true,
-        "commits": commits,
+        "gitAvailable": history.git_available,
+        "commits": history.commits,
         "blame": blame,
         "notice": NOTICE,
     }))

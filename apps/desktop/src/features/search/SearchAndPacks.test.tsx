@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { ContextPack, ProjectSummary, SearchResponse } from "@/lib/bindings";
-import { renderApp, setupIpc } from "@/test/harness";
+import { IpcError, renderApp, setupIpc } from "@/test/harness";
 
 const NOW = Date.now();
 
@@ -427,5 +427,48 @@ describe("Histórico na prévia", () => {
     });
     const history = await openPreview();
     expect(within(history).getByText(/Instale o git/)).toBeInTheDocument();
+  });
+});
+
+describe("Histórico na prévia com erro", () => {
+  it("mostra o erro e tenta de novo", async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    const { calls } = setupIpc({
+      list_projects: () => [project],
+      search_project: () => response,
+      get_file_context: (args) => ({
+        relPath: args.relPath as string,
+        language: "typescript",
+        kind: "code",
+        startLine: 1,
+        endLine: 3,
+        totalLines: 40,
+        text: "conteúdo",
+        freshness: "fresh",
+        contentHash: "abc",
+        indexedAt: NOW,
+      }),
+      get_file_history: () => {
+        if (fail) {
+          throw new IpcError({ code: "internal", message: "o git passou do prazo", opId: null });
+        }
+        return { gitAvailable: true, commits: [] };
+      },
+    });
+    renderApp();
+    await open(user, "Busca");
+    await user.type(await screen.findByRole("searchbox"), "validateSession");
+    await user.click(screen.getByRole("button", { name: "Buscar" }));
+    const results = await screen.findByRole("list", { name: "Resultados" });
+    await user.click(within(results).getByRole("button", { name: /src\/auth\/session\.ts/ }));
+    const preview = await screen.findByRole("complementary", { name: "Prévia" });
+    const history = await within(preview).findByRole("region", { name: "Histórico do arquivo" });
+    expect(await within(history).findByText(/o git passou do prazo/)).toBeInTheDocument();
+    fail = false;
+    await user.click(within(history).getByRole("button", { name: "Tentar novamente" }));
+    // A seção é montada de novo depois do erro: procura dentro da prévia, não na antiga.
+    expect(await within(preview).findByText("Mudanças recentes (0)")).toBeInTheDocument();
+    expect(calls.filter((c) => c.cmd === "get_file_history").length).toBeGreaterThan(1);
   });
 });

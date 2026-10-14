@@ -135,4 +135,4 @@ Servidor MCP em stdio (JSON-RPC, uma mensagem por linha). Logs vão só para o a
 
 ### `nexus mcp tools [--json]`
 
-Lista as 13 ferramentas (com `--json`, as definições completas com `inputSchema` e `outputSchema`).
+Lista as 14 ferramentas (com `--json`, as definições completas com `inputSchema` e `outputSchema`).

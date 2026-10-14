@@ -14,9 +14,13 @@ created: number,
  */
 revisions: number, 
 /**
- * Propostas lidas antes que acompanharam o arquivo.
+ * Propostas existentes atualizadas para acompanhar o arquivo.
  */
 updated: number, 
+/**
+ * Propostas de revisão arquivadas porque o arquivo voltou ao texto confirmado.
+ */
+withdrawn: number, 
 /**
  * Iguais ao que já existe.
  */

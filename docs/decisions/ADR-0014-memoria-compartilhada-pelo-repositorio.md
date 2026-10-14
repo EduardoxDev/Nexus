@@ -38,8 +38,9 @@ A memória do projeto vive no banco local de cada pessoa. Uma equipe que trabalh
      - senão: **proposta de revisão** (`supersedes` = a confirmada). Ela acompanha o arquivo enquanto não for revisada;
    - **id de proposta lida de arquivo**: acompanha o arquivo;
    - **id de memória arquivada ou substituída**: ignorado;
-   - **arquivo de uma memória que outro arquivo da pasta substitui**: ignorado.
-   - Arquivos inválidos são listados com o motivo, sem derrubar os outros: formato desconhecido, campos inválidos, caminho com `..`, link, mais de 64 KiB ou texto que não é UTF-8.
+   - **arquivo de uma memória que outro arquivo da pasta substitui**: ignorado, antes de qualquer outra regra;
+   - **arquivo que voltou ao texto confirmado**: a proposta de revisão que ele tinha gerado é arquivada (pode ser restaurada).
+   - Arquivos inválidos são listados com o motivo, sem derrubar os outros: formato desconhecido, campos inválidos, caminho com `..`, link, mais de 128 KiB ou texto que não é UTF-8. Com mais de 500 arquivos `.md`, a pasta inteira é recusada (na leitura e na exportação).
 4. **Banco**:
    - nova origem `shared_file` e novo autor de revisão `shared_file` (migration v7);
    - o SQLite não altera um CHECK no lugar, então `memories` e `memory_revisions` são recriadas com os mesmos dados;

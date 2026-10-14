@@ -216,8 +216,8 @@ export const diagnostics: DiagnosticsReport = {
   backupsDir: "backups",
   backups: [],
   schemaVersion: 7,
-  latestSchemaVersion: 6,
-  migrations: [1, 2, 3, 4, 5, 6].map((version) => ({
+  latestSchemaVersion: 7,
+  migrations: [1, 2, 3, 4, 5, 6, 7].map((version) => ({
     version,
     name:
       [
@@ -227,6 +227,7 @@ export const diagnostics: DiagnosticsReport = {
         "memory_freshness",
         "analysis",
         "edges_targets",
+        "shared_memory",
       ][version - 1] ?? "",
     checksum: "bbc25775ace5abcdef0123",
     appliedAt: NOW - (7 - version) * 24 * HOUR,
@@ -459,10 +460,12 @@ export function fileContext(relPath: string, start: number, end: number): FileCo
         : `export const exemplo${i} = "linha ${i + 1} da prévia";`,
   );
   // Como no núcleo: intervalo invertido é erro, não é corrigido em silêncio.
-  if (start < 1 || end < start) {
+  // Como no núcleo: o início vale no mínimo 1; um fim antes do início é erro.
+  const from = Math.max(1, start);
+  if (end < from) {
     throw new Error(`intervalo de linhas inválido: ${start}–${end}`);
   }
-  const first = Math.min(start, total);
+  const first = Math.min(from, total);
   const last = Math.min(end, total);
   return {
     relPath,

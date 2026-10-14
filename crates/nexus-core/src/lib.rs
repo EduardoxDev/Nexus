@@ -784,14 +784,20 @@ impl Core {
             ops::kinds::MEMORY_SHARED_IMPORT,
             Some(project_id),
             |_| {
-                let report = self
-                    .db
-                    .write(|c| memory::shared::import(c, &root, project_id))?;
+                // Lê os arquivos antes de pegar a trava de escrita do banco: só a aplicação
+                // das mudanças fica dentro dela.
+                let report = match memory::shared::load(&root)? {
+                    Some(loaded) => self
+                        .db
+                        .write(|c| memory::shared::apply(c, project_id, loaded))?,
+                    None => SharedImportReport::default(),
+                };
                 let detail = json!({
                     "scanned": report.scanned,
                     "created": report.created,
                     "revisions": report.revisions,
                     "updated": report.updated,
+                    "withdrawn": report.withdrawn,
                     "unchanged": report.unchanged,
                     "ignored": report.ignored,
                     "invalid": report.invalid.len(),

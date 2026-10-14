@@ -37,8 +37,11 @@ use crate::time_util::now_ms;
 pub const DIR: &str = ".nexus/memory";
 /// Versão do formato dos arquivos.
 pub const FORMAT: &str = "nexus-memory/1";
-const MAX_FILE_BYTES: u64 = 64 * 1024;
+/// Cabe o maior texto aceito (20 000 caracteres de até 4 bytes) mais o front-matter.
+const MAX_FILE_BYTES: u64 = 128 * 1024;
 const MAX_FILES: usize = 500;
+/// Revisão máxima aceita num arquivo (folga para as edições seguintes sem estourar).
+const MAX_REVISION: i64 = 1_000_000_000;
 
 /// Uma memória como fica no arquivo (sem estado: quem recebe sempre decide).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -219,8 +222,10 @@ pub fn parse(text: &str) -> Result<SharedMemory> {
     let revision = field("revision")?
         .parse::<i64>()
         .ok()
-        .filter(|r| *r >= 1)
-        .ok_or_else(|| Error::InvalidInput("revision deve ser um número a partir de 1".into()))?;
+        .filter(|r| (1..=MAX_REVISION).contains(r))
+        .ok_or_else(|| {
+            Error::InvalidInput(format!("revision deve ser um número de 1 a {MAX_REVISION}"))
+        })?;
     let created_at = parse_iso(&field("createdAt")?)
         .ok_or_else(|| Error::InvalidInput("createdAt não é uma data RFC 3339".into()))?;
     let updated_at = parse_iso(&field("updatedAt")?)
@@ -257,7 +262,10 @@ pub fn parse(text: &str) -> Result<SharedMemory> {
                 )));
             }
             let content_hash = r.get("contentHash").cloned().unwrap_or_default();
-            if content_hash.len() > 128 || !content_hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+            if content_hash.is_empty()
+                || content_hash.len() > 128
+                || !content_hash.bytes().all(|b| b.is_ascii_hexdigit())
+            {
                 return Err(Error::InvalidInput(format!(
                     "contentHash inválido em {rel_path}"
                 )));
@@ -359,44 +367,103 @@ struct SharedFile {
     hash: String,
 }
 
-/// Arquivos `.md` comuns da pasta (links e arquivos grandes demais ficam de fora).
-fn read_dir(dir: &Path) -> Result<(Vec<SharedFile>, Vec<String>)> {
+/// O que há na pasta: arquivos lidos, **todos** os nomes `.md` (para nunca escolher um nome
+/// já ocupado, nem por um link ou arquivo grande) e os recusados, com o motivo.
+struct Listing {
+    files: Vec<SharedFile>,
+    names: HashSet<String>,
+    invalid: Vec<String>,
+}
+
+/// Lê um arquivo sem seguir links: confere antes de abrir e de novo no arquivo aberto (no
+/// Windows, um reparse point é aberto como ele mesmo; no Unix, o arquivo aberto precisa ser o
+/// mesmo que foi conferido). `Ok(Err(motivo))` = recusado.
+fn read_plain_file(path: &Path) -> Result<std::result::Result<Vec<u8>, String>> {
+    use std::io::Read as _;
+    let Ok(before) = std::fs::symlink_metadata(path) else {
+        return Ok(Err("sumiu durante a leitura".into()));
+    };
+    if is_link(&before) || !before.is_file() {
+        return Ok(Err("é um link ou não é um arquivo comum".into()));
+    }
+    let mut opts = std::fs::OpenOptions::new();
+    opts.read(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+        opts.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+    let file = opts
+        .open(path)
+        .map_err(|e| Error::io(format!("abrir {}", path.display()), e))?;
+    let meta = file
+        .metadata()
+        .map_err(|e| Error::io(format!("inspecionar {}", path.display()), e))?;
+    if is_link(&meta) || !meta.is_file() {
+        return Ok(Err("é um link ou não é um arquivo comum".into()));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if (meta.dev(), meta.ino()) != (before.dev(), before.ino()) {
+            return Ok(Err("foi trocado durante a leitura".into()));
+        }
+    }
+    if meta.len() > MAX_FILE_BYTES {
+        return Ok(Err(format!("maior que {} KiB", MAX_FILE_BYTES / 1024)));
+    }
+    let mut bytes = Vec::new();
+    file.take(MAX_FILE_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| Error::io(format!("ler {}", path.display()), e))?;
+    if bytes.len() as u64 > MAX_FILE_BYTES {
+        return Ok(Err(format!("maior que {} KiB", MAX_FILE_BYTES / 1024)));
+    }
+    Ok(Ok(bytes))
+}
+
+/// Arquivos `.md` comuns da pasta. Com mais de `MAX_FILES`, recusa a pasta inteira: ler só uma
+/// parte esconderia nomes ocupados da exportação.
+fn read_dir(dir: &Path) -> Result<Listing> {
     let mut names: Vec<String> = Vec::new();
-    let mut invalid = Vec::new();
     let entries =
         std::fs::read_dir(dir).map_err(|e| Error::io(format!("listar {}", dir.display()), e))?;
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
-        if !name.to_ascii_lowercase().ends_with(".md") {
-            continue;
+        if name.to_ascii_lowercase().ends_with(".md") {
+            names.push(name);
         }
-        names.push(name);
+    }
+    if names.len() > MAX_FILES {
+        return Err(Error::InvalidInput(format!(
+            "{DIR} tem mais de {MAX_FILES} arquivos .md; a NEXUS não lê nem grava nessa pasta"
+        )));
     }
     names.sort();
     let mut files = Vec::new();
-    for name in names.into_iter().take(MAX_FILES) {
-        let path = dir.join(&name);
-        let Ok(meta) = std::fs::symlink_metadata(&path) else {
-            continue;
-        };
-        if is_link(&meta) || !meta.is_file() {
-            invalid.push(format!("{name}: é um link ou não é um arquivo comum"));
-            continue;
+    let mut invalid = Vec::new();
+    for name in &names {
+        match read_plain_file(&dir.join(name))? {
+            Err(why) => invalid.push(format!("{name}: {why}")),
+            Ok(bytes) => match String::from_utf8(bytes) {
+                Ok(text) => {
+                    let hash = blake3::hash(text.as_bytes()).to_hex().to_string();
+                    files.push(SharedFile {
+                        name: name.clone(),
+                        text,
+                        hash,
+                    });
+                }
+                Err(_) => invalid.push(format!("{name}: não é UTF-8")),
+            },
         }
-        if meta.len() > MAX_FILE_BYTES {
-            invalid.push(format!("{name}: maior que {} KiB", MAX_FILE_BYTES / 1024));
-            continue;
-        }
-        let bytes =
-            std::fs::read(&path).map_err(|e| Error::io(format!("ler {}", path.display()), e))?;
-        let Ok(text) = String::from_utf8(bytes) else {
-            invalid.push(format!("{name}: não é UTF-8"));
-            continue;
-        };
-        let hash = blake3::hash(text.as_bytes()).to_hex().to_string();
-        files.push(SharedFile { name, text, hash });
     }
-    Ok((files, invalid))
+    Ok(Listing {
+        files,
+        names: names.iter().map(|n| n.to_ascii_lowercase()).collect(),
+        invalid,
+    })
 }
 
 fn rel(name: &str) -> String {
@@ -468,13 +535,18 @@ fn confirmed(conn: &Connection, project_id: i64) -> Result<Vec<Memory>> {
 }
 
 fn plan(conn: &Connection, root: &Path, project_id: i64) -> Result<Planned> {
-    let existing = match memory_dir(root, false)? {
-        Some(dir) => read_dir(&dir)?.0,
-        None => Vec::new(),
+    let listing = match memory_dir(root, false)? {
+        Some(dir) => read_dir(&dir)?,
+        None => Listing {
+            files: Vec::new(),
+            names: HashSet::new(),
+            invalid: Vec::new(),
+        },
     };
+    let existing = &listing.files;
     let mut by_id: HashMap<String, &SharedFile> = HashMap::new();
     let mut parsed_title: HashMap<&str, Option<String>> = HashMap::new();
-    for f in &existing {
+    for f in existing {
         match parse(&f.text) {
             Ok(m) => {
                 parsed_title.insert(f.name.as_str(), Some(m.title.clone()));
@@ -485,16 +557,21 @@ fn plan(conn: &Connection, root: &Path, project_id: i64) -> Result<Planned> {
             }
         }
     }
-    let mut taken: HashSet<String> = existing
-        .iter()
-        .map(|f| f.name.to_ascii_lowercase())
-        .collect();
+    // Todos os nomes da pasta, inclusive links e arquivos recusados: nenhum é sobrescrito.
+    let mut taken = listing.names.clone();
     let mut items = Vec::new();
     let mut writes = Vec::new();
     let mut used: HashSet<&str> = HashSet::new();
     for m in confirmed(conn, project_id)? {
         let shared = SharedMemory::from_memory(&m);
         let content = render(&shared);
+        if content.len() as u64 > MAX_FILE_BYTES {
+            return Err(Error::InvalidInput(format!(
+                "a memória \"{}\" passa de {} KiB e não pode ser exportada",
+                m.title,
+                MAX_FILE_BYTES / 1024
+            )));
+        }
         let (name, action) = match by_id.get(&m.id) {
             Some(f) => {
                 used.insert(f.name.as_str());
@@ -529,8 +606,21 @@ fn plan(conn: &Connection, root: &Path, project_id: i64) -> Result<Planned> {
             title: parsed_title.get(f.name.as_str()).cloned().flatten(),
         })
         .collect();
+    // A prévia vale para o que estava no disco: qualquer arquivo da pasta que mude depois
+    // (inclusive um que já seria atualizado) invalida o token.
     let mut hasher = blake3::Hasher::new();
     hasher.update(root.to_string_lossy().as_bytes());
+    let mut names: Vec<&String> = listing.names.iter().collect();
+    names.sort();
+    for name in names {
+        hasher.update(name.as_bytes());
+        hasher.update(&[0]);
+    }
+    for f in existing {
+        hasher.update(f.name.as_bytes());
+        hasher.update(f.hash.as_bytes());
+        hasher.update(&[0]);
+    }
     for (name, content) in &writes {
         hasher.update(name.as_bytes());
         hasher.update(&[0]);
@@ -596,8 +686,9 @@ pub fn export(
     Ok(report)
 }
 
-/// Grava num arquivo temporário da mesma pasta e troca pelo definitivo (nunca meio escrito).
-/// Um destino que virou link é recusado.
+/// Grava num arquivo temporário novo da mesma pasta e troca pelo definitivo (nunca meio
+/// escrito). O temporário é criado com exclusividade: se o nome já existir (inclusive como
+/// link), falha em vez de escrever através dele. Um destino que virou link é recusado.
 fn write_file(dir: &Path, name: &str, content: &str) -> Result<()> {
     let target = dir.join(name);
     if let Ok(meta) = std::fs::symlink_metadata(&target)
@@ -608,8 +699,11 @@ fn write_file(dir: &Path, name: &str, content: &str) -> Result<()> {
             target.display()
         )));
     }
-    let tmp = dir.join(format!(".{name}.{}.tmp", std::process::id()));
-    let mut f = std::fs::File::create(&tmp)
+    let tmp = dir.join(format!(".{name}.{}.tmp", crate::ops::new_op_id()));
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp)
         .map_err(|e| Error::io(format!("criar {}", tmp.display()), e))?;
     let written = f.write_all(content.as_bytes()).and_then(|()| f.sync_all());
     drop(f);
@@ -631,8 +725,10 @@ pub struct SharedImportReport {
     pub created: u32,
     /// Propostas de revisão de uma memória confirmada.
     pub revisions: u32,
-    /// Propostas lidas antes que acompanharam o arquivo.
+    /// Propostas existentes atualizadas para acompanhar o arquivo.
     pub updated: u32,
+    /// Propostas de revisão arquivadas porque o arquivo voltou ao texto confirmado.
+    pub withdrawn: u32,
     /// Iguais ao que já existe.
     pub unchanged: u32,
     /// Atrasados, obsoletos ou de memórias arquivadas aqui.
@@ -649,8 +745,32 @@ fn find(conn: &Connection, id: &str) -> Result<Option<Memory>> {
     exists.map(|id| super::get(conn, &id)).transpose()
 }
 
+/// Mesmo tipo, título, texto e referências (caminho e linhas; o hash registrado pode diferir
+/// entre bancos sem que a memória tenha mudado).
 fn same_content(m: &Memory, s: &SharedMemory) -> bool {
-    m.kind == s.kind && m.title == s.title && m.body == s.body
+    let place = |refs: &[MemoryRef]| -> Vec<(String, Option<i64>, Option<i64>)> {
+        refs.iter()
+            .map(|r| (r.rel_path.clone(), r.start_line, r.end_line))
+            .collect()
+    };
+    m.kind == s.kind && m.title == s.title && m.body == s.body && place(&m.refs) == place(&s.refs)
+}
+
+/// O arquivo voltou ao texto confirmado: a proposta de revisão que ele tinha gerado não
+/// corresponde a mais nada no repositório e é arquivada (pode ser restaurada).
+fn withdraw(tx: &rusqlite::Transaction<'_>, mut p: Memory) -> Result<()> {
+    p.status = MemoryStatus::Archived;
+    p.revision += 1;
+    p.updated_at = now_ms();
+    super::store(tx, &p)?;
+    super::snapshot(
+        tx,
+        &p,
+        Actor::System,
+        RevisionChange::Archived,
+        Some("O arquivo compartilhado voltou ao texto confirmado"),
+        p.updated_at,
+    )
 }
 
 /// Proposta de revisão pendente vinda deste arquivo para a memória `target`.
@@ -699,24 +819,52 @@ fn follow_file(
     Ok(p.id)
 }
 
-/// Lê `.nexus/memory/` e cria ou ajusta **propostas** (regras no topo do módulo).
-pub fn import(conn: &mut Connection, root: &Path, project_id: i64) -> Result<SharedImportReport> {
-    let mut report = SharedImportReport::default();
+/// Arquivos de `.nexus/memory/` já lidos e interpretados (sem tocar no banco).
+pub struct Loaded {
+    parsed: Vec<(SharedFile, SharedMemory)>,
+    scanned: u32,
+    invalid: Vec<String>,
+}
+
+/// Lê e interpreta a pasta. Fica fora da trava de escrita do banco: só [`apply`] escreve.
+pub fn load(root: &Path) -> Result<Option<Loaded>> {
     let Some(dir) = memory_dir(root, false)? else {
-        return Ok(report);
+        return Ok(None);
     };
-    let (files, invalid) = read_dir(&dir)?;
-    report.invalid = invalid;
-    let mut parsed = Vec::new();
-    for f in files {
-        report.scanned += 1;
+    let listing = read_dir(&dir)?;
+    let mut loaded = Loaded {
+        parsed: Vec::new(),
+        scanned: 0,
+        invalid: listing.invalid,
+    };
+    for f in listing.files {
+        loaded.scanned += 1;
         match parse(&f.text) {
-            Ok(m) => parsed.push((f, m)),
-            Err(e) => report
+            Ok(m) => loaded.parsed.push((f, m)),
+            Err(e) => loaded
                 .invalid
                 .push(format!("{}: {}", f.name, e.user_message())),
         }
     }
+    Ok(Some(loaded))
+}
+
+/// Lê `.nexus/memory/` e cria ou ajusta **propostas** (regras no topo do módulo).
+pub fn import(conn: &mut Connection, root: &Path, project_id: i64) -> Result<SharedImportReport> {
+    match load(root)? {
+        Some(loaded) => apply(conn, project_id, loaded),
+        None => Ok(SharedImportReport::default()),
+    }
+}
+
+/// Aplica ao banco os arquivos lidos por [`load`].
+pub fn apply(conn: &mut Connection, project_id: i64, loaded: Loaded) -> Result<SharedImportReport> {
+    let mut report = SharedImportReport {
+        scanned: loaded.scanned,
+        invalid: loaded.invalid,
+        ..SharedImportReport::default()
+    };
+    let parsed = loaded.parsed;
     // Memórias que outro arquivo da pasta substitui: o arquivo delas ficou para trás.
     let replaced: HashSet<String> = parsed
         .iter()
@@ -726,6 +874,10 @@ pub fn import(conn: &mut Connection, root: &Path, project_id: i64) -> Result<Sha
     for (file, s) in parsed {
         let origin_path = rel(&file.name);
         let note = format!("Lida de {origin_path}");
+        if replaced.contains(&s.id) {
+            report.ignored += 1;
+            continue;
+        }
         let existing = find(conn, &s.id)?;
         if existing
             .as_ref()
@@ -738,7 +890,6 @@ pub fn import(conn: &mut Connection, root: &Path, project_id: i64) -> Result<Sha
         }
         let tx = conn.transaction()?;
         match existing {
-            None if replaced.contains(&s.id) => report.ignored += 1,
             None => {
                 // Só substitui o que está confirmado aqui; senão, entra como proposta solta.
                 let supersedes = match &s.supersedes {
@@ -773,7 +924,15 @@ pub fn import(conn: &mut Connection, root: &Path, project_id: i64) -> Result<Sha
                 report.memory_ids.push(m.id);
             }
             Some(m) => match m.status {
-                MemoryStatus::Confirmed if same_content(&m, &s) => report.unchanged += 1,
+                MemoryStatus::Confirmed if same_content(&m, &s) => {
+                    match pending_revision(&tx, project_id, &m.id, &origin_path)? {
+                        Some(p) => {
+                            withdraw(&tx, p)?;
+                            report.withdrawn += 1;
+                        }
+                        None => report.unchanged += 1,
+                    }
+                }
                 MemoryStatus::Confirmed if s.revision < m.revision => report.ignored += 1,
                 MemoryStatus::Confirmed => {
                     match pending_revision(&tx, project_id, &m.id, &origin_path)? {
@@ -883,6 +1042,14 @@ mod tests {
             (good.replace("id: 0190", "id: ../0190"), "id"),
             (good.replace("startLine: 10", "startLine: 30"), "intervalo"),
             (good.replace("title: ", "titulo: "), "campo"),
+            (
+                good.replace("revision: 3", "revision: 2000000000"),
+                "revisão enorme",
+            ),
+            (
+                good.replace("contentHash: \"cd34\"", "contentHash: \"\""),
+                "hash vazio",
+            ),
         ] {
             assert!(parse(&bad).is_err(), "{why}");
         }

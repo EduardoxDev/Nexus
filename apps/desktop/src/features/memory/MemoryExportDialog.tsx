@@ -33,6 +33,11 @@ export function MemoryExportDialog({
   const exporter = useMemoryExport();
   const push = useToasts((st) => st.push);
   const data = preview.data;
+  // Fechar ou abrir de novo começa sem o erro da tentativa anterior.
+  const changeOpen = (next: boolean) => {
+    exporter.reset();
+    onOpenChange(next);
+  };
   const pending = data?.items.filter((i) => i.action !== "unchanged").length ?? 0;
 
   const confirm = () => {
@@ -46,7 +51,7 @@ export function MemoryExportDialog({
             title: s.doneTitle,
             body: s.done(report.created, report.updated, report.directory),
           });
-          onOpenChange(false);
+          changeOpen(false);
         },
         onError: () => void preview.refetch(),
       },
@@ -54,7 +59,7 @@ export function MemoryExportDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="w-[min(640px,calc(100vw-32px))] p-5">
         <DialogTitle className="text-lg font-semibold">{s.title}</DialogTitle>
         <DialogDescription className="mt-1 text-sm text-fg-muted">
@@ -100,13 +105,14 @@ export function MemoryExportDialog({
           {data && pending === 0 && data.items.length > 0 && (
             <p className="mr-auto text-xs text-fg-muted">{s.upToDate}</p>
           )}
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => changeOpen(false)}>
             {t.common.close}
           </Button>
           <Button
             variant="primary"
             onClick={confirm}
-            disabled={!data || pending === 0 || exporter.isPending}
+            // Enquanto a prévia recarrega, o token mostrado pode estar velho.
+            disabled={!data || pending === 0 || exporter.isPending || preview.isFetching}
           >
             {exporter.isPending ? s.writing : s.confirm(pending)}
           </Button>

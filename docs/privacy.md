@@ -39,9 +39,9 @@ Remover o projeto do índice apaga tudo isso do banco; os arquivos da pasta nunc
 
 ## Memória compartilhada (`.nexus/memory/`)
 
-A **única** escrita da NEXUS dentro de um projeto é "Exportar para o repositório", na tela Memória, e só acontece com o seu clique, depois de uma prévia do que será criado ou alterado.
+O app e o servidor MCP só gravam dentro de um projeto em um caso: "Exportar para o repositório", na tela Memória, e só com o seu clique, depois de uma prévia do que será criado ou alterado. (Na linha de comando, `nexus context --output ARQUIVO` grava o Context Pack no caminho que você escolher.)
 
-- Só memórias **confirmadas** são exportadas, uma por arquivo em `.nexus/memory/`: título, texto, tipo, revisão, datas e referências (caminho, linhas e hash). Nunca código.
+- Só memórias **confirmadas** são exportadas, uma por arquivo em `.nexus/memory/`: título, texto, tipo, revisão, datas e referências (caminho, linhas e hash). Trechos dos arquivos do projeto não são copiados; o texto da memória vai como você o escreveu, inclusive código que você tenha colocado nele.
 - A NEXUS não apaga nenhum arquivo dessa pasta e não grava fora dela (links e junctions são recusados).
 - O que estiver no repositório passa a ser visto por quem tiver acesso a ele, como qualquer arquivo commitado. Confira a prévia antes de exportar.
 - Na leitura, arquivos de `.nexus/memory/` viram **propostas** no seu banco, nunca memórias confirmadas. Detalhes em `docs/decisions/ADR-0014-memoria-compartilhada-pelo-repositorio.md`.

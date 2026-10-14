@@ -66,7 +66,7 @@ pub struct ImportReport {
 pub fn is_adr_path(rel_path: &str) -> bool {
     let lower = rel_path.to_ascii_lowercase();
     // A memória compartilhada (`.nexus/memory/`) tem leitura própria (`memory::shared`).
-    if lower.starts_with(".nexus/") {
+    if lower.starts_with(".nexus/memory/") {
         return false;
     }
     let is_markdown = [".md", ".markdown", ".mdx"]
@@ -398,6 +398,7 @@ mod tests {
         assert!(!is_adr_path("docs/architecture.md"));
         assert!(!is_adr_path("src/decisions.ts"));
         assert!(!is_adr_path(".nexus/memory/decision-cache-1234abcd.md"));
+        assert!(is_adr_path(".nexus/decisions/0001-cache.md"));
     }
 
     #[test]

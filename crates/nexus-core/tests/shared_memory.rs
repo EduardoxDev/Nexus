@@ -420,3 +420,152 @@ fn references_outside_the_project_are_refused() {
     assert_eq!(report.invalid.len(), 1);
     assert!(all(&b).is_empty());
 }
+
+/// `.nexus/memory` (e não só `.nexus`) trocada por link, e um arquivo de memória que é link:
+/// nada é lido nem gravado através deles.
+#[test]
+fn links_inside_the_memory_folder_are_refused() {
+    let a = machine();
+    confirmed(&a, "Sessões no servidor", "Cookie HttpOnly.", &[]);
+    let outside = a.tmp.path().join("fora-memory");
+    std::fs::create_dir_all(&outside).unwrap();
+    std::fs::create_dir_all(a.root.join(".nexus")).unwrap();
+    if !make_dir_link(&a.root.join(".nexus").join("memory"), &outside) {
+        eprintln!("sem permissão para criar link: teste pulado");
+        return;
+    }
+    assert_eq!(
+        a.core.preview_memory_export(a.pid).unwrap_err().code(),
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(
+        a.core.import_shared_memory(a.pid).unwrap_err().code(),
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
+}
+
+#[cfg(windows)]
+fn make_file_link(link: &Path, target: &Path) -> bool {
+    std::os::windows::fs::symlink_file(target, link).is_ok()
+}
+
+#[cfg(unix)]
+fn make_file_link(link: &Path, target: &Path) -> bool {
+    std::os::unix::fs::symlink(target, link).is_ok()
+}
+
+#[test]
+fn a_memory_file_that_is_a_link_is_refused_and_never_overwritten() {
+    let a = machine();
+    confirmed(&a, "Sessões no servidor", "Cookie HttpOnly.", &[]);
+    export_all(&a);
+    let secret = a.tmp.path().join("segredo.md");
+    let original = std::fs::read_to_string(shared_files(&a).remove(0)).unwrap();
+    std::fs::write(&secret, original.replace("Cookie HttpOnly.", "segredo")).unwrap();
+    let link = a.root.join(DIR).join("link.md");
+    if !make_file_link(&link, &secret) {
+        eprintln!(
+            "sem permissão para criar link de arquivo (Windows sem modo desenvolvedor): teste pulado"
+        );
+        return;
+    }
+    let report = a.core.import_shared_memory(a.pid).unwrap();
+    assert!(
+        report.invalid.iter().any(|i| i.starts_with("link.md")),
+        "{report:?}"
+    );
+    // O nome ocupado pelo link nunca é escolhido para gravar, e o alvo não muda.
+    export_all(&a);
+    assert!(
+        std::fs::read_to_string(&secret)
+            .unwrap()
+            .contains("segredo")
+    );
+}
+
+#[test]
+fn a_file_reverted_to_the_confirmed_text_withdraws_its_proposal() {
+    let a = machine();
+    let m = confirmed(&a, "Sessões no servidor", "Cookie HttpOnly.", &[]);
+    export_all(&a);
+    let file = shared_files(&a).remove(0);
+    let original = std::fs::read_to_string(&file).unwrap();
+    std::fs::write(&file, original.replace("Cookie HttpOnly.", "Outro texto.")).unwrap();
+    assert_eq!(a.core.import_shared_memory(a.pid).unwrap().revisions, 1);
+    std::fs::write(&file, &original).unwrap();
+    let report = a.core.import_shared_memory(a.pid).unwrap();
+    assert_eq!(report.withdrawn, 1);
+    let pending = all(&a)
+        .into_iter()
+        .filter(|x| x.supersedes.as_deref() == Some(m.id.as_str()))
+        .collect::<Vec<_>>();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].status, MemoryStatus::Archived);
+}
+
+#[test]
+fn a_change_only_in_the_references_is_a_revision() {
+    let a = machine();
+    confirmed(
+        &a,
+        "Sessões no servidor",
+        "Cookie HttpOnly.",
+        &["src/auth/session.ts"],
+    );
+    export_all(&a);
+    let file = shared_files(&a).remove(0);
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::write(&file, text.replace("endLine: 3", "endLine: 9")).unwrap();
+    let report = a.core.import_shared_memory(a.pid).unwrap();
+    assert_eq!(report.revisions, 1);
+}
+
+#[test]
+fn a_file_changed_after_the_preview_invalidates_it() {
+    let a = machine();
+    let m = confirmed(&a, "Sessões no servidor", "Cookie HttpOnly.", &[]);
+    export_all(&a);
+    // O arquivo já difere da memória (seria atualizado) e muda de novo depois da prévia.
+    let file = shared_files(&a).remove(0);
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::write(&file, text.replace("Cookie HttpOnly.", "Edição de alguém.")).unwrap();
+    let preview = a.core.preview_memory_export(a.pid).unwrap();
+    assert!(
+        preview
+            .items
+            .iter()
+            .any(|i| i.memory_id == m.id && i.action == ExportAction::Update)
+    );
+    std::fs::write(
+        &file,
+        text.replace("Cookie HttpOnly.", "Outra edição, depois da prévia."),
+    )
+    .unwrap();
+    let err = a.core.export_memory(a.pid, &preview.token).unwrap_err();
+    assert_eq!(err.code(), ErrorCode::Conflict);
+    assert!(
+        std::fs::read_to_string(&file)
+            .unwrap()
+            .contains("depois da prévia")
+    );
+}
+
+#[test]
+fn a_folder_with_too_many_files_is_refused() {
+    let a = machine();
+    confirmed(&a, "Sessões no servidor", "Cookie HttpOnly.", &[]);
+    let dir = a.root.join(DIR);
+    std::fs::create_dir_all(&dir).unwrap();
+    for i in 0..501 {
+        std::fs::write(dir.join(format!("nota-{i:03}.md")), "x").unwrap();
+    }
+    assert_eq!(
+        a.core.preview_memory_export(a.pid).unwrap_err().code(),
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(
+        a.core.import_shared_memory(a.pid).unwrap_err().code(),
+        ErrorCode::InvalidInput
+    );
+}

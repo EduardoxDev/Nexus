@@ -17,19 +17,23 @@ const FAQ = [
   },
   {
     q: "Funciona com quais agentes?",
-    a: "Com qualquer um que fale MCP. O Claude Code se conecta com um comando; para os outros, a tela Integrações gera a configuração pronta. Também dá para usar sem agente: o app e a linha de comando fazem busca e Context Packs.",
+    a: "Com qualquer um que fale MCP. A tela Integrações traz a configuração pronta para Claude Code, Codex, Cursor, VS Code e Claude Desktop, com os caminhos da sua instalação. Também dá para usar sem agente: o app e a linha de comando fazem busca e Context Packs.",
   },
   {
     q: "Quais linguagens ela entende?",
-    a: "A busca funciona em qualquer arquivo de texto. A análise de declarações e imports cobre TypeScript, JavaScript, Python e Rust.",
+    a: "A busca funciona em qualquer arquivo de texto. A análise de declarações e imports cobre TypeScript, JavaScript, Python, Rust, Go, Java e C#.",
   },
   {
     q: "Funciona no Mac ou no Linux?",
-    a: "O app é para Windows, por enquanto. O núcleo e a linha de comando são em Rust e funcionam em outros sistemas; versões completas estão nos planos.",
+    a: "Sim. Há instalador para Windows, .deb e .AppImage para Linux e .dmg para macOS (Apple Silicon e Intel), todos com a linha de comando incluída.",
+  },
+  {
+    q: "Ela se atualiza sozinha?",
+    a: "Só se você deixar. Na primeira vez que abre, o app pergunta se pode verificar versões novas no GitHub (no máximo uma vez por dia). A instalação só acontece quando você clica, e cada atualização é conferida por assinatura antes de instalar.",
   },
   {
     q: "O Windows avisou que o instalador não é reconhecido. É seguro?",
-    a: "O instalador ainda não tem assinatura de código, por isso o aviso. O código é aberto e cada versão publicada traz o SHA-256 do instalador para você conferir.",
+    a: "O instalador ainda não tem assinatura de código, por isso o aviso (no Mac, o Gatekeeper também avisa). O código é aberto e cada versão publicada traz o SHA-256 dos arquivos para você conferir.",
   },
 ];
 

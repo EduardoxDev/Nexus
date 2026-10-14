@@ -4,7 +4,7 @@
  */
 export const site = {
   name: "NEXUS",
-  version: "0.1.0",
+  version: "0.2.0",
   tagline: "Contexto local para engenharia com IA",
   slogan: "Conectando ideias, criando o amanhã.",
   description:

@@ -3,7 +3,7 @@
  * o secundário com um reflexo que passa no hover (GlareHover). Ambos do React Bits.
  */
 import { Download } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import GlareHover from "@/components/GlareHover";
 import StarBorder from "@/components/StarBorder";
@@ -12,7 +12,23 @@ import { downloadHref } from "@/site";
 
 const SIZE = "h-12 px-6 text-[15px] font-medium";
 
-export function DownloadButton({ label = "Baixar para Windows" }: { label?: string }) {
+type System = "Windows" | "macOS" | "Linux";
+
+/** Sistema de quem visita (só no navegador; o HTML pré-renderizado sai com "Windows"). */
+function useSystem(): System {
+  const [system, setSystem] = useState<System>("Windows");
+  useEffect(() => {
+    const p = `${navigator.platform} ${navigator.userAgent}`;
+    if (/Mac|iPhone|iPad/i.test(p)) setSystem("macOS");
+    else if (/Linux|X11/i.test(p) && !/Android/i.test(p)) setSystem("Linux");
+  }, []);
+  return system;
+}
+
+/** Leva à última release publicada, que traz os pacotes de todos os sistemas. */
+export function DownloadButton({ label }: { label?: string }) {
+  const system = useSystem();
+  label ??= `Baixar para ${system}`;
   return (
     <StarBorder
       as="a"

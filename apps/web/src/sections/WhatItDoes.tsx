@@ -53,7 +53,7 @@ const ITEMS: BentoItem[] = [
   {
     title: "Entende o código",
     description:
-      "TypeScript, JavaScript, Python e Rust: quem importa quem e onde cada função nasce.",
+      "TypeScript, JavaScript, Python, Rust, Go, Java e C#: quem importa quem e onde cada função nasce.",
     icon: <Code2 className="size-5" />,
   },
 ];

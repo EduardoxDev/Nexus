@@ -3,4 +3,4 @@
 /**
  * Quem originou a memória.
  */
-export type MemoryOrigin = "user" | "cli" | "adr_import" | "agent";
+export type MemoryOrigin = "user" | "cli" | "adr_import" | "agent" | "shared_file";

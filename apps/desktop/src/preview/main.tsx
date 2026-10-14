@@ -55,6 +55,8 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   get_integration_info: () => data.integration,
   check_for_update: () => ({ status: "upToDate", currentVersion: "0.2.0" }),
   get_analysis_overview: () => data.analysis,
+  preview_memory_export: () => data.exportPreview,
+  export_memory: () => ({ directory: ".nexus/memory", created: 2, updated: 1, unchanged: 1 }),
   get_project_map: (args) => data.projectMap(args.request as MapRequest),
   get_file_context: (args) =>
     data.fileContext(

@@ -3,6 +3,7 @@
 
 use nexus_core::freshness::{FreshnessIssue, FreshnessSummary, IssueQuery, ScanReport};
 use nexus_core::memory::adr::ImportReport;
+use nexus_core::memory::shared::{ExportPreview, ExportReport, SharedImportReport};
 use nexus_core::memory::{
     Actor, Memory, MemoryCounts, MemoryDetail, MemoryQuery, MemoryUpdate, NewMemory, Transition,
 };
@@ -113,6 +114,41 @@ pub async fn import_adrs(
     project_id: i64,
 ) -> Result<ImportReport, ErrorInfo> {
     blocking(&state, move |core| core.import_adrs(project_id)).await
+}
+
+/// Prévia de "Exportar para o repositório": o que seria criado ou alterado em `.nexus/memory/`.
+#[tauri::command]
+pub async fn preview_memory_export(
+    state: State<'_, AppState>,
+    project_id: i64,
+) -> Result<ExportPreview, ErrorInfo> {
+    blocking(&state, move |core| core.preview_memory_export(project_id)).await
+}
+
+/// Grava a prévia confirmada pelo usuário (identificada por `token`).
+#[tauri::command]
+pub async fn export_memory(
+    state: State<'_, AppState>,
+    project_id: i64,
+    token: String,
+) -> Result<ExportReport, ErrorInfo> {
+    if token.len() > 128 {
+        return Err(ErrorInfo {
+            code: ErrorCode::InvalidInput,
+            message: "Prévia inválida.".to_owned(),
+            op_id: None,
+        });
+    }
+    blocking(&state, move |core| core.export_memory(project_id, &token)).await
+}
+
+/// Lê `.nexus/memory/` agora (também acontece em cada indexação): só cria propostas.
+#[tauri::command]
+pub async fn import_shared_memory(
+    state: State<'_, AppState>,
+    project_id: i64,
+) -> Result<SharedImportReport, ErrorInfo> {
+    blocking(&state, move |core| core.import_shared_memory(project_id)).await
 }
 
 #[tauri::command]

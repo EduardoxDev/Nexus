@@ -493,6 +493,23 @@ export const ptBR = {
     importResult: (created: number, updated: number, superseding: number, unchanged: number) =>
       `${created} proposta(s) nova(s), ${updated} atualizada(s), ${superseding} de substituição, ${unchanged} sem mudança.`,
     importStale: (paths: string) => `Mudaram desde a indexação (atualize o índice): ${paths}`,
+    share: {
+      button: "Exportar para o repositório",
+      title: "Exportar memória para o repositório",
+      description:
+        "As memórias confirmadas viram arquivos em .nexus/memory/. Faça commit para a equipe receber: na NEXUS de quem receber, elas chegam como propostas, nunca confirmadas.",
+      listLabel: "Arquivos da exportação",
+      actions: { create: "criar", update: "atualizar", unchanged: "sem mudança" },
+      nothing: "Nenhuma memória confirmada para exportar.",
+      obsolete:
+        "Estes arquivos da pasta não correspondem a uma memória confirmada aqui. A NEXUS não apaga nada; remova-os você, se quiser:",
+      upToDate: "Tudo já está igual no repositório.",
+      confirm: (n: number) => (n === 1 ? "Gravar 1 arquivo" : `Gravar ${n} arquivos`),
+      writing: "Gravando…",
+      doneTitle: "Memória exportada",
+      done: (created: number, updated: number, dir: string) =>
+        `${created} criado(s) e ${updated} atualizado(s) em ${dir}. Faça commit para compartilhar.`,
+    },
     searchPlaceholder: "Buscar no título e no texto…",
     allKinds: "Todos os tipos",
     tabs: {
@@ -513,6 +530,7 @@ export const ptBR = {
       cli: "CLI",
       adr_import: "Importação de ADR",
       agent: "Agente",
+      shared_file: "Arquivo do repositório",
     } as Record<string, string>,
     importedFrom: (path: string) => `Importada de ${path}`,
     supersedes: "Substitui",
@@ -562,6 +580,7 @@ export const ptBR = {
       adr_import: "importação de ADR",
       agent: "agente",
       system: "sistema",
+      shared_file: "arquivo do repositório",
     } as Record<string, string>,
     alerts: "Alertas desta memória",
     noAlerts: "Nenhum alerta aberto.",
@@ -864,6 +883,8 @@ export const ptBR = {
     "memory.update": "Memória editada",
     "memory.transition": "Estado de memória alterado",
     "memory.import_adrs": "Importação de ADRs",
+    "memory.export_shared": "Memória exportada para o repositório",
+    "memory.import_shared": "Leitura de .nexus/memory",
     "freshness.scan": "Verificação de atualidade",
     "mcp.session": "Sessão MCP",
     "mcp.tool": "Ferramenta MCP",

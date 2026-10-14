@@ -40,6 +40,19 @@ Mesmo teste, `main` e a branch da etapa rodados em sequência para comparar nas 
 
 A diferença na inicial está dentro da variação da máquina; as incrementais ficaram iguais. A resolução nova só roda para arquivos Go/Java/C#.
 
+### v0.3 — Kotlin, PHP, Ruby, C e C++ (2026-10-14, mesma máquina)
+
+Mesmo teste, em sequência: esta branch, o `main` e esta branch de novo.
+
+| Medida                                         | `main`  | Com as linguagens novas (2 rodadas) |
+| ---------------------------------------------- | ------- | ----------------------------------- |
+| Indexação inicial (10 000 arquivos)            | 7,7 s   | 8,2 s / 9,3 s                       |
+| Incremental sem mudanças                       | 0,43 s  | 0,45 s / 0,46 s                     |
+| Incremental com 1 arquivo alterado             | 0,93 s  | 0,92 s / 1,00 s                     |
+| Análise em memória (10 000 arquivos, 1 thread) | 99,7 ms | 103,7 ms / 105,3 ms                 |
+
+Os arquivos sintéticos são TypeScript: as linguagens novas só entram na resolução quando há arquivos delas. A análise em memória variou ~4%, mas o TypeScript não passa pelo código novo (a verificação de corpo de expressão só roda para Kotlin). Trato isso como ruído, porque os tempos de parede variam mais do que isso entre rodadas da mesma versão.
+
 ## Repositório real
 
 `nexus projects add <repo> --index` sobre o repositório do NEXUS (2026-10-11, build de depuração):

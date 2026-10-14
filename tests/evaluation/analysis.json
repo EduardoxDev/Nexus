@@ -1709,6 +1709,625 @@
           ]
         ]
       }
+    },
+    "kotlin-app": {
+      "src/main/kotlin/com/acme/shop/App.kt": {
+        "symbols": [
+          [
+            "com.acme.shop",
+            "module",
+            1
+          ],
+          [
+            "main",
+            "function",
+            7
+          ]
+        ],
+        "imports": [
+          [
+            3,
+            "com.acme.shop.cart.Cart",
+            "src/main/kotlin/com/acme/shop/cart/Cart.kt"
+          ],
+          [
+            4,
+            "com.acme.shop.util.formatMoney",
+            "src/main/kotlin/com/acme/shop/util/Money.kt"
+          ],
+          [
+            5,
+            "kotlin.math.max",
+            "ext:kotlin.math"
+          ]
+        ]
+      },
+      "src/main/kotlin/com/acme/shop/cart/Cart.kt": {
+        "symbols": [
+          [
+            "com.acme.shop.cart",
+            "module",
+            1
+          ],
+          [
+            "MAX_ITEMS",
+            "const",
+            5
+          ],
+          [
+            "Cart",
+            "class",
+            7
+          ],
+          [
+            "items",
+            "variable",
+            8,
+            "Cart"
+          ],
+          [
+            "add",
+            "method",
+            10,
+            "Cart"
+          ],
+          [
+            "total",
+            "method",
+            15,
+            "Cart"
+          ],
+          [
+            "Companion",
+            "class",
+            17,
+            "Cart"
+          ],
+          [
+            "empty",
+            "method",
+            18,
+            "Companion"
+          ]
+        ],
+        "imports": [
+          [
+            3,
+            "com.acme.shop.util.*",
+            "src/main/kotlin/com/acme/shop/util/Money.kt"
+          ]
+        ]
+      },
+      "src/main/kotlin/com/acme/shop/cart/Item.kt": {
+        "symbols": [
+          [
+            "com.acme.shop.cart",
+            "module",
+            1
+          ],
+          [
+            "Item",
+            "class",
+            3
+          ]
+        ],
+        "imports": []
+      },
+      "src/main/kotlin/com/acme/shop/util/Money.kt": {
+        "symbols": [
+          [
+            "com.acme.shop.util",
+            "module",
+            1
+          ],
+          [
+            "Cents",
+            "type",
+            3
+          ],
+          [
+            "formatMoney",
+            "function",
+            5
+          ],
+          [
+            "round",
+            "function",
+            7
+          ]
+        ],
+        "imports": []
+      }
+    },
+    "php-app": {
+      "src/Models/User.php": {
+        "symbols": [
+          [
+            "App\\Models",
+            "module",
+            3
+          ],
+          [
+            "User",
+            "class",
+            5
+          ],
+          [
+            "name",
+            "variable",
+            7,
+            "User"
+          ],
+          [
+            "__construct",
+            "method",
+            9,
+            "User"
+          ]
+        ],
+        "imports": []
+      },
+      "src/Services/UserService.php": {
+        "symbols": [
+          [
+            "App\\Services",
+            "module",
+            3
+          ],
+          [
+            "UserService",
+            "class",
+            11
+          ],
+          [
+            "CACHE_TTL",
+            "const",
+            13,
+            "UserService"
+          ],
+          [
+            "create",
+            "method",
+            15,
+            "UserService"
+          ],
+          [
+            "log",
+            "method",
+            20,
+            "UserService"
+          ]
+        ],
+        "imports": [
+          [
+            5,
+            "App\\Models\\User",
+            "src/Models/User.php"
+          ],
+          [
+            6,
+            "App\\Support\\Clock",
+            "src/Support/Clock.php"
+          ],
+          [
+            6,
+            "App\\Support\\Logger",
+            "?"
+          ],
+          [
+            7,
+            "Psr\\Log\\LoggerInterface",
+            "ext:Psr\\Log"
+          ],
+          [
+            9,
+            "./../helpers.php",
+            "src/helpers.php"
+          ]
+        ]
+      },
+      "src/Support/Clock.php": {
+        "symbols": [
+          [
+            "App\\Support",
+            "module",
+            2
+          ],
+          [
+            "Clock",
+            "interface",
+            4
+          ],
+          [
+            "now",
+            "method",
+            6,
+            "Clock"
+          ]
+        ],
+        "imports": []
+      },
+      "src/helpers.php": {
+        "symbols": [
+          [
+            "money",
+            "function",
+            3
+          ],
+          [
+            "APP_NAME",
+            "const",
+            8
+          ]
+        ],
+        "imports": []
+      }
+    },
+    "ruby-app": {
+      "lib/shop.rb": {
+        "symbols": [
+          [
+            "Shop",
+            "module",
+            5
+          ],
+          [
+            "run",
+            "method",
+            6,
+            "Shop"
+          ]
+        ],
+        "imports": [
+          [
+            1,
+            "json",
+            "ext:json"
+          ],
+          [
+            2,
+            "shop/cart",
+            "lib/shop/cart.rb"
+          ],
+          [
+            3,
+            "./shop/version",
+            "lib/shop/version.rb"
+          ]
+        ]
+      },
+      "lib/shop/cart.rb": {
+        "symbols": [
+          [
+            "Shop",
+            "module",
+            3
+          ],
+          [
+            "Cart",
+            "class",
+            4,
+            "Shop"
+          ],
+          [
+            "MAX_ITEMS",
+            "const",
+            5,
+            "Cart"
+          ],
+          [
+            "initialize",
+            "method",
+            7,
+            "Cart"
+          ],
+          [
+            "add",
+            "method",
+            11,
+            "Cart"
+          ],
+          [
+            "total",
+            "method",
+            15,
+            "Cart"
+          ],
+          [
+            "clear!",
+            "method",
+            21,
+            "Cart"
+          ]
+        ],
+        "imports": [
+          [
+            1,
+            "./item",
+            "lib/shop/item.rb"
+          ]
+        ]
+      },
+      "lib/shop/item.rb": {
+        "symbols": [
+          [
+            "Shop",
+            "module",
+            1
+          ],
+          [
+            "Item",
+            "const",
+            2,
+            "Shop"
+          ]
+        ],
+        "imports": []
+      },
+      "lib/shop/version.rb": {
+        "symbols": [
+          [
+            "Shop",
+            "module",
+            1
+          ],
+          [
+            "VERSION",
+            "const",
+            2,
+            "Shop"
+          ]
+        ],
+        "imports": []
+      },
+      "test/cart_test.rb": {
+        "symbols": [
+          [
+            "CartTest",
+            "class",
+            4
+          ],
+          [
+            "test_empty_total",
+            "method",
+            5,
+            "CartTest"
+          ]
+        ],
+        "imports": [
+          [
+            1,
+            "minitest/autorun",
+            "ext:minitest"
+          ],
+          [
+            2,
+            "shop/cart",
+            "lib/shop/cart.rb"
+          ]
+        ]
+      }
+    },
+    "c-lib": {
+      "include/buffer.h": {
+        "symbols": [
+          [
+            "BUFFER_H",
+            "macro",
+            2
+          ],
+          [
+            "Buffer",
+            "struct",
+            6
+          ],
+          [
+            "buffer_new",
+            "function",
+            11
+          ],
+          [
+            "buffer_free",
+            "function",
+            12
+          ],
+          [
+            "buffer_len",
+            "function",
+            13
+          ]
+        ],
+        "imports": [
+          [
+            4,
+            "<stddef.h>",
+            "ext:stddef.h"
+          ]
+        ]
+      },
+      "src/buffer.c": {
+        "symbols": [
+          [
+            "DEFAULT_CAP",
+            "macro",
+            5
+          ],
+          [
+            "grow",
+            "function",
+            7
+          ],
+          [
+            "buffer_new",
+            "function",
+            11
+          ],
+          [
+            "buffer_free",
+            "function",
+            22
+          ],
+          [
+            "buffer_len",
+            "function",
+            27
+          ]
+        ],
+        "imports": [
+          [
+            1,
+            "<stdlib.h>",
+            "ext:stdlib.h"
+          ],
+          [
+            2,
+            "buffer.h",
+            "include/buffer.h"
+          ],
+          [
+            3,
+            "util/log.h",
+            "src/util/log.h"
+          ]
+        ]
+      },
+      "src/util/log.h": {
+        "symbols": [
+          [
+            "log_error",
+            "function",
+            3
+          ]
+        ],
+        "imports": []
+      },
+      "src/util/log.c": {
+        "symbols": [
+          [
+            "log_error",
+            "function",
+            4
+          ]
+        ],
+        "imports": [
+          [
+            1,
+            "<stdio.h>",
+            "ext:stdio.h"
+          ],
+          [
+            2,
+            "log.h",
+            "src/util/log.h"
+          ]
+        ]
+      }
+    },
+    "cpp-app": {
+      "include/bank/account.hpp": {
+        "symbols": [
+          [
+            "bank",
+            "module",
+            6
+          ],
+          [
+            "Account",
+            "class",
+            8
+          ],
+          [
+            "Account",
+            "method",
+            10,
+            "Account"
+          ],
+          [
+            "balance",
+            "method",
+            11,
+            "Account"
+          ],
+          [
+            "deposit",
+            "method",
+            12,
+            "Account"
+          ]
+        ],
+        "imports": [
+          [
+            3,
+            "<string>",
+            "ext:string"
+          ],
+          [
+            4,
+            "<vector>",
+            "ext:vector"
+          ]
+        ]
+      },
+      "src/account.cpp": {
+        "symbols": [
+          [
+            "bank",
+            "module",
+            5
+          ],
+          [
+            "Account",
+            "method",
+            7,
+            "Account"
+          ],
+          [
+            "balance",
+            "method",
+            9,
+            "Account"
+          ],
+          [
+            "deposit",
+            "method",
+            13,
+            "Account"
+          ]
+        ],
+        "imports": [
+          [
+            1,
+            "bank/account.hpp",
+            "include/bank/account.hpp"
+          ],
+          [
+            3,
+            "<numeric>",
+            "ext:numeric"
+          ]
+        ]
+      },
+      "src/main.cpp": {
+        "symbols": [
+          [
+            "main",
+            "function",
+            4
+          ]
+        ],
+        "imports": [
+          [
+            1,
+            "<iostream>",
+            "ext:iostream"
+          ],
+          [
+            2,
+            "<bank/account.hpp>",
+            "include/bank/account.hpp"
+          ]
+        ]
+      }
     }
   }
 }

@@ -205,6 +205,14 @@ Etapa 2 — mapa do código:
 - [x] Acessibilidade: tabela "Mais centrais" com os mesmos números do canvas.
 - [x] 10 000 arquivos e ~20 000 imports: 53 ms para montar o mapa em memória, sem contar a leitura das arestas no banco (release, [benchmarks.md](benchmarks.md)).
 
+Etapa 4 — mais linguagens:
+
+- [x] Kotlin, PHP, Ruby, C e C++ com cobertura declarada e testes de unidade por linguagem.
+- [x] Resolução: pacote Kotlin (também funções de nível superior), PSR-4 do composer.json e namespace PHP, `require`/`require_relative` do Ruby, `#include` com pastas `include/`.
+- [x] Fixtures `kotlin-app`, `php-app`, `ruby-app`, `c-lib`, `cpp-app` com gabarito à mão: 100% de precisão e revocação.
+- [x] C/C++ conferido em código real (33 arquivos de um repositório de terceiros).
+- [ ] Kotlin, PHP e Ruby em código real (sem repositório disponível nesta etapa).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

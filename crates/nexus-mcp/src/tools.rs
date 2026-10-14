@@ -1339,7 +1339,7 @@ pub static TOOLS: &[Tool] = &[
     Tool {
         name: "get_symbol_context",
         title: "Find a symbol's declaration",
-        description: "Find where an identifier (function, method, class, struct, interface, const…) is declared — with kind, container and full body for TS/JS, Python and Rust (lexical analysis), regex elsewhere — and which files import the definition or mention the name.",
+        description: "Find where an identifier (function, method, class, struct, interface, const…) is declared — with kind, container and full body for TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C and C++ (lexical analysis), regex elsewhere — and which files import the definition or mention the name.",
         read_only: true,
         idempotent: true,
         input: || {
@@ -1357,7 +1357,7 @@ pub static TOOLS: &[Tool] = &[
     Tool {
         name: "get_related_files",
         title: "Related files",
-        description: "Files related to a given file: what it imports and who imports it (dependency graph with the import line as evidence; TS/JS, Python, Rust), tests that import it or match its name, same directory, nearest manifest, and memories that reference it.",
+        description: "Files related to a given file: what it imports and who imports it (dependency graph with the import line as evidence; TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C and C++), tests that import it or match its name, same directory, nearest manifest, and memories that reference it.",
         read_only: true,
         idempotent: true,
         input: || {

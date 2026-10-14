@@ -28,3 +28,27 @@ A busca e os Context Packs dependiam de texto e heurísticas de nome; `get_symbo
 - `package` (Java) e `namespace` (C#) viram símbolos `module` e servem para resolver imports por nome; Go usa o `module` do `go.mod`.
 - Um import pode apontar para **vários arquivos** (pacote Go, `import a.b.*`, `using X.Y`): `Target::Files`, e o destino passou a fazer parte da chave de `edges` (migration v6). A tabela é recriada vazia e o grafo é refeito na próxima indexação.
 - `ANALYZER_VERSION` 2 e `INDEXER_VERSION` 3: conteúdos já indexados são reanalisados uma vez.
+
+## Atualização v0.3 (2026-10-14): Kotlin, PHP, Ruby, C e C++
+
+- Continua sem tree-sitter. As quatro famílias novas acertaram 100% do gabarito conferido à mão (`kotlin-app`, `php-app`, `ruby-app`, `c-lib`, `cpp-app`: 67 declarações e 27 imports resolvidos). C/C++ também foi conferido em 33 arquivos de um repositório real ([evaluation.md](../evaluation.md)).
+- **Kotlin**:
+  - `package` vira módulo, como em Java;
+  - `import a.b.x` resolve pela declaração de nível superior `x` do pacote (classe, função ou propriedade), não só pelo nome do arquivo;
+  - funções com corpo de expressão (`fun x() = …`) não esperam chave (`walk_braces_with`).
+- **PHP**:
+  - `namespace` vira módulo;
+  - `use` resolve pelo PSR-4 do `composer.json` e, sem ele, pelo arquivo do namespace;
+  - um nome do projeto que não existe fica **não resolvido**;
+  - `use` dentro de classe é uso de trait e não conta como import.
+- **Ruby**:
+  - percorredor próprio, porque os blocos fecham com `end`;
+  - modificadores (`x if y`) e `def x = 1` não abrem bloco;
+  - `require` procura `lib/`, `app/`, a raiz e as pastas `lib/` do projeto antes de virar gem.
+- **C/C++**:
+  - um analisador para as duas linguagens;
+  - o pré-processador é lido à parte: `#define` vira macro, e as diretivas saem da contagem de chaves;
+  - `#include "x"` procura relativo, na raiz e nas pastas `include/`; `<x>` só nas pastas `include/` do projeto, senão é externo;
+  - um bloco pode agrupar declarações sem ter símbolo próprio (`extern "C" {`).
+- O lexer ganhou um segundo marcador de comentário de linha (`#` no PHP, que não vale para `#[`) e os estilos de PHP e Ruby.
+- `ANALYZER_VERSION` 3 e `INDEXER_VERSION` 4: conteúdos já indexados são reanalisados uma vez.

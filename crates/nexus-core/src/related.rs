@@ -249,7 +249,7 @@ pub fn related_files(conn: &Connection, project: &Project, rel_path: &str) -> Re
         related,
         memories,
         limitations: vec![
-            "Imports resolvidos por análise léxica (TS/JS, Python, Rust); para outras linguagens, relações por nome, pasta, manifesto e citação textual do módulo.".into(),
+            "Imports resolvidos por análise léxica (TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++); para outras linguagens, relações por nome, pasta, manifesto e citação textual do módulo.".into(),
         ],
     })
 }
@@ -393,7 +393,7 @@ pub fn symbol_context(conn: &Connection, project: &Project, symbol: &str) -> Res
         }
     }
     let mut limitations = vec![
-        "Declarações da análise léxica (TS/JS, Python, Rust; tipo e linha exatos) ou, nas demais linguagens, por expressão regular; usos = arquivos que importam a definição ou citam o nome. Sem resolução de tipos.".to_owned(),
+        "Declarações da análise léxica (TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++; tipo e linha exatos) ou, nas demais linguagens, por expressão regular; usos = arquivos que importam a definição ou citam o nome. Sem resolução de tipos.".to_owned(),
     ];
     if definitions.is_empty() {
         limitations.insert(

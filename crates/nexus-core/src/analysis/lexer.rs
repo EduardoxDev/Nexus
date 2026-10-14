@@ -6,6 +6,8 @@
 #[derive(Debug, Clone, Copy)]
 pub struct Style {
     pub line_comment: &'static str,
+    /// Segundo marcador de comentário de linha (`#` no PHP, que não vale para `#[`).
+    pub alt_line_comment: Option<&'static str>,
     pub block_comment: Option<(&'static str, &'static str)>,
     /// Comentários de bloco aninháveis (Rust).
     pub nested_blocks: bool,
@@ -18,7 +20,30 @@ pub struct Style {
 
 pub const C_LIKE: Style = Style {
     line_comment: "//",
+    alt_line_comment: None,
     block_comment: Some(("/*", "*/")),
+    nested_blocks: false,
+    quotes: &['"', '\'', '`'],
+    triple_quotes: false,
+    rust: false,
+};
+
+/// PHP: `//` e `#` (menos `#[`, atributo do PHP 8), `/* */`, aspas simples, duplas e crases.
+pub const PHP: Style = Style {
+    line_comment: "//",
+    alt_line_comment: Some("#"),
+    block_comment: Some(("/*", "*/")),
+    nested_blocks: false,
+    quotes: &['"', '\'', '`'],
+    triple_quotes: false,
+    rust: false,
+};
+
+/// Ruby: `#` (blocos `=begin`/`=end` não são tratados), aspas simples, duplas e crases.
+pub const RUBY: Style = Style {
+    line_comment: "#",
+    alt_line_comment: None,
+    block_comment: None,
     nested_blocks: false,
     quotes: &['"', '\'', '`'],
     triple_quotes: false,
@@ -27,6 +52,7 @@ pub const C_LIKE: Style = Style {
 
 pub const PYTHON: Style = Style {
     line_comment: "#",
+    alt_line_comment: None,
     block_comment: None,
     nested_blocks: false,
     quotes: &['"', '\''],
@@ -36,6 +62,7 @@ pub const PYTHON: Style = Style {
 
 pub const RUST: Style = Style {
     line_comment: "//",
+    alt_line_comment: None,
     block_comment: Some(("/*", "*/")),
     nested_blocks: true,
     quotes: &['"'],
@@ -66,7 +93,10 @@ pub fn mask(text: &str, style: Style) -> Masked {
 
     while i < src.len() {
         // Comentário de linha.
-        if starts(i, style.line_comment) {
+        let alt = style
+            .alt_line_comment
+            .is_some_and(|m| starts(i, m) && src.get(i + m.len()) != Some(&b'['));
+        if starts(i, style.line_comment) || alt {
             let end = src[i..]
                 .iter()
                 .position(|&b| b == b'\n')
@@ -256,6 +286,15 @@ mod tests {
         assert!(m.bare.contains("fn yes"));
         assert_eq!(m.bare.matches('{').count(), 2);
         assert_eq!(m.bare.len(), src.len());
+    }
+
+    #[test]
+    fn php_hash_comments_but_not_attributes() {
+        let src = "# class A {}\n#[Route('/x')]\nclass B {}\n";
+        let m = mask(src, PHP);
+        assert!(!m.bare.contains("class A"));
+        assert!(m.bare.contains("#[Route"));
+        assert!(m.bare.contains("class B"));
     }
 
     #[test]

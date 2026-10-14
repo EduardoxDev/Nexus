@@ -123,7 +123,7 @@ A CLI age como o usuário: pode confirmar e revisar memórias. Veja [ADR-0011](d
 
 ### `nexus symbol <NOME> [--project P] [--limit N]`
 
-Onde um símbolo é declarado (TS/JS, Python, Rust), com tipo, linhas e contêiner. A comparação ignora maiúsculas e `_`: `create_session` encontra `createSession`.
+Onde um símbolo é declarado (TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++), com tipo, linhas e contêiner. A comparação ignora maiúsculas e `_`: `create_session` encontra `createSession`.
 
 ### `nexus deps [ARQUIVO] [--project P]`
 

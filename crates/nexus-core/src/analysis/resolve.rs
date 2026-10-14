@@ -10,6 +10,14 @@
 //!   `.go` da pasta do pacote (sem `_test.go`).
 //! - Java: `a.b.C` → arquivo da classe `C` declarado em `package a.b`; `a.b.*` → o pacote.
 //! - C#: `using X.Y` → arquivos que declaram `namespace X.Y`; `using static X.Y.Z` → o tipo `Z`.
+//! - Kotlin: `a.b.C` → arquivo de `package a.b` que declara `C` no nível superior (classe,
+//!   função ou propriedade); `a.b.*` → o pacote.
+//! - PHP: `A\B\C` pelo PSR-4 do `composer.json` (o prefixo mais longo) ou, sem ele, pelo arquivo
+//!   `C.php` de `namespace A\B`; `require`/`include` relativos ao arquivo ou à raiz.
+//! - Ruby: `require_relative` relativo ao arquivo; `require "x"` procura `lib/`, `app/`, a raiz
+//!   e as pastas `lib/` do projeto, senão é uma gem.
+//! - C/C++: `#include "x.h"` relativo ao arquivo, à raiz e às pastas `include/`; `<x>` só nas
+//!   pastas `include/`, senão é externo.
 //!
 //! O que não resolve para um arquivo vira dependência **externa** (pacote/crate) ou fica
 //! **não resolvido** (caminho relativo que não existe) — nunca é inventado.
@@ -103,6 +111,18 @@ pub struct Resolver<'a> {
     java_packages: HashMap<String, Vec<String>>,
     /// `namespace` C# → arquivos.
     cs_namespaces: HashMap<String, Vec<String>>,
+    /// `package` Kotlin → arquivos.
+    kt_packages: HashMap<String, Vec<String>>,
+    /// (pacote Kotlin, nome de nível superior) → arquivos que o declaram.
+    kt_symbols: HashMap<(String, String), Vec<String>>,
+    /// `namespace` PHP → arquivos.
+    php_namespaces: HashMap<String, Vec<String>>,
+    /// PSR-4 do composer.json: (prefixo sem `\` final, pasta), o mais longo primeiro.
+    psr4: Vec<(String, String)>,
+    /// Pastas `include/` do projeto (C/C++).
+    include_dirs: Vec<String>,
+    /// Pastas `lib/` do projeto (Ruby), além de `lib`, `app` e a raiz.
+    ruby_lib_dirs: Vec<String>,
 }
 
 /// Nome do arquivo sem pasta e sem extensão.
@@ -146,6 +166,26 @@ impl<'a> Resolver<'a> {
         let mut tsconfigs = tsconfigs;
         // O mais profundo primeiro: o tsconfig mais próximo vence.
         tsconfigs.sort_by_key(|c| std::cmp::Reverse(c.dir.len()));
+        // Pastas especiais deduzidas dos caminhos (`…/include`, `…/lib`).
+        let mut include_dirs: HashSet<String> = HashSet::new();
+        let mut ruby_lib_dirs: HashSet<String> = HashSet::new();
+        for f in files {
+            let mut dir = dir_of(f);
+            while !dir.is_empty() {
+                let name = dir.rsplit('/').next().unwrap_or(dir);
+                if name == "include" {
+                    include_dirs.insert(dir.to_owned());
+                }
+                if name == "lib" && f.ends_with(".rb") {
+                    ruby_lib_dirs.insert(dir.to_owned());
+                }
+                dir = dir_of(dir);
+            }
+        }
+        let mut include_dirs: Vec<String> = include_dirs.into_iter().collect();
+        include_dirs.sort();
+        let mut ruby_lib_dirs: Vec<String> = ruby_lib_dirs.into_iter().collect();
+        ruby_lib_dirs.sort();
         Self {
             files,
             tsconfigs,
@@ -154,7 +194,48 @@ impl<'a> Resolver<'a> {
             go_dirs: HashMap::new(),
             java_packages: HashMap::new(),
             cs_namespaces: HashMap::new(),
+            kt_packages: HashMap::new(),
+            kt_symbols: HashMap::new(),
+            php_namespaces: HashMap::new(),
+            psr4: Vec::new(),
+            include_dirs,
+            ruby_lib_dirs,
         }
+    }
+
+    /// PSR-4 do composer.json: (prefixo `App\`, pasta relativa à raiz do projeto).
+    #[must_use]
+    pub fn with_psr4(mut self, mut map: Vec<(String, String)>) -> Self {
+        for (prefix, _) in &mut map {
+            *prefix = prefix.trim_matches('\\').to_owned();
+        }
+        map.sort_by_key(|(p, _)| std::cmp::Reverse(p.len()));
+        self.psr4 = map;
+        self
+    }
+
+    /// Declarações de nível superior de Kotlin: (arquivo, nome); o pacote vem de
+    /// `with_namespaces`.
+    #[must_use]
+    pub fn with_kotlin_symbols(mut self, decls: Vec<(String, String)>) -> Self {
+        let package_of: HashMap<&String, &String> = self
+            .kt_packages
+            .iter()
+            .flat_map(|(pkg, files)| files.iter().map(move |f| (f, pkg)))
+            .collect();
+        let mut map: HashMap<(String, String), Vec<String>> = HashMap::new();
+        for (file, name) in decls {
+            let pkg = package_of
+                .get(&file)
+                .map_or(String::new(), |p| (*p).clone());
+            map.entry((pkg, name)).or_default().push(file);
+        }
+        for list in map.values_mut() {
+            list.sort();
+            list.dedup();
+        }
+        self.kt_symbols = map;
+        self
     }
 
     /// Módulos Go: (caminho do `module`, pasta do go.mod).
@@ -184,6 +265,8 @@ impl<'a> Resolver<'a> {
             let map = match language.as_str() {
                 "java" => &mut self.java_packages,
                 "csharp" => &mut self.cs_namespaces,
+                "kotlin" => &mut self.kt_packages,
+                "php" => &mut self.php_namespaces,
                 _ => continue,
             };
             map.entry(name).or_default().push(path);
@@ -192,6 +275,8 @@ impl<'a> Resolver<'a> {
             .java_packages
             .values_mut()
             .chain(self.cs_namespaces.values_mut())
+            .chain(self.kt_packages.values_mut())
+            .chain(self.php_namespaces.values_mut())
         {
             list.sort();
             list.dedup();
@@ -211,7 +296,145 @@ impl<'a> Resolver<'a> {
             "go" => self.resolve_go(from, &import.specifier),
             "java" => self.resolve_java(from, &import.specifier),
             "csharp" => self.resolve_csharp(from, &import.specifier),
+            "kotlin" => self.resolve_kotlin(from, &import.specifier),
+            "php" => self.resolve_php(from, import),
+            "ruby" => self.resolve_ruby(from, &import.specifier),
+            "c" | "cpp" => self.resolve_c(from, &import.specifier),
             _ => Target::Unresolved,
+        }
+    }
+
+    // ---- Kotlin ------------------------------------------------------------------------
+
+    fn resolve_kotlin(&self, from: &str, spec: &str) -> Target {
+        if let Some(pkg) = spec.strip_suffix(".*") {
+            return self.kt_packages.get(pkg).map_or_else(
+                || Target::External(pkg.to_owned()),
+                |f| files_target(from, f),
+            );
+        }
+        // `a.b.C` ou `a.b.C.Interna`: o pacote mais longo que declara o nome.
+        let segs: Vec<&str> = spec.split('.').collect();
+        for cut in (1..segs.len()).rev() {
+            let pkg = segs[..cut].join(".");
+            if !self.kt_packages.contains_key(&pkg) {
+                continue;
+            }
+            let name = segs[cut];
+            if let Some(files) = self.kt_symbols.get(&(pkg.clone(), name.to_owned())) {
+                return files_target(from, files);
+            }
+            if let Some(file) = self
+                .kt_packages
+                .get(&pkg)
+                .and_then(|files| files.iter().find(|f| stem(f) == name))
+            {
+                return Target::File(file.clone());
+            }
+            // Pacote do projeto, nome não encontrado: não inventa um destino.
+            return Target::Unresolved;
+        }
+        Target::External(
+            spec.rsplit_once('.')
+                .map_or(spec, |(pkg, _)| pkg)
+                .to_owned(),
+        )
+    }
+
+    // ---- PHP ---------------------------------------------------------------------------
+
+    fn resolve_php(&self, from: &str, import: &Import) -> Target {
+        let spec = import.specifier.as_str();
+        if import.kind == ImportKind::Require {
+            let rel = spec.trim_start_matches("./");
+            let candidates = [join(dir_of(from), spec), Some(rel.to_owned())];
+            return candidates
+                .into_iter()
+                .flatten()
+                .find(|p| self.exists(p))
+                .map_or(Target::Unresolved, Target::File);
+        }
+        let spec = spec.trim_start_matches('\\');
+        for (prefix, dir) in &self.psr4 {
+            let rest = if prefix.is_empty() {
+                Some(spec)
+            } else {
+                spec.strip_prefix(prefix.as_str())
+                    .and_then(|r| r.strip_prefix('\\'))
+            };
+            let Some(rest) = rest else { continue };
+            let path = format!("{}.php", rest.replace('\\', "/"));
+            let full = if dir.is_empty() {
+                path
+            } else {
+                format!("{}/{path}", dir.trim_end_matches('/'))
+            };
+            if self.exists(&full) {
+                return Target::File(full);
+            }
+        }
+        if let Some((ns, class)) = spec.rsplit_once('\\')
+            && let Some(files) = self.php_namespaces.get(ns)
+        {
+            return files
+                .iter()
+                .find(|f| stem(f) == class)
+                .map_or(Target::Unresolved, |f| Target::File(f.clone()));
+        }
+        Target::External(spec.rsplit_once('\\').map_or(spec, |(ns, _)| ns).to_owned())
+    }
+
+    // ---- Ruby --------------------------------------------------------------------------
+
+    fn resolve_ruby(&self, from: &str, spec: &str) -> Target {
+        let with_ext = |p: String| {
+            if p.ends_with(".rb") {
+                p
+            } else {
+                format!("{p}.rb")
+            }
+        };
+        if spec.starts_with("./") || spec.starts_with("../") {
+            return join(dir_of(from), spec)
+                .map(with_ext)
+                .filter(|p| self.exists(p))
+                .map_or(Target::Unresolved, Target::File);
+        }
+        let mut dirs: Vec<&str> = vec!["lib", "app", ""];
+        dirs.extend(self.ruby_lib_dirs.iter().map(String::as_str));
+        for dir in dirs {
+            let p = with_ext(if dir.is_empty() {
+                spec.to_owned()
+            } else {
+                format!("{dir}/{spec}")
+            });
+            if self.exists(&p) {
+                return Target::File(p);
+            }
+        }
+        Target::External(spec.split('/').next().unwrap_or(spec).to_owned())
+    }
+
+    // ---- C/C++ -------------------------------------------------------------------------
+
+    fn resolve_c(&self, from: &str, spec: &str) -> Target {
+        let (system, path) = match spec.strip_prefix('<').and_then(|s| s.strip_suffix('>')) {
+            Some(inner) => (true, inner),
+            None => (false, spec),
+        };
+        let mut candidates: Vec<String> = Vec::new();
+        if !system {
+            candidates.extend(join(dir_of(from), path));
+            candidates.push(path.to_owned());
+        }
+        candidates.extend(self.include_dirs.iter().map(|d| format!("{d}/{path}")));
+        if let Some(found) = candidates.into_iter().find(|p| self.exists(p)) {
+            return Target::File(found);
+        }
+        if system {
+            Target::External(path.split('/').next().unwrap_or(path).to_owned())
+        } else {
+            Target::Unresolved
         }
     }
 

@@ -114,6 +114,29 @@ Gabarito conferido à mão em três fixtures novas (`tests/evaluation/analysis.j
 
 As linguagens anteriores continuaram em 1,000. Limitação: as fixtures são pequenas e escritas por mim; código real com geração de código, text blocks ou strings verbatim desbalanceadas pode errar (ver cobertura declarada em `analysis::coverage()`).
 
+## v0.3 — Kotlin, PHP, Ruby, C e C++ (2026-10-14)
+
+Gabarito conferido à mão em cinco fixtures novas (`kotlin-app`, `php-app`, `ruby-app`, `c-lib`, `cpp-app`), no mesmo teste:
+
+| Linguagem | Símbolos: precisão | Símbolos: revocação | Imports resolvidos: precisão | Imports resolvidos: revocação |
+| --------- | ------------------ | ------------------- | ---------------------------- | ----------------------------- |
+| Kotlin    | 1,000 (16/16)      | 1,000               | 1,000 (4/4)                  | 1,000                         |
+| PHP       | 1,000 (14/14)      | 1,000               | 1,000 (5/5)                  | 1,000                         |
+| Ruby      | 1,000 (15/15)      | 1,000               | 1,000 (6/6)                  | 1,000                         |
+| C/C++     | 1,000 (22/22)      | 1,000               | 1,000 (12/12)                | 1,000                         |
+
+As fixtures cobrem os casos difíceis de propósito:
+
+- PHP: import com PSR-4, `use` em grupo e um nome que não existe no projeto, que fica **não resolvido** em vez de inventado.
+- Ruby: `require` de pasta local × gem.
+- C/C++: `#include` relativo, pela pasta `include/` e com `<…>` de arquivo do projeto; métodos definidos fora da classe (`Account::balance`).
+
+As linguagens anteriores continuaram em 1,000.
+
+**Código real (só C/C++):** conferi as declarações de 33 arquivos C/C++ de um repositório real de terceiros (26 `.c`, 6 `.cc`, 1 `.hpp`) contra o código-fonte. Não achei declaração faltando nem sobrando. As diferenças em relação a um `grep` de conferência eram erros do `grep`: corpo na mesma linha, `__attribute__`, `struct` sem nome de função.
+
+Kotlin, PHP e Ruby **não** foram conferidos em código real nesta etapa: só nas fixtures.
+
 ## Falhas conhecidas (conjunto principal)
 
 | Tarefa                                     | Problema                                                                                                            |

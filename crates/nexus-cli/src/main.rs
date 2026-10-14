@@ -77,7 +77,7 @@ enum Command {
     /// Alertas de atualidade: caminhos e símbolos citados que sumiram, memória desatualizada,
     /// contradições e arquivos alterados desde a indexação.
     Freshness(memory_cmd::FreshnessArgs),
-    /// Onde um símbolo é declarado (TS/JS, Python, Rust).
+    /// Onde um símbolo é declarado (TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++).
     Symbol(code_cmd::SymbolArgs),
     /// Dependências de um arquivo (o que importa e quem o importa) ou visão geral do grafo.
     Deps(code_cmd::DepsArgs),

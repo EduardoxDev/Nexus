@@ -203,7 +203,7 @@ Etapa 2 — mapa do código:
 - [x] `analysis::map`: grafo dos imports internos com graus de entrada/saída e PageRank, corte nos 150 nós mais centrais (até 500), filtro por pasta e modo agrupado por pasta; nada novo é gravado.
 - [x] Tela "Mapa": layout de forças próprio em canvas (sem dependência nova), que para quando estabiliza; zoom, arraste, hover com vizinhos, clique abre o arquivo na Busca; cores por linguagem com legenda.
 - [x] Acessibilidade: tabela "Mais centrais" com os mesmos números do canvas.
-- [x] 10 000 arquivos e ~20 000 imports: 53 ms para montar o mapa (release, [benchmarks.md](benchmarks.md)).
+- [x] 10 000 arquivos e ~20 000 imports: 53 ms para montar o mapa em memória, sem contar a leitura das arestas no banco (release, [benchmarks.md](benchmarks.md)).
 
 ## Riscos
 

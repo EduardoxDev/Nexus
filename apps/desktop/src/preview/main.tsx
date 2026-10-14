@@ -56,6 +56,16 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   check_for_update: () => ({ status: "upToDate", currentVersion: "0.2.0" }),
   get_analysis_overview: () => data.analysis,
   get_project_map: (args) => data.projectMap(args.request as MapRequest),
+  get_file_context: (args) => data.fileContext(String(args.relPath)),
+  get_file_analysis: (args) => ({
+    relPath: String(args.relPath),
+    language: null,
+    analyzed: false,
+    symbols: [],
+    imports: [],
+    importedBy: [],
+  }),
+  get_file_history: () => ({ gitAvailable: true, commits: [] }),
 };
 
 mockIPC(

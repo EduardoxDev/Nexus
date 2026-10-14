@@ -7,11 +7,13 @@ function run(nodes: number, edges: [number, number][]) {
     Array.from({ length: nodes }, (_, i) => ({ id: `n${i}`, r: 6 })),
     edges.map(([a, b]) => ({ from: `n${a}`, to: `n${b}` })),
   );
+  // Limite de segurança: se o layout parar de convergir, o teste falha em vez de travar.
   let steps = 0;
-  while (!isStable(layout)) {
+  while (!isStable(layout) && steps < 2_000) {
     step(layout);
     steps++;
   }
+  if (!isStable(layout)) throw new Error(`o layout não estabilizou em ${steps} passos`);
   return { layout, steps };
 }
 

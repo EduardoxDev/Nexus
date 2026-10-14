@@ -667,8 +667,8 @@ export const ptBR = {
     clickFolder: "Clique para ver os arquivos desta pasta.",
     hint: "Roda: zoom · arrastar: mover · duplo clique: enquadrar",
     canvasLabel: (nodes: number, edges: number) =>
-      `Mapa do código com ${nodes} nós e ${edges} ligações. A tabela ao lado traz os mesmos dados.`,
-    tableTitle: "Mais centrais",
+      `Mapa do código com ${nodes} nós e ${edges} ligações. A tabela ao lado lista os 30 mais centrais, com os mesmos números.`,
+    tableTitle: "Mais centrais (até 30)",
     colFile: "Arquivo",
     colFolder: "Pasta",
     colIn: "Importado por",

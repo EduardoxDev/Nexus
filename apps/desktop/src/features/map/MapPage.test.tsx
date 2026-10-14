@@ -82,7 +82,7 @@ describe("Mapa", () => {
     const user = userEvent.setup();
     setupIpc({ list_projects: () => [project], get_project_map: () => fileMap() });
     await openMap(user);
-    const table = await screen.findByRole("complementary", { name: "Mais centrais" });
+    const table = await screen.findByRole("complementary", { name: "Mais centrais (até 30)" });
     const rows = within(table).getAllByRole("row");
     expect(rows).toHaveLength(4);
     const first = rows[1];
@@ -108,31 +108,28 @@ describe("Mapa", () => {
         (args.request as MapRequest).groupByFolder ? folderMap() : fileMap(),
     });
     await openMap(user);
-    await screen.findByRole("complementary", { name: "Mais centrais" });
+    await screen.findByRole("complementary", { name: "Mais centrais (até 30)" });
     await user.type(screen.getByRole("searchbox", { name: "Filtrar por pasta" }), "/src/auth/");
     await user.click(screen.getByRole("button", { name: "Filtrar" }));
     await user.click(screen.getByRole("button", { name: "Agrupar por pasta" }));
     expect(await screen.findByText("2 de 2 pastas (os mais centrais)")).toBeInTheDocument();
     expect(mapRequests(calls)).toContainEqual({
       projectId: 1,
-      maxNodes: null,
       folder: "src/auth",
       groupByFolder: false,
     });
     expect(mapRequests(calls).at(-1)).toEqual({
       projectId: 1,
-      maxNodes: null,
       folder: "src/auth",
       groupByFolder: true,
     });
 
     // Clicar numa pasta desagrupa e filtra por ela.
-    const table = screen.getByRole("complementary", { name: "Mais centrais" });
+    const table = screen.getByRole("complementary", { name: "Mais centrais (até 30)" });
     await user.click(within(table).getByRole("button", { name: "src/db" }));
     expect(await screen.findByText("3 de 40 arquivos (os mais centrais)")).toBeInTheDocument();
     expect(mapRequests(calls).at(-1)).toEqual({
       projectId: 1,
-      maxNodes: null,
       folder: "src/db",
       groupByFolder: false,
     });
@@ -157,7 +154,7 @@ describe("Mapa", () => {
       }),
     });
     await openMap(user);
-    const table = await screen.findByRole("complementary", { name: "Mais centrais" });
+    const table = await screen.findByRole("complementary", { name: "Mais centrais (até 30)" });
     await user.click(within(table).getByRole("button", { name: "src/db/client.ts" }));
     const preview = await screen.findByRole("complementary", { name: "Prévia" });
     expect(await within(preview).findByText("conteúdo de src/db/client.ts")).toBeInTheDocument();

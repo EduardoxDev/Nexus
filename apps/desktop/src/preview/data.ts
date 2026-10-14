@@ -8,6 +8,7 @@ import type {
   ContextPack,
   ContextPackSummary,
   DiagnosticsReport,
+  FileContext,
   FreshnessIssue,
   FreshnessSummary,
   IndexJob,
@@ -423,6 +424,45 @@ export const analysis: AnalysisOverview = {
   coverage: [],
 };
 
+/** PageRank como no núcleo: amortecimento 0,85, 30 iterações, nós sem saída distribuem a nota. */
+function pagerank(ids: string[], edges: [string, string][]): Map<string, number> {
+  const n = ids.length;
+  const out = new Map(ids.map((id) => [id, [] as string[]]));
+  for (const [from, to] of edges) out.get(from)?.push(to);
+  let rank = new Map(ids.map((id) => [id, 1 / Math.max(1, n)]));
+  for (let it = 0; it < 30; it++) {
+    const dangling = ids
+      .filter((id) => (out.get(id) ?? []).length === 0)
+      .reduce((sum, id) => sum + (rank.get(id) ?? 0), 0);
+    const next = new Map(ids.map((id) => [id, (0.15 + 0.85 * dangling) / n]));
+    for (const id of ids) {
+      const links = out.get(id) ?? [];
+      for (const to of links) {
+        next.set(to, (next.get(to) ?? 0) + (0.85 * (rank.get(id) ?? 0)) / links.length);
+      }
+    }
+    rank = next;
+  }
+  return rank;
+}
+
+/** Trecho de exemplo para abrir um arquivo do Mapa na Busca. */
+export function fileContext(relPath: string): FileContext {
+  const text = `// ${relPath}\nexport function exemplo() {\n  return "conteúdo de exemplo da prévia";\n}\n`;
+  return {
+    relPath,
+    language: relPath.endsWith(".py") ? "python" : "typescript",
+    kind: "code",
+    startLine: 1,
+    endLine: 4,
+    totalLines: 4,
+    text,
+    freshness: "fresh",
+    contentHash: "0".repeat(64),
+    indexedAt: NOW,
+  };
+}
+
 /** Grafo de exemplo para o Mapa: um app TS com serviços, rotas e um utilitário em Python. */
 export function projectMap(request: MapRequest): ProjectMap {
   const folders = ["src/server/routes", "src/services", "src/db", "src/auth", "src/ui", "scripts"];
@@ -471,19 +511,25 @@ export function projectMap(request: MapRequest): ProjectMap {
   const inDeg = (id: string) => [...weights.keys()].filter((k) => k.endsWith(`\u0000${id}`)).length;
   const outDeg = (id: string) =>
     [...weights.keys()].filter((k) => k.startsWith(`${id}\u0000`)).length;
-  const nodes: MapNode[] = ids
-    .map((id) => ({
-      id,
-      folder: request.groupByFolder ? id : id.slice(0, id.lastIndexOf("/")),
-      language: files.find((x) => key(x.id) === id)?.language ?? null,
-      files: files.filter((x) => key(x.id) === id).length,
-      inDegree: inDeg(id),
-      outDegree: outDeg(id),
-      centrality: 0,
-    }))
-    .sort((a, b) => b.inDegree - a.inDegree || a.id.localeCompare(b.id));
-  const top = Math.max(1, nodes[0]?.inDegree ?? 1);
-  for (const n of nodes) n.centrality = n.inDegree / top;
+  const nodes: MapNode[] = ids.map((id) => ({
+    id,
+    folder: request.groupByFolder ? id : id.slice(0, id.lastIndexOf("/")),
+    language: files.find((x) => key(x.id) === id)?.language ?? null,
+    files: files.filter((x) => key(x.id) === id).length,
+    inDegree: inDeg(id),
+    outDegree: outDeg(id),
+    centrality: 0,
+  }));
+  // Mesmo PageRank do núcleo (`analysis::map`), normalizado pelo maior; ordena por ele.
+  const rank = pagerank(
+    ids,
+    [...weights.keys()].map((k) => k.split("\u0000") as [string, string]),
+  );
+  const top = Math.max(...rank.values(), Number.MIN_VALUE);
+  for (const n of nodes) n.centrality = (rank.get(n.id) ?? 0) / top;
+  nodes.sort(
+    (a, b) => b.centrality - a.centrality || b.inDegree - a.inDegree || a.id.localeCompare(b.id),
+  );
   return {
     nodes,
     edges: [...weights].map(([k, weight]) => {

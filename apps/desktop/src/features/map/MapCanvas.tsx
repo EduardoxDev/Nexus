@@ -30,6 +30,8 @@ function radius(node: MapNode, maxIn: number): number {
 /** Rótulos visíveis sem hover: só os mais centrais, para não poluir. */
 const LABELED = 12;
 const STEPS_PER_FRAME = 3;
+/** Espera antes de abrir um nó clicado, para reconhecer o duplo clique. */
+const DOUBLE_CLICK_MS = 250;
 
 interface View {
   k: number;
@@ -69,6 +71,7 @@ export function MapCanvas({
   const hoverRef = useRef<number | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const frameRef = useRef<number | null>(null);
+  const openTimerRef = useRef<number | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   /** Tamanho atual para o laço de animação (que roda com o fechamento de um render antigo). */
   const sizeRef = useRef(size);
@@ -86,6 +89,14 @@ export function MapCanvas({
     }
     return list;
   }, [map]);
+
+  // Clique pendente não abre nada depois que a tela some.
+  useEffect(
+    () => () => {
+      if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
+    },
+    [],
+  );
 
   // Tamanho do contêiner (o canvas acompanha, com a densidade de pixels da tela).
   useEffect(() => {
@@ -234,6 +245,8 @@ export function MapCanvas({
   };
 
   const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
+    // Só o botão principal move o mapa ou abre nós.
+    if (e.button !== 0) return;
     dragRef.current = { x: e.clientX, y: e.clientY, moved: false };
     // Arrastar para fora do mapa continua movendo (jsdom não tem captura: ignora).
     if (typeof e.currentTarget.setPointerCapture === "function") {
@@ -272,15 +285,22 @@ export function MapCanvas({
   };
 
   const onPointerUp = (e: PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return;
     const drag = dragRef.current;
     dragRef.current = null;
-    if (drag?.moved) return;
+    if (!drag || drag.moved) return;
     const layout = layoutRef.current;
     if (!layout) return;
     const { x, y } = toMap(e.clientX, e.clientY);
     const hit = hitTest(layout, x, y);
     const node = hit === null ? undefined : map.nodes[hit];
-    if (node) onOpen(node);
+    if (!node) return;
+    // Espera um pouco: se vier um segundo clique (duplo clique = enquadrar), não abre.
+    if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
+    openTimerRef.current = window.setTimeout(() => {
+      openTimerRef.current = null;
+      onOpen(node);
+    }, DOUBLE_CLICK_MS);
   };
 
   const onPointerLeave = () => {
@@ -309,6 +329,8 @@ export function MapCanvas({
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
         onDoubleClick={() => {
+          if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
+          openTimerRef.current = null;
           userMovedRef.current = false;
           schedule();
         }}

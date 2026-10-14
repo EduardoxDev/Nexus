@@ -4,11 +4,11 @@ export type MapRequest = { projectId: number,
 /**
  * Padrão 150, máximo 500.
  */
-maxNodes: number | null, 
+maxNodes?: number, 
 /**
- * Só arquivos dentro desta pasta (relativa, com `/`).
+ * Só arquivos dentro desta pasta (relativa, com `/`); `.` = só os da raiz do projeto.
  */
-folder: string | null, 
+folder?: string, 
 /**
  * Um nó por pasta em vez de um por arquivo.
  */

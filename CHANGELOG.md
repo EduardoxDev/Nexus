@@ -11,6 +11,8 @@ Cada versão da NEXUS, da mais nova para a mais antiga. A seção de cada versã
 - **Mais agentes.** A tela Integrações mostra a configuração pronta para Claude Code, Codex, Cursor, VS Code e Claude Desktop, com os caminhos da sua instalação, para copiar.
 - **Go, Java e C#.** Além de TypeScript, JavaScript, Python e Rust: funções, classes, métodos e quem importa quem. Em Go e C#, um import aponta para todos os arquivos do pacote ou namespace.
 
+- **Visual novo.** O app ganhou o visual do site: grafite quase preto com azul só nos destaques, fonte Inter, cartões com um brilho que segue o mouse e um banner novo na Visão geral.
+
 ### Também
 
 - Pastas do sistema no Linux e no macOS não podem ser adicionadas como projeto.

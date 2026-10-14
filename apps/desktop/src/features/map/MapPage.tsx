@@ -1,4 +1,5 @@
 import { FolderGit2, Network } from "lucide-react";
+import { useReducedMotionConfig } from "motion/react";
 import { useState, type SubmitEvent } from "react";
 
 import { EmptyState, ErrorState } from "@/components/feedback";
@@ -17,10 +18,6 @@ const s = t.map;
 /** Linhas da tabela alternativa ao canvas. */
 const TABLE_ROWS = 30;
 
-function reducedMotionNow(): boolean {
-  return document.documentElement.dataset.reducedMotion === "true";
-}
-
 export function MapPage() {
   const projects = useProjects();
   const projectId = useUi((st) => st.selectedProjectId);
@@ -29,12 +26,28 @@ export function MapPage() {
   const [grouped, setGrouped] = useState(false);
   const [folder, setFolder] = useState("");
   const [folderDraft, setFolderDraft] = useState("");
-  const [hovered, setHovered] = useState<MapNode | null>(null);
+  // Mesma preferência que o resto do app usa (MotionConfig no AppShell), reativa.
+  const reducedMotion = useReducedMotionConfig() === true;
   const map = useProjectMap(
     projectId === null
       ? null
-      : { projectId, maxNodes: null, folder: folder || null, groupByFolder: grouped },
+      : { projectId, groupByFolder: grouped, ...(folder ? { folder } : {}) },
   );
+  const [hover, setHover] = useState<MapNode | null>(null);
+  // Mapa novo (ou outro do cache): o nó apontado era do anterior, então é descartado.
+  const [hoverMap, setHoverMap] = useState(map.data);
+  if (hoverMap !== map.data) {
+    setHoverMap(map.data);
+    setHover(null);
+  }
+
+  if (projects.isError) {
+    return (
+      <div className="p-6">
+        <ErrorState error={projects.error} onRetry={() => void projects.refetch()} />
+      </div>
+    );
+  }
 
   if (projects.data?.length === 0) {
     return (
@@ -61,7 +74,8 @@ export function MapPage() {
   const open = (node: MapNode) => {
     if (map.data?.grouped) {
       setGrouped(false);
-      applyFolder(node.id === "." ? "" : node.id);
+      // A pasta raiz (".") filtra só os arquivos que estão direto nela.
+      applyFolder(node.id);
     } else {
       openFile(node.id);
     }
@@ -141,12 +155,14 @@ export function MapPage() {
           <div className="dot-grid relative min-w-0 flex-1">
             <MapCanvas
               map={map.data}
-              reducedMotion={reducedMotionNow()}
+              reducedMotion={reducedMotion}
               onOpen={open}
-              onHover={setHovered}
+              onHover={(node) => {
+                setHover(node);
+              }}
             />
             <Legend map={map.data} />
-            {hovered && <HoverCard node={hovered} grouped={map.data.grouped} />}
+            {hover && <HoverCard node={hover} grouped={map.data.grouped} />}
             <p className="pointer-events-none absolute right-3 bottom-3 text-xs text-fg-subtle">
               {s.hint}
             </p>

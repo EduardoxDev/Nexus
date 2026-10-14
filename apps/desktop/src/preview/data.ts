@@ -8,6 +8,7 @@ import type {
   ContextPack,
   ContextPackSummary,
   DiagnosticsReport,
+  FileContext,
   FreshnessIssue,
   FreshnessSummary,
   IndexJob,
@@ -423,6 +424,55 @@ export const analysis: AnalysisOverview = {
   coverage: [],
 };
 
+/** PageRank como no núcleo: amortecimento 0,85, 30 iterações, nós sem saída distribuem a nota. */
+function pagerank(ids: string[], edges: [string, string][]): Map<string, number> {
+  const n = ids.length;
+  const out = new Map(ids.map((id) => [id, [] as string[]]));
+  for (const [from, to] of edges) out.get(from)?.push(to);
+  let rank = new Map(ids.map((id) => [id, 1 / Math.max(1, n)]));
+  for (let it = 0; it < 30; it++) {
+    const dangling = ids
+      .filter((id) => (out.get(id) ?? []).length === 0)
+      .reduce((sum, id) => sum + (rank.get(id) ?? 0), 0);
+    const next = new Map(ids.map((id) => [id, (0.15 + 0.85 * dangling) / n]));
+    for (const id of ids) {
+      const links = out.get(id) ?? [];
+      for (const to of links) {
+        next.set(to, (next.get(to) ?? 0) + (0.85 * (rank.get(id) ?? 0)) / links.length);
+      }
+    }
+    rank = next;
+  }
+  return rank;
+}
+
+/** Arquivo de exemplo (60 linhas) para a prévia; respeita o intervalo pedido. */
+export function fileContext(relPath: string, start: number, end: number): FileContext {
+  const python = relPath.endsWith(".py");
+  const total = 60;
+  const lines = Array.from({ length: total }, (_, i) =>
+    i === 0
+      ? `${python ? "#" : "//"} ${relPath}`
+      : python
+        ? (`def exemplo_${i}():\n    return "linha ${i + 1} da prévia"`.split("\n")[i % 2] ?? "")
+        : `export const exemplo${i} = "linha ${i + 1} da prévia";`,
+  );
+  const first = Math.min(Math.max(1, start), total);
+  const last = Math.min(Math.max(first, end), total);
+  return {
+    relPath,
+    language: python ? "python" : "typescript",
+    kind: "code",
+    startLine: first,
+    endLine: last,
+    totalLines: total,
+    text: lines.slice(first - 1, last).join("\n"),
+    freshness: "fresh",
+    contentHash: "0".repeat(64),
+    indexedAt: NOW,
+  };
+}
+
 /** Grafo de exemplo para o Mapa: um app TS com serviços, rotas e um utilitário em Python. */
 export function projectMap(request: MapRequest): ProjectMap {
   const folders = ["src/server/routes", "src/services", "src/db", "src/auth", "src/ui", "scripts"];
@@ -460,30 +510,37 @@ export function projectMap(request: MapRequest): ProjectMap {
     const k = `${key(e.from)}\u0000${key(e.to)}`;
     weights.set(k, (weights.get(k) ?? 0) + 1);
   }
+  // Como no núcleo: só entram pontas de imports com os dois lados dentro do filtro.
   const ids = [
     ...new Set(
       real
+        .filter((e) => inside(e.from) && inside(e.to))
         .flatMap((e) => [e.from, e.to])
-        .filter(inside)
         .map(key),
     ),
   ];
   const inDeg = (id: string) => [...weights.keys()].filter((k) => k.endsWith(`\u0000${id}`)).length;
   const outDeg = (id: string) =>
     [...weights.keys()].filter((k) => k.startsWith(`${id}\u0000`)).length;
-  const nodes: MapNode[] = ids
-    .map((id) => ({
-      id,
-      folder: request.groupByFolder ? id : id.slice(0, id.lastIndexOf("/")),
-      language: files.find((x) => key(x.id) === id)?.language ?? null,
-      files: files.filter((x) => key(x.id) === id).length,
-      inDegree: inDeg(id),
-      outDegree: outDeg(id),
-      centrality: 0,
-    }))
-    .sort((a, b) => b.inDegree - a.inDegree || a.id.localeCompare(b.id));
-  const top = Math.max(1, nodes[0]?.inDegree ?? 1);
-  for (const n of nodes) n.centrality = n.inDegree / top;
+  const nodes: MapNode[] = ids.map((id) => ({
+    id,
+    folder: request.groupByFolder ? id : id.slice(0, id.lastIndexOf("/")),
+    language: files.find((x) => key(x.id) === id)?.language ?? null,
+    files: files.filter((x) => key(x.id) === id).length,
+    inDegree: inDeg(id),
+    outDegree: outDeg(id),
+    centrality: 0,
+  }));
+  // Mesmo PageRank do núcleo (`analysis::map`), normalizado pelo maior; ordena por ele.
+  const rank = pagerank(
+    ids,
+    [...weights.keys()].map((k) => k.split("\u0000") as [string, string]),
+  );
+  const top = Math.max(...rank.values(), Number.MIN_VALUE);
+  for (const n of nodes) n.centrality = (rank.get(n.id) ?? 0) / top;
+  nodes.sort(
+    (a, b) => b.centrality - a.centrality || b.inDegree - a.inDegree || a.id.localeCompare(b.id),
+  );
   return {
     nodes,
     edges: [...weights].map(([k, weight]) => {

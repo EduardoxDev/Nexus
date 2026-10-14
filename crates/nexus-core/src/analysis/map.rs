@@ -27,8 +27,10 @@ pub const ROOT_FOLDER: &str = ".";
 pub struct MapRequest {
     pub project_id: i64,
     /// Padrão 150, máximo 500.
+    #[ts(optional)]
     pub max_nodes: Option<u32>,
-    /// Só arquivos dentro desta pasta (relativa, com `/`).
+    /// Só arquivos dentro desta pasta (relativa, com `/`); `.` = só os da raiz do projeto.
+    #[ts(optional)]
     pub folder: Option<String>,
     /// Um nó por pasta em vez de um por arquivo.
     #[serde(default)]
@@ -84,8 +86,11 @@ fn normalize_folder(folder: Option<&str>) -> Result<Option<String>> {
     let Some(f) = folder.map(|f| f.trim().trim_matches('/')) else {
         return Ok(None);
     };
-    if f.is_empty() || f == ROOT_FOLDER {
+    if f.is_empty() {
         return Ok(None);
+    }
+    if f == ROOT_FOLDER {
+        return Ok(Some(ROOT_FOLDER.to_owned()));
     }
     if f.contains('\\') || f.split('/').any(|p| p.is_empty() || p == "." || p == "..") {
         return Err(Error::InvalidInput(format!("pasta inválida: {f}")));
@@ -107,10 +112,11 @@ pub fn build(
         )));
     }
     let folder = normalize_folder(req.folder.as_deref())?;
-    let inside = |p: &str| {
-        folder
-            .as_deref()
-            .is_none_or(|f| p.strip_prefix(f).is_some_and(|rest| rest.starts_with('/')))
+    let inside = |p: &str| match folder.as_deref() {
+        None => true,
+        // Raiz: só os arquivos que estão direto nela.
+        Some(ROOT_FOLDER) => !p.contains('/'),
+        Some(f) => p.strip_prefix(f).is_some_and(|rest| rest.starts_with('/')),
     };
     let node_of = |p: &str| -> String {
         if req.group_by_folder {
@@ -260,8 +266,14 @@ fn pagerank(out_links: &[Vec<usize>]) -> Vec<f64> {
 /// Lê do banco as arestas internas e a linguagem dos arquivos, e monta o mapa.
 pub fn project_map(conn: &Connection, req: &MapRequest) -> Result<ProjectMap> {
     let mut stmt = conn.prepare(
-        "SELECT DISTINCT from_path, to_path FROM edges
-         WHERE project_id = ?1 AND to_path IS NOT NULL AND from_path <> to_path",
+        // Uma linha por import (o peso conta repetições); só entre arquivos indexados, para que
+        // todo nó do mapa possa ser aberto na prévia.
+        "SELECT e.from_path, e.to_path FROM edges e
+         JOIN files a ON a.project_id = e.project_id AND a.rel_path = e.from_path
+                     AND a.status = 'indexed'
+         JOIN files b ON b.project_id = e.project_id AND b.rel_path = e.to_path
+                     AND b.status = 'indexed'
+         WHERE e.project_id = ?1 AND e.to_path IS NOT NULL AND e.from_path <> e.to_path",
     )?;
     let edges: Vec<(String, String)> = stmt
         .query_map([req.project_id], |r| Ok((r.get(0)?, r.get(1)?)))?
@@ -402,6 +414,38 @@ mod tests {
         )
         .unwrap();
         assert!(m.nodes.is_empty());
+    }
+
+    #[test]
+    fn root_filter_keeps_only_files_in_the_project_root() {
+        let edges = e(&[
+            ("main.ts", "util.ts"),
+            ("main.ts", "src/a.ts"),
+            ("src/a.ts", "src/b.ts"),
+        ]);
+        let m = build(
+            &edges,
+            &HashMap::new(),
+            &MapRequest {
+                folder: Some(".".into()),
+                ..req()
+            },
+        )
+        .unwrap();
+        let mut ids: Vec<_> = m.nodes.iter().map(|n| n.id.as_str()).collect();
+        ids.sort_unstable();
+        assert_eq!(ids, ["main.ts", "util.ts"]);
+    }
+
+    #[test]
+    fn repeated_imports_add_weight() {
+        let edges = e(&[("a.ts", "b.ts"), ("a.ts", "b.ts")]);
+        let m = build(&edges, &HashMap::new(), &req()).unwrap();
+        assert_eq!(m.edges[0].weight, 2);
+        assert_eq!(
+            m.nodes.iter().find(|n| n.id == "b.ts").unwrap().in_degree,
+            1
+        );
     }
 
     #[test]

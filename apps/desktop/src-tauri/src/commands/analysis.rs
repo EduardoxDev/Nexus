@@ -1,7 +1,7 @@
 //! Análise de código: cobertura por linguagem, grafo, dependências e histórico de um arquivo.
 
 use nexus_core::analysis::query::{AnalysisOverview, FileAnalysisView};
-use nexus_core::git_history::{self, FileHistory};
+use nexus_core::git_history::FileHistory;
 use nexus_core::{ErrorCode, ErrorInfo};
 use tauri::State;
 
@@ -51,16 +51,7 @@ pub async fn get_file_history(
         });
     }
     blocking(&state, move |core| {
-        if !git_history::available() {
-            return Ok(FileHistory {
-                git_available: false,
-                commits: Vec::new(),
-            });
-        }
-        Ok(FileHistory {
-            git_available: true,
-            commits: core.file_history(project_id, &rel_path, 10)?,
-        })
+        core.file_history_view(project_id, &rel_path, 10)
     })
     .await
 }

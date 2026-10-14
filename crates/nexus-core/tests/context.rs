@@ -422,7 +422,7 @@ fn packs_list_recent_commits_of_their_files_when_git_is_there() {
         return;
     }
     let env = setup(|root| {
-        git(root, &["init", "-q", "-b", "main"]);
+        git(root, &["init", "-q"]);
         git(root, &["add", "."]);
         git(root, &["commit", "-q", "-m", "feat: primeira versão"]);
     });

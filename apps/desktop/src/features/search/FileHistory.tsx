@@ -1,3 +1,4 @@
+import { ErrorState } from "@/components/feedback";
 import type { Commit } from "@/lib/bindings";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { t } from "@/lib/i18n/pt-BR";
@@ -27,6 +28,13 @@ export function CommitList({ commits }: { commits: Commit[] }) {
 /** Últimos commits do arquivo na prévia da busca (git instalado, só leitura). */
 export function FileHistory({ projectId, relPath }: { projectId: number; relPath: string }) {
   const history = useFileHistory(projectId, relPath);
+  if (history.isError) {
+    return (
+      <section aria-label={s.history} className="mt-3 text-sm">
+        <ErrorState error={history.error} onRetry={() => void history.refetch()} />
+      </section>
+    );
+  }
   if (!history.data) return null;
   const { gitAvailable, commits } = history.data;
   return (

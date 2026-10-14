@@ -26,10 +26,10 @@ Exemplo (Claude Desktop):
 {
   "mcpServers": {
     "nexus": {
-      "command": "C:\caminho\nexus.exe",
+      "command": "C:\\caminho\\nexus.exe",
       "args": [
         "--data-dir",
-        "C:\Users\voce\AppData\Local\Nexus",
+        "C:\\Users\\voce\\AppData\\Local\\Nexus",
         "mcp",
         "serve"
       ]

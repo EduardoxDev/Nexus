@@ -28,9 +28,9 @@
 
 ## Histórico do git
 
-Para mostrar quem mudou um arquivo e quando, a NEXUS executa o `git` instalado no computador (só `log`, `blame`, `ls-files` e `--version`), nunca um comando que grave no repositório. Comandos configurados pelo próprio repositório (`core.fsmonitor`, hooks, `textconv`) ficam desligados. Sem `git` instalado, a função não aparece.
+Para mostrar quem mudou um arquivo e quando, a NEXUS executa o `git` instalado no computador (só `log`, `blame`, `ls-files` e `--version`), nunca um comando que grave no repositório. Comandos configurados pelo próprio repositório (`core.fsmonitor`, hooks, `textconv`) ficam desligados. Sem `git` instalado, nada é executado: o app mostra um aviso ("Instale o git…") e a ferramenta `get_file_history` responde `gitAvailable: false`, sem commits.
 
-- Só para arquivos **indexados**: arquivos ignorados ou sensíveis não têm o histórico consultado.
+- Só para arquivos **indexados**: arquivos que o índice marcou como ignorados ou sensíveis não têm o histórico consultado. Um arquivo que ganhou um segredo depois da última indexação só passa a ser tratado como sensível na próxima indexação; até lá, o histórico dele (nunca o conteúdo) pode ser consultado.
 - Lidos: hash, nome do autor, data e assunto dos commits. O e-mail do autor não é lido.
 - Nada disso é gravado no banco: o histórico é lido na hora em que aparece.
 - Um agente conectado que use `get_file_history` ou um Context Pack recebe esses dados (inclusive nomes de pessoas) e os envia ao provedor do modelo, como qualquer resultado de ferramenta. Detalhes em `docs/decisions/ADR-0013-historico-pelo-git-instalado.md`.

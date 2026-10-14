@@ -91,6 +91,24 @@ fn inline_code(text: &str) -> String {
     }
 }
 
+/// Texto do repositório (assunto, autor) como texto puro em Markdown: uma linha, sem links,
+/// ênfase, HTML ou código.
+fn escape_markdown(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for ch in text.chars() {
+        match ch {
+            '\n' | '\r' => out.push(' '),
+            '\\' | '`' | '*' | '_' | '[' | ']' | '(' | ')' | '<' | '>' | '!' | '#' | '|' | '~'
+            | '{' | '}' | '&' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
 fn role_title(role: SourceRole) -> &'static str {
     match role {
         SourceRole::Primary => "principal",
@@ -221,8 +239,8 @@ fn history_section(out: &mut String, changes: &[&PackFileChanges]) {
                 out,
                 "  - `{}` {} — {}, {}",
                 c.short_hash,
-                c.subject.replace(['\n', '\r'], " "),
-                c.author.replace(['\n', '\r'], " "),
+                escape_markdown(&c.subject),
+                escape_markdown(&c.author),
                 date.get(..10).unwrap_or(&date)
             );
         }
@@ -491,6 +509,15 @@ mod tests {
         assert_eq!(fence_for("sem crases"), "```");
         assert_eq!(fence_for("um ``` dentro"), "````");
         assert_eq!(fence_for("cinco ````` aqui"), "``````");
+    }
+
+    #[test]
+    fn escape_markdown_keeps_commit_text_plain() {
+        assert_eq!(
+            escape_markdown("[release](https://x.y) <b>\n`z`"),
+            r"\[release\]\(https://x.y\) \<b\> \`z\`"
+        );
+        assert_eq!(escape_markdown("fix: frete"), "fix: frete");
     }
 
     #[test]

@@ -22,9 +22,10 @@ use crate::scan::{ProjectPath, check_project_path};
 const TIMEOUT: Duration = Duration::from_secs(5);
 /// Saída máxima lida do git (o resto é descartado).
 const MAX_OUTPUT: usize = 1024 * 1024;
-/// Separadores de campo e de registro no `--format` (não aparecem em texto comum).
-const FS: char = '\u{1f}';
-const RS: char = '\u{1e}';
+/// Linhas máximas por `blame`.
+const MAX_BLAME_LINES: i64 = 2_000;
+/// Campos por commit na saída de `git log -z` (hash, autor, data, assunto, separados por NUL).
+const LOG_FIELDS: usize = 4;
 
 /// Um commit que tocou o arquivo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -81,12 +82,18 @@ pub fn available() -> bool {
     *AVAILABLE.get_or_init(|| {
         let mut cmd = git();
         cmd.arg("--version");
-        run(cmd).is_ok_and(|out| out.starts_with("git version"))
+        run(cmd, TIMEOUT).is_ok_and(|out| out.text.starts_with("git version"))
     })
 }
 
+/// Saída do git: texto e se passou do limite (o resto foi descartado).
+struct Output {
+    text: String,
+    truncated: bool,
+}
+
 /// Roda o comando com prazo e limite de saída. Erro = git ausente, falhou ou passou do prazo.
-fn run(mut cmd: Command) -> std::io::Result<String> {
+fn run(mut cmd: Command, timeout: Duration) -> std::io::Result<Output> {
     let mut child = cmd.spawn()?;
     let mut stdout = child
         .stdout
@@ -97,10 +104,10 @@ fn run(mut cmd: Command) -> std::io::Result<String> {
         let mut buf = Vec::new();
         let _ = (&mut stdout).take(MAX_OUTPUT as u64).read_to_end(&mut buf);
         // Descarta o excedente para o git conseguir terminar.
-        let _ = std::io::copy(&mut stdout, &mut std::io::sink());
-        buf
+        let extra = std::io::copy(&mut stdout, &mut std::io::sink()).unwrap_or(0);
+        (buf, extra > 0)
     });
-    let deadline = Instant::now() + TIMEOUT;
+    let deadline = Instant::now() + timeout;
     let status = loop {
         if let Some(status) = child.try_wait()? {
             break status;
@@ -115,11 +122,14 @@ fn run(mut cmd: Command) -> std::io::Result<String> {
         }
         std::thread::sleep(Duration::from_millis(15));
     };
-    let buf = reader.join().unwrap_or_default();
+    let (buf, truncated) = reader.join().unwrap_or_default();
     if !status.success() {
         return Err(std::io::Error::other(format!("o git saiu com {status}")));
     }
-    Ok(String::from_utf8_lossy(&buf).into_owned())
+    Ok(Output {
+        text: String::from_utf8_lossy(&buf).into_owned(),
+        truncated,
+    })
 }
 
 /// Comando git dentro do repositório, com as defesas contra configuração do próprio repositório.
@@ -129,15 +139,27 @@ fn repo_git(root: &Path) -> Command {
         .arg(root)
         .args(["-c", "core.fsmonitor=false"])
         .args(["-c", "core.hooksPath=/dev/null"])
-        .arg("--no-pager");
+        .arg("--no-pager")
+        // O caminho é o nome exato do arquivo, não um padrão (`a*` não pega outros arquivos).
+        .arg("--literal-pathspecs");
     cmd
 }
 
 /// O arquivo está versionado num repositório git (fora de repositório ou não versionado: falso).
+/// Só consultado quando o comando principal falha, para não gastar um processo a mais sempre.
 fn tracked(root: &Path, rel: &str) -> bool {
     let mut cmd = repo_git(root);
     cmd.args(["ls-files", "--error-unmatch", "--"]).arg(rel);
-    run(cmd).is_ok()
+    run(cmd, TIMEOUT).is_ok()
+}
+
+/// Falha do git: fora de repositório ou arquivo não versionado viram "sem histórico" (`None`);
+/// o resto (prazo, erro do git) é erro.
+fn failure(root: &Path, rel: &str, e: &std::io::Error, what: &str) -> Option<Error> {
+    if e.kind() != std::io::ErrorKind::TimedOut && !tracked(root, rel) {
+        return None;
+    }
+    Some(Error::Internal(format!("{what} de {rel}: {e}")))
 }
 
 fn unavailable() -> Error {
@@ -155,17 +177,23 @@ fn checked(root: &Path, rel: &str) -> Result<()> {
     }
 }
 
+/// `git log -z` com campos separados por NUL: NUL não existe em nome nem em mensagem de commit,
+/// então nenhum texto do repositório desalinha os registros. Um registro incompleto (saída cortada
+/// no limite) é descartado.
 fn parse_commits(out: &str) -> Vec<Commit> {
-    out.split(RS)
-        .filter_map(|rec| {
-            let mut f = rec.trim_matches(['\n', '\r']).split(FS);
-            let hash = f.next()?.trim().to_owned();
-            if hash.len() < 7 {
+    let fields: Vec<&str> = out.split('\0').collect();
+    fields
+        .as_chunks::<LOG_FIELDS>()
+        .0
+        .iter()
+        .filter_map(|f| {
+            let hash = f[0].trim_matches(['\n', '\r']).to_owned();
+            if hash.len() < 7 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
                 return None;
             }
-            let author = f.next()?.to_owned();
-            let secs: i64 = f.next()?.trim().parse().ok()?;
-            let subject = f.next().unwrap_or("").trim().to_owned();
+            let author = f[1].to_owned();
+            let secs: i64 = f[2].trim().parse().ok()?;
+            let subject = f[3].trim().to_owned();
             Some(Commit {
                 short_hash: hash[..7].to_owned(),
                 hash,
@@ -180,21 +208,30 @@ fn parse_commits(out: &str) -> Vec<Commit> {
 /// Commits que tocaram `rel` (seguindo renomeações), do mais novo ao mais antigo.
 /// Fora de um repositório, ou com o arquivo não versionado, a lista é vazia.
 pub fn file_history(root: &Path, rel: &str, limit: u32) -> Result<Vec<Commit>> {
+    file_history_within(root, rel, limit, TIMEOUT)
+}
+
+/// Como [`file_history`], com prazo menor (o pack divide um prazo total entre os arquivos).
+pub fn file_history_within(
+    root: &Path,
+    rel: &str,
+    limit: u32,
+    timeout: Duration,
+) -> Result<Vec<Commit>> {
     if !available() {
         return Err(unavailable());
     }
     checked(root, rel)?;
-    if !tracked(root, rel) {
-        return Ok(Vec::new());
-    }
     let mut cmd = repo_git(root);
-    cmd.args(["log", "--follow", "--no-color", "--no-ext-diff"])
+    cmd.args(["log", "-z", "--follow", "--no-color", "--no-ext-diff"])
         .arg(format!("-n{}", limit.clamp(1, 200)))
-        .arg(format!("--format={RS}%H{FS}%an{FS}%at{FS}%s"))
+        .arg("--format=%H%x00%an%x00%at%x00%s")
         .arg("--")
         .arg(rel);
-    let out = run(cmd).map_err(|e| Error::Internal(format!("histórico do git de {rel}: {e}")))?;
-    Ok(parse_commits(&out))
+    match run(cmd, timeout.min(TIMEOUT)) {
+        Ok(out) => Ok(parse_commits(&out.text)),
+        Err(e) => failure(root, rel, &e, "histórico do git").map_or(Ok(Vec::new()), Err),
+    }
 }
 
 /// Quem escreveu as linhas `start..=end` de `rel`, agrupado por commit (mais recente primeiro).
@@ -204,21 +241,24 @@ pub fn blame(root: &Path, rel: &str, start: i64, end: i64) -> Result<Vec<BlameEn
         return Err(unavailable());
     }
     checked(root, rel)?;
-    if start < 1 || end < start || end - start > 2_000 {
+    if start < 1 || end < start || end - start >= MAX_BLAME_LINES {
         return Err(Error::InvalidInput(format!(
-            "intervalo de linhas inválido: {start}–{end}"
+            "intervalo de linhas inválido: {start}–{end} (até {MAX_BLAME_LINES} linhas)"
         )));
-    }
-    if !tracked(root, rel) {
-        return Ok(Vec::new());
     }
     let mut cmd = repo_git(root);
     cmd.args(["blame", "--porcelain", "--no-textconv"])
         .arg(format!("-L{start},{end}"))
         .arg("--")
         .arg(rel);
-    let out = run(cmd).map_err(|e| Error::Internal(format!("autoria do git de {rel}: {e}")))?;
-    Ok(parse_blame(&out))
+    match run(cmd, TIMEOUT) {
+        // Autoria parcial seria enganosa: com a saída cortada, é erro.
+        Ok(out) if out.truncated => Err(Error::Internal(format!(
+            "autoria do git de {rel}: saída grande demais"
+        ))),
+        Ok(out) => Ok(parse_blame(&out.text)),
+        Err(e) => failure(root, rel, &e, "autoria do git").map_or(Ok(Vec::new()), Err),
+    }
 }
 
 fn parse_blame(out: &str) -> Vec<BlameEntry> {
@@ -278,15 +318,26 @@ mod tests {
 
     #[test]
     fn parses_log_records() {
-        let out = format!(
-            "{RS}0123456789abcdef0123456789abcdef01234567{FS}Ana Maria{FS}1700000000{FS}feat: cupom{FS}x\n{RS}fedcba9876543210fedcba9876543210fedcba98{FS}Bruno{FS}1690000000{FS}\n"
-        );
+        // Caracteres de controle no assunto não desalinham; registro cortado no fim é descartado.
+        let out = [
+            "0123456789abcdef0123456789abcdef01234567",
+            "Ana Maria",
+            "1700000000",
+            "feat: cupom \u{1e}\u{1f}",
+            "\nfedcba9876543210fedcba9876543210fedcba98",
+            "Bruno",
+            "1690000000",
+            "",
+            "\nabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+            "Cortado",
+        ]
+        .join("\u{0}");
         let c = parse_commits(&out);
         assert_eq!(c.len(), 2);
         assert_eq!(c[0].short_hash, "0123456");
         assert_eq!(c[0].author, "Ana Maria");
         assert_eq!(c[0].date_ms, 1_700_000_000_000);
-        assert_eq!(c[0].subject, "feat: cupom");
+        assert_eq!(c[0].subject, "feat: cupom \u{1e}\u{1f}");
         assert_eq!(c[1].subject, "");
     }
 

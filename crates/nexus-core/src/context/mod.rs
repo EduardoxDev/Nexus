@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::classify::FileKind;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorCode, Result};
 use crate::freshness::{self, FreshnessIssue};
 use crate::git_history::{self, Commit};
 use crate::memory::{self, Memory, MemoryKind, MemoryStatus};
@@ -920,6 +920,8 @@ pub fn materialize(root: &Path, plan: ContextPackPlan) -> Result<ContextPack> {
 
 /// Arquivos principais com histórico consultado, no máximo.
 const HISTORY_FILES: usize = 5;
+/// Prazo total da seção "Mudanças recentes" (dividido entre os arquivos, não 5 s por arquivo).
+const HISTORY_BUDGET: std::time::Duration = std::time::Duration::from_secs(5);
 /// Commits por arquivo na seção "Mudanças recentes".
 const HISTORY_COMMITS: u32 = 3;
 
@@ -938,14 +940,21 @@ pub fn attach_history(root: &Path, mut pack: ContextPack) -> ContextPack {
         .map(|s| s.rel_path.as_str())
         .filter(|p| seen.insert(*p))
         .take(HISTORY_FILES);
+    let deadline = std::time::Instant::now() + HISTORY_BUDGET;
     for rel in paths {
-        match git_history::file_history(root, rel, HISTORY_COMMITS) {
+        let left = deadline.saturating_duration_since(std::time::Instant::now());
+        if left.is_zero() {
+            break;
+        }
+        match git_history::file_history_within(root, rel, HISTORY_COMMITS, left) {
             Ok(commits) if commits.is_empty() => {}
             Ok(commits) => pack.recent_changes.push(PackFileChanges {
                 rel_path: rel.to_owned(),
                 commits,
             }),
-            // Um erro (prazo, arquivo sumiu) tende a se repetir: não insiste nos demais.
+            // Problema só deste arquivo (apagado, virou link): segue para os demais.
+            Err(e) if matches!(e.code(), ErrorCode::NotFound | ErrorCode::InvalidInput) => {}
+            // Falha do git (prazo, erro): tende a se repetir, não insiste nos demais.
             Err(e) => {
                 tracing::warn!(error = %e, "histórico do git indisponível para o pack");
                 break;

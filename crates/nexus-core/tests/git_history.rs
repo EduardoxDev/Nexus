@@ -35,12 +35,7 @@ fn git(root: &Path, args: &[&str], date: &str, author: &str) {
 fn repo() -> tempfile::TempDir {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path();
-    git(
-        root,
-        &["init", "-q", "-b", "main"],
-        "2026-01-01T10:00:00Z",
-        "Ana",
-    );
+    git(root, &["init", "-q"], "2026-01-01T10:00:00Z", "Ana");
     std::fs::create_dir_all(root.join("src")).unwrap();
     std::fs::write(
         root.join("src/frete.ts"),
@@ -179,4 +174,38 @@ fn untracked_files_and_plain_folders_have_no_history() {
     )
     .unwrap();
     assert!(file_history(plain.path(), "a.ts", 5).unwrap().is_empty());
+}
+
+/// O caminho é o nome exato do arquivo: `[ab].ts` não pega o histórico de `a.ts`.
+#[test]
+fn paths_are_literal_not_patterns() {
+    if !available() {
+        return;
+    }
+    let tmp = repo();
+    let root = tmp.path();
+    std::fs::write(root.join("a.ts"), "a\n").unwrap();
+    git(root, &["add", "a.ts"], "2026-04-01T10:00:00Z", "Ana");
+    git(
+        root,
+        &["commit", "-q", "-m", "feat: a"],
+        "2026-04-01T10:00:00Z",
+        "Ana",
+    );
+    std::fs::write(root.join("[ab].ts"), "x\n").unwrap();
+    git(
+        root,
+        &["--literal-pathspecs", "add", "[ab].ts"],
+        "2026-04-02T10:00:00Z",
+        "Ana",
+    );
+    git(
+        root,
+        &["commit", "-q", "-m", "feat: colchetes"],
+        "2026-04-02T10:00:00Z",
+        "Ana",
+    );
+    let h = file_history(root, "[ab].ts", 10).unwrap();
+    let subjects: Vec<_> = h.iter().map(|c| c.subject.as_str()).collect();
+    assert_eq!(subjects, ["feat: colchetes"]);
 }

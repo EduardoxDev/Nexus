@@ -56,7 +56,12 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   check_for_update: () => ({ status: "upToDate", currentVersion: "0.2.0" }),
   get_analysis_overview: () => data.analysis,
   get_project_map: (args) => data.projectMap(args.request as MapRequest),
-  get_file_context: (args) => data.fileContext(String(args.relPath)),
+  get_file_context: (args) =>
+    data.fileContext(
+      String(args.relPath),
+      Number(args.startLine ?? 1),
+      Number(args.endLine ?? 400),
+    ),
   get_file_analysis: (args) => ({
     relPath: String(args.relPath),
     language: null,

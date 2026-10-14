@@ -30,8 +30,6 @@ function radius(node: MapNode, maxIn: number): number {
 /** Rótulos visíveis sem hover: só os mais centrais, para não poluir. */
 const LABELED = 12;
 const STEPS_PER_FRAME = 3;
-/** Espera antes de abrir um nó clicado, para reconhecer o duplo clique. */
-const DOUBLE_CLICK_MS = 250;
 
 interface View {
   k: number;
@@ -71,7 +69,6 @@ export function MapCanvas({
   const hoverRef = useRef<number | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const frameRef = useRef<number | null>(null);
-  const openTimerRef = useRef<number | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   /** Tamanho atual para o laço de animação (que roda com o fechamento de um render antigo). */
   const sizeRef = useRef(size);
@@ -89,14 +86,6 @@ export function MapCanvas({
     }
     return list;
   }, [map]);
-
-  // Clique pendente não abre nada depois que a tela some.
-  useEffect(
-    () => () => {
-      if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
-    },
-    [],
-  );
 
   // Tamanho do contêiner (o canvas acompanha, com a densidade de pixels da tela).
   useEffect(() => {
@@ -294,13 +283,8 @@ export function MapCanvas({
     const { x, y } = toMap(e.clientX, e.clientY);
     const hit = hitTest(layout, x, y);
     const node = hit === null ? undefined : map.nodes[hit];
-    if (!node) return;
-    // Espera um pouco: se vier um segundo clique (duplo clique = enquadrar), não abre.
-    if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
-    openTimerRef.current = window.setTimeout(() => {
-      openTimerRef.current = null;
-      onOpen(node);
-    }, DOUBLE_CLICK_MS);
+    // Clique num nó abre na hora; o duplo clique (enquadrar) é no fundo do mapa.
+    if (node) onOpen(node);
   };
 
   const onPointerLeave = () => {
@@ -328,9 +312,10 @@ export function MapCanvas({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
-        onDoubleClick={() => {
-          if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
-          openTimerRef.current = null;
+        onDoubleClick={(e) => {
+          const layout = layoutRef.current;
+          const { x, y } = toMap(e.clientX, e.clientY);
+          if (layout && hitTest(layout, x, y) !== null) return;
           userMovedRef.current = false;
           schedule();
         }}

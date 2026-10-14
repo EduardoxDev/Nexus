@@ -26,8 +26,6 @@ export function MapPage() {
   const [grouped, setGrouped] = useState(false);
   const [folder, setFolder] = useState("");
   const [folderDraft, setFolderDraft] = useState("");
-  // O nó sob o mouse vale só para o mapa em que foi apontado (um mapa novo o descarta).
-  const [hover, setHover] = useState<{ node: MapNode; of: ProjectMap } | null>(null);
   // Mesma preferência que o resto do app usa (MotionConfig no AppShell), reativa.
   const reducedMotion = useReducedMotionConfig() === true;
   const map = useProjectMap(
@@ -35,6 +33,13 @@ export function MapPage() {
       ? null
       : { projectId, groupByFolder: grouped, ...(folder ? { folder } : {}) },
   );
+  const [hover, setHover] = useState<MapNode | null>(null);
+  // Mapa novo (ou outro do cache): o nó apontado era do anterior, então é descartado.
+  const [hoverMap, setHoverMap] = useState(map.data);
+  if (hoverMap !== map.data) {
+    setHoverMap(map.data);
+    setHover(null);
+  }
 
   if (projects.isError) {
     return (
@@ -153,11 +158,11 @@ export function MapPage() {
               reducedMotion={reducedMotion}
               onOpen={open}
               onHover={(node) => {
-                setHover(node ? { node, of: map.data } : null);
+                setHover(node);
               }}
             />
             <Legend map={map.data} />
-            {hover?.of === map.data && <HoverCard node={hover.node} grouped={map.data.grouped} />}
+            {hover && <HoverCard node={hover} grouped={map.data.grouped} />}
             <p className="pointer-events-none absolute right-3 bottom-3 text-xs text-fg-subtle">
               {s.hint}
             </p>

@@ -446,17 +446,27 @@ function pagerank(ids: string[], edges: [string, string][]): Map<string, number>
   return rank;
 }
 
-/** Trecho de exemplo para abrir um arquivo do Mapa na Busca. */
-export function fileContext(relPath: string): FileContext {
-  const text = `// ${relPath}\nexport function exemplo() {\n  return "conteúdo de exemplo da prévia";\n}\n`;
+/** Arquivo de exemplo (60 linhas) para a prévia; respeita o intervalo pedido. */
+export function fileContext(relPath: string, start: number, end: number): FileContext {
+  const python = relPath.endsWith(".py");
+  const total = 60;
+  const lines = Array.from({ length: total }, (_, i) =>
+    i === 0
+      ? `${python ? "#" : "//"} ${relPath}`
+      : python
+        ? (`def exemplo_${i}():\n    return "linha ${i + 1} da prévia"`.split("\n")[i % 2] ?? "")
+        : `export const exemplo${i} = "linha ${i + 1} da prévia";`,
+  );
+  const first = Math.min(Math.max(1, start), total);
+  const last = Math.min(Math.max(first, end), total);
   return {
     relPath,
-    language: relPath.endsWith(".py") ? "python" : "typescript",
+    language: python ? "python" : "typescript",
     kind: "code",
-    startLine: 1,
-    endLine: 4,
-    totalLines: 4,
-    text,
+    startLine: first,
+    endLine: last,
+    totalLines: total,
+    text: lines.slice(first - 1, last).join("\n"),
     freshness: "fresh",
     contentHash: "0".repeat(64),
     indexedAt: NOW,
@@ -500,11 +510,12 @@ export function projectMap(request: MapRequest): ProjectMap {
     const k = `${key(e.from)}\u0000${key(e.to)}`;
     weights.set(k, (weights.get(k) ?? 0) + 1);
   }
+  // Como no núcleo: só entram pontas de imports com os dois lados dentro do filtro.
   const ids = [
     ...new Set(
       real
+        .filter((e) => inside(e.from) && inside(e.to))
         .flatMap((e) => [e.from, e.to])
-        .filter(inside)
         .map(key),
     ),
   ];

@@ -665,7 +665,7 @@ export const ptBR = {
     folderFiles: (n: number) => (n === 1 ? "1 arquivo" : `${n} arquivos`),
     clickFile: "Clique para abrir na Busca.",
     clickFolder: "Clique para ver os arquivos desta pasta.",
-    hint: "Roda: zoom · arrastar: mover · duplo clique: enquadrar",
+    hint: "Roda: zoom · arrastar: mover · duplo clique no fundo: enquadrar",
     canvasLabel: (nodes: number, edges: number) =>
       `Mapa do código com ${nodes} nós e ${edges} ligações. A tabela ao lado lista os 30 mais centrais, com os mesmos números.`,
     tableTitle: "Mais centrais (até 30)",

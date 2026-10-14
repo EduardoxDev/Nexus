@@ -29,7 +29,7 @@ const FAQ = [
   },
   {
     q: "Ela se atualiza sozinha?",
-    a: "Só se você deixar. Na primeira vez que abre, o app pergunta se pode verificar versões novas no GitHub (no máximo uma vez por dia). A instalação só acontece quando você clica, e cada atualização é conferida por assinatura antes de instalar.",
+    a: "Só se você deixar. Na primeira vez que abre, o app pergunta se pode verificar versões novas no GitHub (no máximo uma vez por dia). A instalação só acontece quando você clica, e cada atualização é conferida por assinatura antes de instalar. Vale para o instalador do Windows, o .AppImage do Linux e o macOS; quem instalou pelo .deb atualiza baixando o .deb novo.",
   },
   {
     q: "O Windows avisou que o instalador não é reconhecido. É seguro?",

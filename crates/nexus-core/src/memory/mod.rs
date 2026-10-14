@@ -11,6 +11,7 @@
 //! - Edições usam controle otimista (`expected_revision`): duas janelas não se sobrescrevem.
 
 pub mod adr;
+pub mod shared;
 
 use std::collections::{BTreeSet, HashMap};
 
@@ -149,6 +150,8 @@ pub enum MemoryOrigin {
     Cli,
     AdrImport,
     Agent,
+    /// Lida de um arquivo do repositório (`.nexus/memory/`, ADR-0014).
+    SharedFile,
 }
 
 impl MemoryOrigin {
@@ -158,6 +161,7 @@ impl MemoryOrigin {
             Self::Cli => "cli",
             Self::AdrImport => "adr_import",
             Self::Agent => "agent",
+            Self::SharedFile => "shared_file",
         }
     }
 
@@ -166,13 +170,15 @@ impl MemoryOrigin {
             "cli" => Self::Cli,
             "adr_import" => Self::AdrImport,
             "agent" => Self::Agent,
+            "shared_file" => Self::SharedFile,
             _ => Self::User,
         }
     }
 }
 
 /// Quem está fazendo a mudança. Só `User` e `Cli` revisam (confirmam, arquivam, editam
-/// confirmadas); `AdrImport` e `Agent` só propõem; `System` faz ajustes de metadados.
+/// confirmadas); `AdrImport`, `Agent` e `SharedFile` só propõem; `System` faz ajustes de
+/// metadados.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum Actor {
@@ -181,6 +187,8 @@ pub enum Actor {
     AdrImport,
     Agent,
     System,
+    /// Leitura de `.nexus/memory/` (arquivos vindos do repositório).
+    SharedFile,
 }
 
 impl Actor {
@@ -191,6 +199,7 @@ impl Actor {
             Self::AdrImport => "adr_import",
             Self::Agent => "agent",
             Self::System => "system",
+            Self::SharedFile => "shared_file",
         }
     }
 
@@ -200,6 +209,7 @@ impl Actor {
             "adr_import" => Self::AdrImport,
             "agent" => Self::Agent,
             "system" => Self::System,
+            "shared_file" => Self::SharedFile,
             _ => Self::User,
         }
     }
@@ -214,6 +224,7 @@ impl Actor {
             Self::Cli => MemoryOrigin::Cli,
             Self::AdrImport => MemoryOrigin::AdrImport,
             Self::Agent => MemoryOrigin::Agent,
+            Self::SharedFile => MemoryOrigin::SharedFile,
             Self::User | Self::System => MemoryOrigin::User,
         }
     }
@@ -985,6 +996,10 @@ fn store(tx: &Transaction<'_>, m: &Memory) -> Result<()> {
 
 /// Dados de uma memória criada pelo core (importação), já validados.
 pub(crate) struct Draft {
+    /// Id já existente em outro banco (memória compartilhada); `None` gera um novo.
+    pub id: Option<String>,
+    /// Revisão inicial: 1, ou a do arquivo compartilhado (para comparar edições entre bancos).
+    pub revision: i64,
     pub project_id: i64,
     pub kind: MemoryKind,
     pub title: String,
@@ -1009,7 +1024,7 @@ pub(crate) fn insert(
     }
     let now = now_ms();
     let m = Memory {
-        id: crate::ops::new_op_id(),
+        id: d.id.unwrap_or_else(crate::ops::new_op_id),
         project_id: d.project_id,
         kind: d.kind,
         status: if confirm {
@@ -1024,7 +1039,7 @@ pub(crate) fn insert(
         origin_hash: d.origin_hash,
         supersedes: d.supersedes,
         superseded_by: None,
-        revision: 1,
+        revision: d.revision.max(1),
         created_at: now,
         updated_at: now,
         confirmed_at: confirm.then_some(now),
@@ -1065,6 +1080,8 @@ pub fn create(conn: &mut Connection, req: &NewMemory, actor: Actor) -> Result<Me
     let m = insert(
         &tx,
         Draft {
+            id: None,
+            revision: 1,
             project_id: req.project_id,
             kind: req.kind,
             title,

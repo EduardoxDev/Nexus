@@ -205,6 +205,14 @@ Etapa 2 — mapa do código:
 - [x] Acessibilidade: tabela "Mais centrais" com os mesmos números do canvas.
 - [x] 10 000 arquivos e ~20 000 imports: 53 ms para montar o mapa (release, [benchmarks.md](benchmarks.md)).
 
+Etapa 3 — memória compartilhada ([ADR-0014](decisions/ADR-0014-memoria-compartilhada-pelo-repositorio.md)):
+
+- [x] Formato `.nexus/memory/<título>-<fim do id>.md` (`nexus-memory/1`) com front-matter: id, tipo, título, revisão, datas, `supersedes` e referências.
+- [x] Exportar (Memória → "Exportar para o repositório"): prévia, confirmação com `token`, só dentro de `.nexus/memory/` pelo caminho real, nunca apaga.
+- [x] Ler a cada indexação: só propostas; reconhecimento pelo `id`; edições viram proposta de revisão; cópias atrasadas são ignoradas.
+- [x] Migration v7 (origem e autor `shared_file`) preservando memórias, referências, revisões e alertas; migrador com chaves estrangeiras desligadas e conferidas.
+- [x] Testes: ida e volta entre dois bancos, arquivo adulterado, link e `..` recusados, prévia obrigatória, nada apagado.
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

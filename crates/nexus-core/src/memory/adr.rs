@@ -65,6 +65,10 @@ pub struct ImportReport {
 /// O caminho parece um registro de decisão?
 pub fn is_adr_path(rel_path: &str) -> bool {
     let lower = rel_path.to_ascii_lowercase();
+    // A memória compartilhada (`.nexus/memory/`) tem leitura própria (`memory::shared`).
+    if lower.starts_with(".nexus/") {
+        return false;
+    }
     let is_markdown = [".md", ".markdown", ".mdx"]
         .iter()
         .any(|ext| lower.ends_with(ext));
@@ -346,6 +350,8 @@ pub fn import(conn: &mut Connection, root: &Path, project_id: i64) -> Result<Imp
             let m = super::insert(
                 &tx,
                 Draft {
+                    id: None,
+                    revision: 1,
                     project_id,
                     kind: MemoryKind::Decision,
                     title: adr.title.clone(),
@@ -391,6 +397,7 @@ mod tests {
         assert!(!is_adr_path("docs/decisions/README.md"));
         assert!(!is_adr_path("docs/architecture.md"));
         assert!(!is_adr_path("src/decisions.ts"));
+        assert!(!is_adr_path(".nexus/memory/decision-cache-1234abcd.md"));
     }
 
     #[test]

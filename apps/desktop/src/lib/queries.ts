@@ -350,6 +350,24 @@ export function useMemoryMutations() {
   return { create, update, transition, reviewRefs, importAdrs };
 }
 
+/** Prévia da exportação para `.nexus/memory/` (só lê). */
+export function useMemoryExportPreview(projectId: number | null) {
+  return useQuery({
+    queryKey: [...memoryKeys.all, "exportPreview", projectId] as const,
+    queryFn: () => call("preview_memory_export", { projectId: projectId ?? -1 }),
+    enabled: projectId !== null,
+    staleTime: 0,
+  });
+}
+
+export function useMemoryExport() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { projectId: number; token: string }) => call("export_memory", args),
+    onSuccess: () => invalidateMemory(client),
+  });
+}
+
 export function useFreshnessIssues(query: IssueQuery | null) {
   return useQuery({
     queryKey: freshnessKeys.issues(query ?? { projectId: -1 }),

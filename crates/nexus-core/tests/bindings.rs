@@ -35,6 +35,9 @@ use nexus_core::index::{
 };
 use nexus_core::integration::{ClientSetup, IntegrationInfo, McpToolInfo, SetupKind};
 use nexus_core::memory::adr::ImportReport;
+use nexus_core::memory::shared::{
+    ExportAction, ExportItem, ExportPreview, ExportReport, ObsoleteFile, SharedImportReport,
+};
 use nexus_core::memory::{
     Actor, Memory, MemoryCounts, MemoryDetail, MemoryKind, MemoryOrigin, MemoryQuery, MemoryRef,
     MemoryRefInput, MemoryRevision, MemoryStatus, MemoryUpdate, NewMemory, RefCheck, RefState,
@@ -151,6 +154,12 @@ fn generate() -> BTreeMap<String, String> {
     render::<MemoryQuery>(&cfg, &mut files);
     render::<MemoryCounts>(&cfg, &mut files);
     render::<ImportReport>(&cfg, &mut files);
+    render::<ExportAction>(&cfg, &mut files);
+    render::<ExportItem>(&cfg, &mut files);
+    render::<ObsoleteFile>(&cfg, &mut files);
+    render::<ExportPreview>(&cfg, &mut files);
+    render::<ExportReport>(&cfg, &mut files);
+    render::<SharedImportReport>(&cfg, &mut files);
     render::<IssueKind>(&cfg, &mut files);
     render::<Severity>(&cfg, &mut files);
     render::<IssueStatus>(&cfg, &mut files);

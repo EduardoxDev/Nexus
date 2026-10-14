@@ -17,10 +17,10 @@ fn init_creates_database_and_reports_json() {
     let data = dir.path().join("data");
     let out = nexus(&data).args(["init", "--json"]).assert().success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["schemaVersion"], 6);
+    assert_eq!(v["schemaVersion"], 7);
     assert_eq!(
         v["appliedMigrations"],
-        serde_json::json!([1, 2, 3, 4, 5, 6])
+        serde_json::json!([1, 2, 3, 4, 5, 6, 7])
     );
     assert!(data.join("nexus.db").is_file());
 
@@ -36,7 +36,7 @@ fn init_human_output_is_portuguese() {
     let out = nexus(&dir.path().join("d")).arg("init").assert().success();
     let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
     assert!(stdout.contains("NEXUS pronto."), "{stdout}");
-    assert!(stdout.contains("Schema:         v6"), "{stdout}");
+    assert!(stdout.contains("Schema:         v7"), "{stdout}");
 }
 
 #[test]
@@ -48,11 +48,11 @@ fn diagnostics_json_has_expected_shape() {
         .assert()
         .success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["diagnostics"]["schemaVersion"], 6);
+    assert_eq!(v["diagnostics"]["schemaVersion"], 7);
     assert_eq!(v["diagnostics"]["fts5Available"], true);
     assert_eq!(v["integrity"]["ok"], true);
     assert!(v["app"]["coreVersion"].is_string());
-    assert!(v["diagnostics"]["migrations"].as_array().unwrap().len() == 6);
+    assert!(v["diagnostics"]["migrations"].as_array().unwrap().len() == 7);
 }
 
 #[test]

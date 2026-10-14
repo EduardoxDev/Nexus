@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-import-shared-memory"
+description = "Enables the import_shared_memory command without any pre-configured scope."
+commands.allow = ["import_shared_memory"]
+
+[[permission]]
+identifier = "deny-import-shared-memory"
+description = "Denies the import_shared_memory command without any pre-configured scope."
+commands.deny = ["import_shared_memory"]

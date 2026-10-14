@@ -2,6 +2,7 @@
 
 /**
  * Quem está fazendo a mudança. Só `User` e `Cli` revisam (confirmam, arquivam, editam
- * confirmadas); `AdrImport` e `Agent` só propõem; `System` faz ajustes de metadados.
+ * confirmadas); `AdrImport`, `Agent` e `SharedFile` só propõem; `System` faz ajustes de
+ * metadados.
  */
-export type Actor = "user" | "cli" | "adr_import" | "agent" | "system";
+export type Actor = "user" | "cli" | "adr_import" | "agent" | "system" | "shared_file";

@@ -8,6 +8,7 @@ import type {
   ContextPack,
   ContextPackSummary,
   DiagnosticsReport,
+  ExportPreview,
   FreshnessIssue,
   FreshnessSummary,
   IndexJob,
@@ -35,7 +36,7 @@ export const startup: StartupStatus = {
   ready: true,
   dataDir: DATA_DIR,
   error: null,
-  schemaVersion: 6,
+  schemaVersion: 7,
   appliedMigrations: [],
   backupCreated: false,
   recoveredOperations: 0,
@@ -213,7 +214,7 @@ export const diagnostics: DiagnosticsReport = {
   logFiles: 3,
   backupsDir: "backups",
   backups: [],
-  schemaVersion: 6,
+  schemaVersion: 7,
   latestSchemaVersion: 6,
   migrations: [1, 2, 3, 4, 5, 6].map((version) => ({
     version,
@@ -495,3 +496,36 @@ export function projectMap(request: MapRequest): ProjectMap {
     grouped: request.groupByFolder,
   };
 }
+
+/** Prévia de "Exportar para o repositório". */
+export const exportPreview: ExportPreview = {
+  directory: ".nexus/memory",
+  items: [
+    {
+      relPath: ".nexus/memory/sessoes-no-servidor-com-cookie-httponly-0a1b2c3d.md",
+      memoryId: "0190f0aa-1111-7222-8333-00000a1b2c3d",
+      title: "Sessões no servidor com cookie HttpOnly",
+      action: "create",
+    },
+    {
+      relPath: ".nexus/memory/valores-em-centavos-4e5f6a7b.md",
+      memoryId: "0190f0aa-1111-7222-8333-00004e5f6a7b",
+      title: "Valores em centavos (inteiros)",
+      action: "update",
+    },
+    {
+      relPath: ".nexus/memory/commits-em-portugues-8c9d0e1f.md",
+      memoryId: "0190f0aa-1111-7222-8333-00008c9d0e1f",
+      title: "Commits em português",
+      action: "create",
+    },
+    {
+      relPath: ".nexus/memory/testes-com-fixtures-reais-2a3b4c5d.md",
+      memoryId: "0190f0aa-1111-7222-8333-00002a3b4c5d",
+      title: "Testes com fixtures reais",
+      action: "unchanged",
+    },
+  ],
+  obsolete: [{ relPath: ".nexus/memory/jwt-no-cliente-99aa88bb.md", title: "JWT no cliente" }],
+  token: "previa",
+};

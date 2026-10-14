@@ -257,7 +257,7 @@ fn v6_recreates_edges_with_target_in_the_key() {
     )
     .unwrap();
 
-    let report = migrate::migrate(&mut conn, None).unwrap();
+    let report = migrate::migrate_with(&mut conn, &migrate::MIGRATIONS[..6], None).unwrap();
     assert_eq!(report.applied, vec![6]);
     let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
     assert_eq!(count("SELECT COUNT(*) FROM edges"), 0);
@@ -270,4 +270,76 @@ fn v6_recreates_edges_with_target_in_the_key() {
     )
     .unwrap();
     assert_eq!(count("SELECT COUNT(*) FROM edges"), 2);
+}
+
+/// v6 → v7: memórias, referências, revisões e alertas sobrevivem à recriação das tabelas, o
+/// índice textual continua funcionando, a origem `shared_file` passa a valer e as chaves
+/// estrangeiras voltam ligadas.
+#[test]
+fn v7_keeps_memories_and_accepts_shared_file_origin() {
+    let mut conn = mem();
+    migrate::migrate_with(&mut conn, &migrate::MIGRATIONS[..6], None).unwrap();
+    conn.execute_batch(
+        "INSERT INTO projects (id, name, root_path, created_at, last_opened_at)
+           VALUES (1, 'p', '/p', 0, 0);
+         INSERT INTO memories (id, project_id, kind, status, title, body, origin, revision,
+                               created_at, updated_at)
+           VALUES ('m1', 1, 'decision', 'confirmed', 'Sessões no servidor', 'cookie HttpOnly',
+                   'user', 2, 0, 0),
+                  ('m2', 1, 'decision', 'proposed', 'Sessões com JWT', 'token', 'agent', 1, 0, 0);
+         UPDATE memories SET supersedes = 'm1' WHERE id = 'm2';
+         INSERT INTO memory_refs (memory_id, ordinal, rel_path, content_hash)
+           VALUES ('m1', 0, 'src/auth.ts', 'h');
+         INSERT INTO memory_revisions (memory_id, revision, kind, status, title, body, refs_json,
+                                       actor, change, changed_at)
+           VALUES ('m1', 1, 'decision', 'proposed', 'Sessões no servidor', 'x', '[]', 'user',
+                   'created', 0);
+         INSERT INTO freshness_issues (project_id, kind, fingerprint, severity, status,
+                                       needs_review, memory_id, detail_json, first_detected_at,
+                                       last_detected_at)
+           VALUES (1, 'memory_ref_changed', 'f', 'warning', 'open', 0, 'm1', '{}', 0, 0);",
+    )
+    .unwrap();
+
+    let report = migrate::migrate(&mut conn, None).unwrap();
+    assert_eq!(report.applied, vec![7]);
+    let count =
+        |conn: &Connection, sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM memories"), 2);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM memory_refs"), 1);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM memory_revisions"), 1);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM freshness_issues"), 1);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM memories WHERE id = 'm2' AND supersedes = 'm1'"
+        ),
+        1
+    );
+    assert_eq!(count(&conn, "PRAGMA foreign_keys"), 1);
+
+    conn.execute_batch(
+        "INSERT INTO memories (id, project_id, kind, status, title, body, origin, origin_path,
+                               revision, created_at, updated_at)
+           VALUES ('m3', 1, 'convention', 'proposed', 'Commits em português', 'sempre',
+                   'shared_file', '.nexus/memory/commits.md', 1, 0, 0);
+         INSERT INTO memory_revisions (memory_id, revision, kind, status, title, body, refs_json,
+                                       actor, change, changed_at)
+           VALUES ('m3', 1, 'convention', 'proposed', 'Commits em português', 'sempre', '[]',
+                   'shared_file', 'created', 0);",
+    )
+    .unwrap();
+    // Os gatilhos do índice textual foram recriados.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH 'portugues'"
+        ),
+        1
+    );
+    // As chaves estrangeiras continuam valendo: apagar a memória leva as referências junto.
+    conn.execute("DELETE FROM memories WHERE id = 'm1'", [])
+        .unwrap();
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM memory_refs"), 0);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM freshness_issues"), 0);
 }

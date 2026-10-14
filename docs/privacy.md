@@ -37,6 +37,15 @@ Para mostrar quem mudou um arquivo e quando, a NEXUS executa o `git` instalado n
 
 Remover o projeto do índice apaga tudo isso do banco; os arquivos da pasta nunca são alterados.
 
+## Memória compartilhada (`.nexus/memory/`)
+
+A **única** escrita da NEXUS dentro de um projeto é "Exportar para o repositório", na tela Memória, e só acontece com o seu clique, depois de uma prévia do que será criado ou alterado.
+
+- Só memórias **confirmadas** são exportadas, uma por arquivo em `.nexus/memory/`: título, texto, tipo, revisão, datas e referências (caminho, linhas e hash). Nunca código.
+- A NEXUS não apaga nenhum arquivo dessa pasta e não grava fora dela (links e junctions são recusados).
+- O que estiver no repositório passa a ser visto por quem tiver acesso a ele, como qualquer arquivo commitado. Confira a prévia antes de exportar.
+- Na leitura, arquivos de `.nexus/memory/` viram **propostas** no seu banco, nunca memórias confirmadas. Detalhes em `docs/decisions/ADR-0014-memoria-compartilhada-pelo-repositorio.md`.
+
 ## Memória do projeto
 
 - A memória guarda **texto**: o que você escreve e, ao importar ADRs, a seção de decisão do documento (até 4 000 caracteres por ADR). Cada revisão guarda o texto completo daquela versão.

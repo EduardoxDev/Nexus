@@ -453,3 +453,99 @@ describe("Context Packs com memória", () => {
     );
   });
 });
+
+describe("Exportar memória para o repositório", () => {
+  const preview = (token: string) => ({
+    directory: ".nexus/memory",
+    items: [
+      {
+        relPath: ".nexus/memory/sessoes-no-servidor-0000c0f1.md",
+        memoryId: CONFIRMED_ID,
+        title: "Sessões no servidor",
+        action: "create" as const,
+      },
+      {
+        relPath: ".nexus/memory/dinheiro-em-centavos-0000c0f2.md",
+        memoryId: "01a13000-0000-7000-8000-00000000c0f2",
+        title: "Dinheiro em centavos",
+        action: "unchanged" as const,
+      },
+    ],
+    obsolete: [{ relPath: ".nexus/memory/nota-antiga.md", title: null }],
+    token,
+  });
+
+  it("mostra a prévia e só grava com o clique, usando o token da prévia", async () => {
+    const user = userEvent.setup();
+    const { calls } = baseIpc({
+      preview_memory_export: () => preview("t-1"),
+      export_memory: () => ({
+        directory: ".nexus/memory",
+        created: 1,
+        updated: 0,
+        unchanged: 1,
+      }),
+    });
+    renderApp();
+    await open(user, "Memória");
+    await user.click(await screen.findByRole("button", { name: "Exportar para o repositório" }));
+    const dialog = await screen.findByRole("dialog");
+    const list = await within(dialog).findByRole("list", { name: "Arquivos da exportação" });
+    expect(within(list).getByText("Sessões no servidor")).toBeInTheDocument();
+    expect(within(list).getByText("criar")).toBeInTheDocument();
+    expect(within(list).getByText("sem mudança")).toBeInTheDocument();
+    expect(within(dialog).getByText(".nexus/memory/nota-antiga.md")).toBeInTheDocument();
+    expect(calls.some((c) => c.cmd === "export_memory")).toBe(false);
+
+    await user.click(within(dialog).getByRole("button", { name: "Gravar 1 arquivo" }));
+    await waitFor(() => {
+      expect(calls).toContainEqual({ cmd: "export_memory", args: { projectId: 1, token: "t-1" } });
+    });
+    expect(await screen.findByText("Memória exportada")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("com tudo igual no repositório, não há o que gravar", async () => {
+    const user = userEvent.setup();
+    baseIpc({
+      preview_memory_export: () => ({
+        ...preview("t-2"),
+        items: preview("t-2").items.map((i) => ({ ...i, action: "unchanged" as const })),
+        obsolete: [],
+      }),
+    });
+    renderApp();
+    await open(user, "Memória");
+    await user.click(await screen.findByRole("button", { name: "Exportar para o repositório" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Tudo já está igual no repositório."),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Gravar 0 arquivos" })).toBeDisabled();
+  });
+
+  it("se a memória mudou depois da prévia, mostra o erro e recarrega a prévia", async () => {
+    const user = userEvent.setup();
+    let version = 1;
+    const { calls } = baseIpc({
+      preview_memory_export: () => preview(`t-${version}`),
+      export_memory: () => {
+        version = 2;
+        throw new IpcError({
+          code: "conflict",
+          message: "a memória ou a pasta mudou desde a prévia",
+          opId: null,
+        });
+      },
+    });
+    renderApp();
+    await open(user, "Memória");
+    await user.click(await screen.findByRole("button", { name: "Exportar para o repositório" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(await within(dialog).findByRole("button", { name: "Gravar 1 arquivo" }));
+    expect(await within(dialog).findByText(/mudou desde a prévia/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(calls.filter((c) => c.cmd === "preview_memory_export").length).toBeGreaterThan(1);
+    });
+  });
+});

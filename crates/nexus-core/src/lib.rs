@@ -41,6 +41,7 @@ use crate::index::{
     JobStatus,
 };
 use crate::memory::adr::ImportReport;
+use crate::memory::shared::{ExportPreview, ExportReport, SharedImportReport};
 use crate::memory::{
     Actor, Memory, MemoryCounts, MemoryDetail, MemoryQuery, MemoryUpdate, NewMemory, Transition,
 };
@@ -322,6 +323,17 @@ impl Core {
         };
         if let Err(e) = logged {
             tracing::warn!(error = %e, "falha ao registrar a operação de indexação");
+        }
+        // Memória compartilhada pelo repositório: só vira proposta. Uma falha aqui não
+        // invalida a indexação (fica registrada como operação com erro).
+        if let Ok(job) = &result
+            && job.status == JobStatus::Succeeded
+            && Path::new(&project.root_path)
+                .join(memory::shared::DIR)
+                .exists()
+            && let Err(e) = self.import_shared_memory(project_id)
+        {
+            tracing::warn!(error = %e, project_id, "leitura de .nexus/memory após indexação falhou");
         }
         // O índice mudou: reavalia a atualidade (documentos, memória, arquivos). Uma falha aqui
         // não invalida a indexação — fica registrada como operação com erro.
@@ -729,6 +741,73 @@ impl Core {
             },
         )?;
         self.rescan_memories(project_id);
+        Ok(report)
+    }
+
+    /// O que "Exportar para o repositório" gravaria em `.nexus/memory/` (não grava nada).
+    pub fn preview_memory_export(&self, project_id: i64) -> Result<ExportPreview> {
+        let project = self.project(project_id)?;
+        let root = std::path::PathBuf::from(&project.root_path);
+        self.db
+            .read(|c| memory::shared::preview(c, &root, project_id))
+    }
+
+    /// Grava as memórias confirmadas em `.nexus/memory/`, só se nada mudou desde a prévia
+    /// (`token`). É a única escrita da NEXUS dentro de um projeto (ADR-0014).
+    pub fn export_memory(&self, project_id: i64, token: &str) -> Result<ExportReport> {
+        let project = self.project(project_id)?;
+        let root = std::path::PathBuf::from(&project.root_path);
+        ops::run(
+            &self.db,
+            ops::kinds::MEMORY_EXPORT,
+            Some(project_id),
+            |_| {
+                let report = self
+                    .db
+                    .read(|c| memory::shared::export(c, &root, project_id, token))?;
+                let detail = json!({
+                    "created": report.created,
+                    "updated": report.updated,
+                    "unchanged": report.unchanged,
+                });
+                Ok((report, Some(detail)))
+            },
+        )
+    }
+
+    /// Lê `.nexus/memory/` do projeto: cada arquivo vira, no máximo, uma proposta.
+    pub fn import_shared_memory(&self, project_id: i64) -> Result<SharedImportReport> {
+        let project = self.project(project_id)?;
+        let root = std::path::PathBuf::from(&project.root_path);
+        let report = ops::run(
+            &self.db,
+            ops::kinds::MEMORY_SHARED_IMPORT,
+            Some(project_id),
+            |_| {
+                // Lê os arquivos antes de pegar a trava de escrita do banco: só a aplicação
+                // das mudanças fica dentro dela.
+                let report = match memory::shared::load(&root)? {
+                    Some(loaded) => self
+                        .db
+                        .write(|c| memory::shared::apply(c, project_id, loaded))?,
+                    None => SharedImportReport::default(),
+                };
+                let detail = json!({
+                    "scanned": report.scanned,
+                    "created": report.created,
+                    "revisions": report.revisions,
+                    "updated": report.updated,
+                    "withdrawn": report.withdrawn,
+                    "unchanged": report.unchanged,
+                    "ignored": report.ignored,
+                    "invalid": report.invalid.len(),
+                });
+                Ok((report, Some(detail)))
+            },
+        )?;
+        if !report.memory_ids.is_empty() {
+            self.rescan_memories(project_id);
+        }
         Ok(report)
     }
 

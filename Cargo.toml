@@ -23,7 +23,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 tracing-appender = "0.2"
 uuid = { version = "1.28", features = ["v7"] }
-time = { version = "0.3", features = ["formatting", "macros"] }
+time = { version = "0.3", features = ["formatting", "macros", "parsing"] }
 dirs = "7"
 ts-rs = { version = "12", features = ["serde-json-impl"] }
 ignore = "0.4.33"

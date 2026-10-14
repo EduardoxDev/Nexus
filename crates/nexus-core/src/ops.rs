@@ -34,6 +34,8 @@ pub mod kinds {
     pub const MEMORY_UPDATE: &str = "memory.update";
     pub const MEMORY_TRANSITION: &str = "memory.transition";
     pub const MEMORY_IMPORT: &str = "memory.import_adrs";
+    pub const MEMORY_EXPORT: &str = "memory.export_shared";
+    pub const MEMORY_SHARED_IMPORT: &str = "memory.import_shared";
     pub const FRESHNESS_SCAN: &str = "freshness.scan";
     pub const MCP_SESSION: &str = "mcp.session";
     pub const MCP_TOOL: &str = "mcp.tool";

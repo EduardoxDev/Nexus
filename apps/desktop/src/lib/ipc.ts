@@ -10,6 +10,9 @@ import type {
   ContextPackRequest,
   ContextPackSummary,
   ExportFormat,
+  ExportPreview,
+  ExportReport,
+  SharedImportReport,
   ExportOptions,
   FileContext,
   FreshnessIssue,
@@ -74,6 +77,9 @@ export interface Commands {
   };
   review_memory_refs: { args: MemoryArgs & { expectedRevision: number }; result: Memory };
   import_adrs: { args: ProjectArgs; result: ImportReport };
+  preview_memory_export: { args: ProjectArgs; result: ExportPreview };
+  export_memory: { args: ProjectArgs & { token: string }; result: ExportReport };
+  import_shared_memory: { args: ProjectArgs; result: SharedImportReport };
   list_freshness_issues: { args: { query: IssueQuery }; result: FreshnessIssue[] };
   get_freshness_summary: { args: ProjectArgs; result: FreshnessSummary };
   scan_freshness: { args: ProjectArgs; result: ScanReport };

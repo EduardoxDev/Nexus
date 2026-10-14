@@ -30,6 +30,9 @@ function radius(node: MapNode, maxIn: number): number {
 /** Rótulos visíveis sem hover: só os mais centrais, para não poluir. */
 const LABELED = 12;
 const STEPS_PER_FRAME = 3;
+/** Um 2º clique conta como duplo clique se vier até este tempo depois, no mesmo lugar. */
+const DOUBLE_CLICK_MS = 500;
+const DOUBLE_CLICK_PX = 4;
 
 interface View {
   k: number;
@@ -69,6 +72,8 @@ export function MapCanvas({
   const hoverRef = useRef<number | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const frameRef = useRef<number | null>(null);
+  /** Último clique que abriu um nó (para ignorar o 2º clique de um duplo clique). */
+  const lastOpenRef = useRef({ at: -Infinity, x: 0, y: 0 });
   const [size, setSize] = useState({ w: 0, h: 0 });
   /** Tamanho atual para o laço de animação (que roda com o fechamento de um render antigo). */
   const sizeRef = useRef(size);
@@ -283,8 +288,18 @@ export function MapCanvas({
     const { x, y } = toMap(e.clientX, e.clientY);
     const hit = hitTest(layout, x, y);
     const node = hit === null ? undefined : map.nodes[hit];
-    // Clique num nó abre na hora; o duplo clique (enquadrar) é no fundo do mapa.
-    if (node) onOpen(node);
+    if (!node) return;
+    // Clique num nó abre na hora; o duplo clique (enquadrar) é no fundo do mapa. O 2º clique
+    // de um duplo clique é ignorado: o 1º pode ter trocado o mapa (pasta → arquivos) e o
+    // nó sob o mouse agora seria outro.
+    const now = performance.now();
+    const last = lastOpenRef.current;
+    const sameSpot =
+      Math.abs(e.clientX - last.x) <= DOUBLE_CLICK_PX &&
+      Math.abs(e.clientY - last.y) <= DOUBLE_CLICK_PX;
+    if (now - last.at < DOUBLE_CLICK_MS && sameSpot) return;
+    lastOpenRef.current = { at: now, x: e.clientX, y: e.clientY };
+    onOpen(node);
   };
 
   const onPointerLeave = () => {

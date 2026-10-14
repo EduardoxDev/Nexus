@@ -4,6 +4,7 @@ import {
   Brain,
   CheckCheck,
   FileUp,
+  FolderUp,
   FolderGit2,
   Pencil,
   Plus,
@@ -21,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
 import { IssueCard } from "@/features/freshness/FreshnessPage";
 import { MEMORY_KINDS, MemoryEditor } from "@/features/memory/MemoryEditor";
+import { MemoryExportDialog } from "@/features/memory/MemoryExportDialog";
 import type { MemoryDetail, MemoryKind, MemoryStatus, RefState } from "@/lib/bindings";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatRelative } from "@/lib/format";
@@ -62,6 +64,7 @@ export function MemoryPage() {
   const [kind, setKind] = useState<MemoryKind | "all">("all");
   const [text, setText] = useState("");
   const [creating, setCreating] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const counts = useMemoryCounts(projectId);
   const list = useMemories(
     projectId === null
@@ -113,6 +116,17 @@ export function MemoryPage() {
               {importAdrs.isPending ? t.memory.importing : t.memory.importAdrs}
             </Button>
           </div>
+          <Button onClick={() => setExporting(true)} disabled={projectId === null}>
+            <FolderUp aria-hidden="true" />
+            {t.memory.share.button}
+          </Button>
+          {projectId !== null && (
+            <MemoryExportDialog
+              projectId={projectId}
+              open={exporting}
+              onOpenChange={setExporting}
+            />
+          )}
           {report && (
             <div role="status" className="text-xs text-fg-muted">
               <p>

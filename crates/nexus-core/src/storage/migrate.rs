@@ -58,6 +58,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "edges_targets",
         sql: include_str!("migrations/0006_edges_targets.sql"),
     },
+    Migration {
+        version: 7,
+        name: "shared_memory",
+        sql: include_str!("migrations/0007_shared_memory.sql"),
+    },
 ];
 
 pub fn latest_version() -> i64 {
@@ -157,6 +162,22 @@ pub fn migrate_with(
         report.backup = Some(backup_database(conn, policy, current)?);
     }
 
+    // Recriar uma tabela (para mudar um CHECK) exige as chaves estrangeiras desligadas: com
+    // elas ligadas, o DROP apagaria em cascata as linhas que apontam para a tabela. O pragma só
+    // vale fora de transação; as referências são conferidas antes de cada commit.
+    conn.execute_batch("PRAGMA foreign_keys = OFF;")?;
+    let applied = apply_pending(conn, &pending, &mut report);
+    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+    applied?;
+    report.duration_ms = elapsed_ms(started);
+    Ok(report)
+}
+
+fn apply_pending(
+    conn: &mut Connection,
+    pending: &[&Migration],
+    report: &mut MigrationReport,
+) -> Result<()> {
     for migration in pending {
         let step = Instant::now();
         let tx = conn.transaction()?;
@@ -166,6 +187,15 @@ pub fn migrate_with(
                 migration.version, migration.name
             ))
         })?;
+        let broken: Option<String> = tx
+            .query_row("PRAGMA foreign_key_check", [], |r| r.get(0))
+            .optional()?;
+        if let Some(table) = broken {
+            return Err(Error::Storage(format!(
+                "a migration {} ({}) deixaria referências quebradas em {table}",
+                migration.version, migration.name
+            )));
+        }
         tx.execute(
             "INSERT INTO schema_migrations (version, name, checksum, applied_at, duration_ms)
              VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -186,8 +216,7 @@ pub fn migrate_with(
         report.applied.push(migration.version);
         report.to_version = migration.version;
     }
-    report.duration_ms = elapsed_ms(started);
-    Ok(report)
+    Ok(())
 }
 
 pub fn applied_migrations(conn: &Connection) -> Result<Vec<AppliedMigration>> {

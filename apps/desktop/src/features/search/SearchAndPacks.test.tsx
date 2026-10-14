@@ -116,6 +116,7 @@ function pack(stale = 0): ContextPack {
     staleSources: stale,
     memories: [],
     issues: [],
+    recentChanges: [],
   };
 }
 
@@ -360,5 +361,71 @@ describe("Dependências na prévia", () => {
     });
     await user.click(within(preview).getByRole("button", { name: "Voltar ao resultado" }));
     expect(await within(preview).findByText("conteúdo de src/auth/session.ts")).toBeInTheDocument();
+  });
+});
+
+describe("Histórico na prévia", () => {
+  const fileContext = (args: Record<string, unknown>) => ({
+    relPath: args.relPath as string,
+    language: "typescript",
+    kind: "code",
+    startLine: 1,
+    endLine: 3,
+    totalLines: 40,
+    text: "conteúdo",
+    freshness: "fresh",
+    contentHash: "abc",
+    indexedAt: NOW,
+  });
+
+  async function openPreview() {
+    const user = userEvent.setup();
+    renderApp();
+    await open(user, "Busca");
+    await user.type(await screen.findByRole("searchbox"), "validateSession");
+    await user.click(screen.getByRole("button", { name: "Buscar" }));
+    const results = await screen.findByRole("list", { name: "Resultados" });
+    await user.click(within(results).getByRole("button", { name: /src\/auth\/session\.ts/ }));
+    const preview = await screen.findByRole("complementary", { name: "Prévia" });
+    return within(preview).findByRole("region", { name: "Histórico do arquivo" });
+  }
+
+  it("lista os últimos commits do arquivo", async () => {
+    const { calls } = setupIpc({
+      list_projects: () => [project],
+      search_project: () => response,
+      get_file_context: fileContext,
+      get_file_history: () => ({
+        gitAvailable: true,
+        commits: [
+          {
+            hash: "a".repeat(40),
+            shortHash: "aaaaaaa",
+            author: "Bruno",
+            dateMs: NOW - 2 * 86_400_000,
+            subject: "fix: sessão expirada",
+          },
+        ],
+      }),
+    });
+    const history = await openPreview();
+    expect(within(history).getByText("Mudanças recentes (1)")).toBeInTheDocument();
+    expect(within(history).getByText("fix: sessão expirada")).toBeInTheDocument();
+    expect(within(history).getByText(/Bruno · /)).toBeInTheDocument();
+    expect(calls).toContainEqual({
+      cmd: "get_file_history",
+      args: { projectId: 1, relPath: "src/auth/session.ts" },
+    });
+  });
+
+  it("explica quando o git não está instalado", async () => {
+    setupIpc({
+      list_projects: () => [project],
+      search_project: () => response,
+      get_file_context: fileContext,
+      get_file_history: () => ({ gitAvailable: false, commits: [] }),
+    });
+    const history = await openPreview();
+    expect(within(history).getByText(/Instale o git/)).toBeInTheDocument();
   });
 });

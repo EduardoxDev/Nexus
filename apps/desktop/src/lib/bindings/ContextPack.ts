@@ -2,6 +2,7 @@
 import type { ContextPackPlan } from "./ContextPackPlan";
 import type { FreshnessIssue } from "./FreshnessIssue";
 import type { PackExcerpt } from "./PackExcerpt";
+import type { PackFileChanges } from "./PackFileChanges";
 import type { PackMemory } from "./PackMemory";
 
 /**
@@ -19,4 +20,8 @@ memories: Array<PackMemory>,
 /**
  * Alertas de atualidade abertos ligados às fontes ou memórias do pack (inclui contradições).
  */
-issues: Array<FreshnessIssue>, };
+issues: Array<FreshnessIssue>, 
+/**
+ * Últimos commits dos arquivos principais, lidos do git agora (vazio sem git ou repositório).
+ */
+recentChanges: Array<PackFileChanges>, };

@@ -407,6 +407,7 @@ describe("Context Packs com memória", () => {
       },
     ],
     issues: [issue],
+    recentChanges: [],
   };
 
   it("mostra memórias e contradições e exclui memória do export", async () => {

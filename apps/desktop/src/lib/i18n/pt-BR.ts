@@ -442,6 +442,7 @@ export const ptBR = {
     limitations: "Limitações da recuperação",
     contradictions: "Contradições e alertas pendentes",
     noContradictions: "Nenhum alerta aberto ligado a estas fontes ou memórias.",
+    recentChanges: "Mudanças recentes",
     memories: "Memória do projeto (confirmada)",
     memoryStates: {
       unchanged: "Inalterada",
@@ -674,6 +675,11 @@ export const ptBR = {
     externalPackage: (name: string) => `pacote ${name}`,
     unresolved: "não resolvido",
     backToResult: "Voltar ao resultado",
+    history: "Histórico do arquivo",
+    historyTitle: (n: number) => `Mudanças recentes (${n})`,
+    historyEmpty:
+      "Sem commits: o projeto não é um repositório git ou o arquivo ainda não foi versionado.",
+    historyNoGit: "Instale o git para ver quem mudou este arquivo e quando.",
   },
   symbolKinds: {
     function: "função",

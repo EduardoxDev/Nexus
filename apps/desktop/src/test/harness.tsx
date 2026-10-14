@@ -123,6 +123,7 @@ export function setupIpc(overrides: Partial<Record<CommandName, Handler>> = {}) 
       externalPackages: [],
       coverage: [],
     }),
+    get_file_history: () => ({ gitAvailable: true, commits: [] }),
     get_file_analysis: (args) => ({
       relPath: args.relPath as string,
       language: null,

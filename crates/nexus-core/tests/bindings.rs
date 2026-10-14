@@ -17,8 +17,9 @@ use nexus_core::analysis::{Coverage, Symbol, SymbolKind};
 use nexus_core::classify::FileKind;
 use nexus_core::context::export::{ExportFormat, ExportOptions};
 use nexus_core::context::{
-    ContextPack, ContextPackPlan, ContextPackRequest, ContextPackSummary, PackExcerpt, PackMemory,
-    PackMemoryRef, PackMemoryState, PackSource, QueryAnalysisSnapshot, SourceRole,
+    ContextPack, ContextPackPlan, ContextPackRequest, ContextPackSummary, PackExcerpt,
+    PackFileChanges, PackMemory, PackMemoryRef, PackMemoryState, PackSource, QueryAnalysisSnapshot,
+    SourceRole,
 };
 use nexus_core::diagnostics::{
     AppInfo, BackupInfo, DiagnosticsReport, FileStat, IntegrityReport, StartupStatus,
@@ -27,6 +28,7 @@ use nexus_core::freshness::{
     FreshnessIssue, FreshnessSummary, IssueKind, IssueQuery, IssueSource, IssueStatus, KindCount,
     ScanInfo, ScanReport, Severity,
 };
+use nexus_core::git_history::{BlameEntry, Commit, FileHistory};
 use nexus_core::index::{
     IndexError, IndexJob, IndexMode, IndexTrigger, IndexingQueue, JobPhase, JobStatus,
 };
@@ -170,6 +172,10 @@ fn generate() -> BTreeMap<String, String> {
     render::<Edge>(&cfg, &mut files);
     render::<GraphStats>(&cfg, &mut files);
     render::<FileAnalysisView>(&cfg, &mut files);
+    render::<Commit>(&cfg, &mut files);
+    render::<BlameEntry>(&cfg, &mut files);
+    render::<FileHistory>(&cfg, &mut files);
+    render::<PackFileChanges>(&cfg, &mut files);
     render::<SymbolHit>(&cfg, &mut files);
     render::<LanguageAnalysis>(&cfg, &mut files);
     render::<CountItem>(&cfg, &mut files);

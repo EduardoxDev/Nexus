@@ -202,7 +202,7 @@ fn legacy_clients_use_the_initialize_handshake() {
         json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/list" }),
     );
     let tools = list["result"]["tools"].as_array().unwrap();
-    assert_eq!(tools.len(), 13);
+    assert_eq!(tools.len(), 14);
     assert!(
         list["result"].get("resultType").is_none(),
         "campos modernos não vão para clientes legados"
@@ -399,6 +399,10 @@ fn every_tool_output_matches_its_output_schema() {
             "get_file_context",
             json!({ "path": "src/checkout/shipping.ts", "startLine": 1, "endLine": 5 }),
         ),
+        (
+            "get_file_history",
+            json!({ "path": "src/checkout/shipping.ts", "startLine": 1, "endLine": 3 }),
+        ),
         ("get_symbol_context", json!({ "symbol": "createSession" })),
         (
             "get_related_files",
@@ -415,7 +419,7 @@ fn every_tool_output_matches_its_output_schema() {
             json!({ "task": "regras de dinheiro", "format": "json" }),
         ),
     ];
-    assert_eq!(cases.len(), 13, "uma chamada por ferramenta");
+    assert_eq!(cases.len(), 14, "uma chamada por ferramenta");
     for (i, (tool, args)) in cases.iter().enumerate() {
         let r = call(&mut s, 200 + i as i64, tool, args.clone());
         assert_eq!(r["isError"], false, "{tool}: {r}");

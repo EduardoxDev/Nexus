@@ -16,6 +16,7 @@ use ts_rs::TS;
 use crate::classify::FileKind;
 use crate::error::{Error, Result};
 use crate::freshness::{self, FreshnessIssue};
+use crate::git_history::{self, Commit};
 use crate::memory::{self, Memory, MemoryKind, MemoryStatus};
 use crate::projects::Project;
 use crate::search::evidence::{self, Freshness};
@@ -234,6 +235,16 @@ pub struct ContextPack {
     pub memories: Vec<PackMemory>,
     /// Alertas de atualidade abertos ligados às fontes ou memórias do pack (inclui contradições).
     pub issues: Vec<FreshnessIssue>,
+    /// Últimos commits dos arquivos principais, lidos do git agora (vazio sem git ou repositório).
+    pub recent_changes: Vec<PackFileChanges>,
+}
+
+/// Últimos commits de um arquivo do pack.
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PackFileChanges {
+    pub rel_path: String,
+    pub commits: Vec<Commit>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, TS)]
@@ -903,7 +914,45 @@ pub fn materialize(root: &Path, plan: ContextPackPlan) -> Result<ContextPack> {
         stale_sources: stale,
         memories: Vec::new(),
         issues: Vec::new(),
+        recent_changes: Vec::new(),
     })
+}
+
+/// Arquivos principais com histórico consultado, no máximo.
+const HISTORY_FILES: usize = 5;
+/// Commits por arquivo na seção "Mudanças recentes".
+const HISTORY_COMMITS: u32 = 3;
+
+/// Completa o pack com os últimos commits dos arquivos principais (`git` instalado, só leitura).
+/// Sem git, fora de repositório ou com erro, a seção fica vazia: o pack não depende dela.
+pub fn attach_history(root: &Path, mut pack: ContextPack) -> ContextPack {
+    if !git_history::available() {
+        return pack;
+    }
+    let mut seen = HashSet::new();
+    let paths = pack
+        .plan
+        .sources
+        .iter()
+        .filter(|s| matches!(s.role, SourceRole::Primary | SourceRole::Related))
+        .map(|s| s.rel_path.as_str())
+        .filter(|p| seen.insert(*p))
+        .take(HISTORY_FILES);
+    for rel in paths {
+        match git_history::file_history(root, rel, HISTORY_COMMITS) {
+            Ok(commits) if commits.is_empty() => {}
+            Ok(commits) => pack.recent_changes.push(PackFileChanges {
+                rel_path: rel.to_owned(),
+                commits,
+            }),
+            // Um erro (prazo, arquivo sumiu) tende a se repetir: não insiste nos demais.
+            Err(e) => {
+                tracing::warn!(error = %e, "histórico do git indisponível para o pack");
+                break;
+            }
+        }
+    }
+    pack
 }
 
 /// Completa o pack com o estado atual das memórias incluídas e os alertas abertos ligados a ele.

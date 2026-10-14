@@ -425,6 +425,13 @@ export function useAnalysisOverview(projectId: number) {
   });
 }
 
+export function useFileHistory(projectId: number, relPath: string) {
+  return useQuery({
+    queryKey: [...projectKeys.all, "fileHistory", projectId, relPath] as const,
+    queryFn: () => call("get_file_history", { projectId, relPath }),
+  });
+}
+
 export function useFileAnalysis(projectId: number, relPath: string) {
   return useQuery({
     queryKey: [...projectKeys.all, "fileAnalysis", projectId, relPath] as const,

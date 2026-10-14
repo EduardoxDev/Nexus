@@ -52,6 +52,7 @@
     "allow-set-issue-dismissed",
     "allow-get-integration-info",
     "allow-get-analysis-overview",
-    "allow-get-file-analysis"
+    "allow-get-file-analysis",
+    "allow-get-file-history"
   ]
 }

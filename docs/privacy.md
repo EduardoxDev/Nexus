@@ -26,6 +26,15 @@
 - Arquivos sensíveis (`.env`, chaves, credenciais, conteúdo com padrões de tokens/chaves) aparecem **apenas** com caminho, tamanho e motivo — sem hash e sem conteúdo.
 - Ref e commit do HEAD do git (lidos de `.git`, sem executar `git`).
 
+## Histórico do git
+
+Para mostrar quem mudou um arquivo e quando, a NEXUS executa o `git` instalado no computador (só `log`, `blame`, `ls-files` e `--version`), nunca um comando que grave no repositório. Comandos configurados pelo próprio repositório (`core.fsmonitor`, hooks, `textconv`) ficam desligados. Sem `git` instalado, a função não aparece.
+
+- Só para arquivos **indexados**: arquivos ignorados ou sensíveis não têm o histórico consultado.
+- Lidos: hash, nome do autor, data e assunto dos commits. O e-mail do autor não é lido.
+- Nada disso é gravado no banco: o histórico é lido na hora em que aparece.
+- Um agente conectado que use `get_file_history` ou um Context Pack recebe esses dados (inclusive nomes de pessoas) e os envia ao provedor do modelo, como qualquer resultado de ferramenta. Detalhes em `docs/decisions/ADR-0013-historico-pelo-git-instalado.md`.
+
 Remover o projeto do índice apaga tudo isso do banco; os arquivos da pasta nunca são alterados.
 
 ## Memória do projeto

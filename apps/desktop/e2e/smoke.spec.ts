@@ -39,7 +39,7 @@ test("Integrações mostra o comando do Claude Code com a CLI ao lado do app", a
   await expect(command).toContainText("nexus.exe");
   await expect(command).toContainText("mcp serve");
   await expect(page.getByRole("list", { name: "Ferramentas" }).getByRole("listitem")).toHaveCount(
-    13,
+    14,
   );
 });
 

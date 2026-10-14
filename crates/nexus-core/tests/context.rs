@@ -391,3 +391,77 @@ fn deleting_a_pack_and_validating_requests() {
         .unwrap_err();
     assert_eq!(err.code(), ErrorCode::InvalidInput);
 }
+
+fn git(root: &Path, args: &[&str]) {
+    let ok = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(args)
+        .env("GIT_AUTHOR_NAME", "Ana")
+        .env("GIT_AUTHOR_EMAIL", "ana@example.com")
+        .env("GIT_COMMITTER_NAME", "Ana")
+        .env("GIT_COMMITTER_EMAIL", "ana@example.com")
+        .env("GIT_AUTHOR_DATE", "2026-05-02T12:00:00Z")
+        .env("GIT_COMMITTER_DATE", "2026-05-02T12:00:00Z")
+        .env(
+            "GIT_CONFIG_GLOBAL",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .output()
+        .unwrap()
+        .status
+        .success();
+    assert!(ok, "git {args:?}");
+}
+
+#[test]
+fn packs_list_recent_commits_of_their_files_when_git_is_there() {
+    if !nexus_core::git_history::available() {
+        eprintln!("git ausente: teste pulado");
+        return;
+    }
+    let env = setup(|root| {
+        git(root, &["init", "-q", "-b", "main"]);
+        git(root, &["add", "."]);
+        git(root, &["commit", "-q", "-m", "feat: primeira versão"]);
+    });
+    let p = pack(&env, "como funciona o cálculo do frete?");
+    assert!(!p.recent_changes.is_empty(), "sem histórico no pack");
+    let first = &p.recent_changes[0];
+    assert!(p.plan.sources.iter().any(|s| s.rel_path == first.rel_path));
+    assert_eq!(first.commits[0].subject, "feat: primeira versão");
+    assert_eq!(first.commits[0].author, "Ana");
+
+    let md = env
+        .core
+        .export_context_pack(
+            &p.plan.id,
+            ExportFormat::Markdown,
+            &ExportOptions::default(),
+        )
+        .unwrap();
+    assert!(md.contains("## Mudanças recentes"));
+    assert!(md.contains("feat: primeira versão — Ana, 2026-05-02"));
+    let json = env
+        .core
+        .export_context_pack(&p.plan.id, ExportFormat::Json, &ExportOptions::default())
+        .unwrap();
+    assert!(json.contains("\"recentChanges\""));
+}
+
+#[test]
+fn packs_outside_a_repository_have_no_recent_changes() {
+    let env = setup(|_| {});
+    let p = pack(&env, "como funciona o cálculo do frete?");
+    assert!(p.recent_changes.is_empty());
+    let md = env
+        .core
+        .export_context_pack(
+            &p.plan.id,
+            ExportFormat::Markdown,
+            &ExportOptions::default(),
+        )
+        .unwrap();
+    assert!(!md.contains("Mudanças recentes"));
+}

@@ -592,6 +592,76 @@ fn get_file_context_out() -> Value {
     )
 }
 
+fn get_file_history(ctx: &ToolContext<'_>, args: &Map<String, Value>) -> Result<Value, ToolError> {
+    let a = Args::new(args, &["project", "path", "limit", "startLine", "endLine"])?;
+    let project = a.project(ctx.core)?;
+    let path = a.str_req("path")?;
+    let limit = a.int_opt("limit", 1, 100)?.unwrap_or(20);
+    let start = a.int_opt("startLine", 1, i64::from(u32::MAX))?;
+    let end = a.int_opt("endLine", 1, i64::from(u32::MAX))?;
+    if !nexus_core::git_history::available() {
+        return Ok(json!({
+            "project": project_json(&project),
+            "relPath": path,
+            "gitAvailable": false,
+            "commits": [],
+            "blame": null,
+            "notice": NOTICE,
+        }));
+    }
+    let commits = ctx
+        .core
+        .file_history(project.id, path, u32::try_from(limit).unwrap_or(20))?;
+    let blame = match (start, end) {
+        (None, None) => None,
+        (s, e) => {
+            let s = s.unwrap_or(1);
+            Some(ctx.core.file_blame(project.id, path, s, e.unwrap_or(s))?)
+        }
+    };
+    Ok(json!({
+        "project": project_json(&project),
+        "relPath": path,
+        "gitAvailable": true,
+        "commits": commits,
+        "blame": blame,
+        "notice": NOTICE,
+    }))
+}
+
+fn commit_schema() -> Value {
+    object(
+        json!({
+            "hash": t("string"),
+            "shortHash": t("string"),
+            "author": t("string"),
+            "dateMs": t("integer"),
+            "subject": t("string"),
+        }),
+        &["hash", "shortHash", "author", "dateMs", "subject"],
+    )
+}
+
+fn get_file_history_out() -> Value {
+    object(
+        json!({
+            "project": object(json!({ "id": t("integer"), "name": t("string") }), &["id", "name"]),
+            "relPath": t("string"),
+            "gitAvailable": t("boolean"),
+            "commits": array(commit_schema()),
+            "blame": {
+                "type": ["array", "null"],
+                "items": object(
+                    json!({ "commit": commit_schema(), "lines": array(t("integer")) }),
+                    &["commit", "lines"],
+                ),
+            },
+            "notice": t("string"),
+        }),
+        &["relPath", "gitAvailable", "commits", "notice"],
+    )
+}
+
 fn get_symbol_context(
     ctx: &ToolContext<'_>,
     args: &Map<String, Value>,
@@ -1252,6 +1322,27 @@ pub static TOOLS: &[Tool] = &[
         },
         output: get_file_context_out,
         handler: get_file_context,
+    },
+    Tool {
+        name: "get_file_history",
+        title: "File git history",
+        description: "Recent commits that touched an indexed file (follows renames), newest first, with author name, date and subject — read with the user's installed git, read-only. With startLine/endLine, also who last changed those lines (git blame, up to 2000 lines). gitAvailable is false when git is not installed.",
+        read_only: true,
+        idempotent: true,
+        input: || {
+            input(
+                json!({
+                    "project": project_prop(),
+                    "path": { "type": "string", "description": "Indexed file, relative to the project root" },
+                    "limit": { "type": "integer", "minimum": 1, "maximum": 100, "description": "Default 20" },
+                    "startLine": { "type": "integer", "minimum": 1 },
+                    "endLine": { "type": "integer", "minimum": 1 },
+                }),
+                &["path"],
+            )
+        },
+        output: get_file_history_out,
+        handler: get_file_history,
     },
     Tool {
         name: "get_symbol_context",

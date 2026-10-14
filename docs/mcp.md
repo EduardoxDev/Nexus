@@ -6,12 +6,12 @@ O NEXUS expõe seus projetos a agentes de programação (Claude Code, Codex, Cur
 
 A tela **Integrações** do app mostra a configuração pronta de cada agente, com os caminhos desta instalação, para copiar. O app não grava nada nos arquivos dos agentes. Formatos conferidos na documentação oficial de cada um em 2026-10-13:
 
-| Agente         | Como                    | Onde                                                                                          |
-| -------------- | ----------------------- | --------------------------------------------------------------------------------------------- |
-| Claude Code    | `claude mcp add nexus -- <cli> <args>` | terminal                                                                        |
-| Codex          | `codex mcp add nexus -- <cli> <args>`  | terminal (grava em `~/.codex/config.toml`)                                      |
-| Cursor         | JSON `mcpServers` com `"type": "stdio"` | `~/.cursor/mcp.json` ou `.cursor/mcp.json`                                     |
-| VS Code        | JSON `servers` com `"type": "stdio"`    | `.vscode/mcp.json` ou "MCP: Open User Configuration"                           |
+| Agente         | Como                                    | Onde                                                                                                                                  |
+| -------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code    | `claude mcp add nexus -- <cli> <args>`  | terminal                                                                                                                              |
+| Codex          | `codex mcp add nexus -- <cli> <args>`   | terminal (grava em `~/.codex/config.toml`)                                                                                            |
+| Cursor         | JSON `mcpServers` com `"type": "stdio"` | `~/.cursor/mcp.json` ou `.cursor/mcp.json`                                                                                            |
+| VS Code        | JSON `servers` com `"type": "stdio"`    | `.vscode/mcp.json` ou "MCP: Open User Configuration"                                                                                  |
 | Claude Desktop | JSON `mcpServers`                       | `%APPDATA%\Claude\claude_desktop_config.json` (Windows), `~/Library/Application Support/Claude/` (macOS), `~/.config/Claude/` (Linux) |
 
 Exemplo (Claude Code):
@@ -27,7 +27,12 @@ Exemplo (Claude Desktop):
   "mcpServers": {
     "nexus": {
       "command": "C:\caminho\nexus.exe",
-      "args": ["--data-dir", "C:\Users\voce\AppData\Local\Nexus", "mcp", "serve"]
+      "args": [
+        "--data-dir",
+        "C:\Users\voce\AppData\Local\Nexus",
+        "mcp",
+        "serve"
+      ]
     }
   }
 }
@@ -56,21 +61,22 @@ Não implementados (não são necessários para ferramentas somente leitura): re
 
 Todas recebem `project` (id, nome ou caminho), opcional quando há um único projeto. Cada uma tem `inputSchema` (sem propriedades extras) e `outputSchema`; o resultado traz `structuredContent` e o mesmo JSON em texto.
 
-| Ferramenta              | Faz                                                                                                                                                          | Grava?                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `list_projects`         | projetos autorizados e estado do índice                                                                                                                      | não                                       |
-| `get_project_overview`  | linguagens, tipos, pastas, manifestos, CI, mais alterados, memória e alertas                                                                                 | não                                       |
-| `search_project`        | busca híbrida com motivos, trechos verificados e atualidade                                                                                                  | não                                       |
-| `get_file_context`      | até 400 linhas de um arquivo **indexado**                                                                                                                    | não                                       |
-| `get_symbol_context`    | declarações com tipo, contêiner e corpo (análise léxica de TS/JS, Python e Rust; regex nas demais) e arquivos que importam a definição ou citam o nome       | não                                       |
-| `get_related_files`     | o que o arquivo importa e quem o importa (com a linha), testes que o importam ou têm nome correspondente, mesma pasta, manifesto, memórias que o referenciam | não                                       |
-| `get_project_memory`    | memória confirmada (propostas só com `includeProposals`)                                                                                                     | não                                       |
-| `get_project_decisions` | decisões confirmadas, separadas de propostas e documentos de decisão não revisados                                                                           | não                                       |
-| `build_context_pack`    | Context Pack para uma tarefa, exportado em Markdown ou JSON                                                                                                  | só o pack (referências) no banco do NEXUS |
-| `get_stale_context`     | alertas de atualidade e contradições abertos                                                                                                                 | não                                       |
-| `get_index_status`      | contagens, geração, job em execução e último job                                                                                                             | não                                       |
-| `refresh_project_index` | atualização incremental + verificação de atualidade; 1 vez a cada 30 s por projeto, até 120 s por execução                                                   | índice do NEXUS                           |
-| `get_context_sources`   | fontes de um pack, verificadas de novo contra o disco agora                                                                                                  | não                                       |
+| Ferramenta              | Faz                                                                                                                                                                 | Grava?                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `list_projects`         | projetos autorizados e estado do índice                                                                                                                             | não                                       |
+| `get_project_overview`  | linguagens, tipos, pastas, manifestos, CI, mais alterados, memória e alertas                                                                                        | não                                       |
+| `search_project`        | busca híbrida com motivos, trechos verificados e atualidade                                                                                                         | não                                       |
+| `get_file_context`      | até 400 linhas de um arquivo **indexado**                                                                                                                           | não                                       |
+| `get_file_history`      | últimos commits de um arquivo **indexado** (segue renomeações) e, com `startLine`/`endLine`, quem mudou aquelas linhas (`git blame`); `gitAvailable: false` sem git | não                                       |
+| `get_symbol_context`    | declarações com tipo, contêiner e corpo (análise léxica de TS/JS, Python e Rust; regex nas demais) e arquivos que importam a definição ou citam o nome              | não                                       |
+| `get_related_files`     | o que o arquivo importa e quem o importa (com a linha), testes que o importam ou têm nome correspondente, mesma pasta, manifesto, memórias que o referenciam        | não                                       |
+| `get_project_memory`    | memória confirmada (propostas só com `includeProposals`)                                                                                                            | não                                       |
+| `get_project_decisions` | decisões confirmadas, separadas de propostas e documentos de decisão não revisados                                                                                  | não                                       |
+| `build_context_pack`    | Context Pack para uma tarefa, exportado em Markdown ou JSON                                                                                                         | só o pack (referências) no banco do NEXUS |
+| `get_stale_context`     | alertas de atualidade e contradições abertos                                                                                                                        | não                                       |
+| `get_index_status`      | contagens, geração, job em execução e último job                                                                                                                    | não                                       |
+| `refresh_project_index` | atualização incremental + verificação de atualidade; 1 vez a cada 30 s por projeto, até 120 s por execução                                                          | índice do NEXUS                           |
+| `get_context_sources`   | fontes de um pack, verificadas de novo contra o disco agora                                                                                                         | não                                       |
 
 `nexus mcp tools` lista as ferramentas; `nexus mcp tools --json` imprime as definições completas.
 
@@ -89,7 +95,7 @@ O NEXUS não envia dados para lugar nenhum. Um agente conectado, porém, envia o
 
 ## Testes
 
-- `crates/nexus-mcp/tests/session.rs`: handshake legado, requisições modernas sem estado, erros de protocolo, **todas as 13 ferramentas com o `structuredContent` validado contra o `outputSchema`**, erros de escopo e de entrada, limite de frequência e auditoria sem argumentos.
+- `crates/nexus-mcp/tests/session.rs`: handshake legado, requisições modernas sem estado, erros de protocolo, **todas as 14 ferramentas com o `structuredContent` validado contra o `outputSchema`**, erros de escopo e de entrada, limite de frequência e auditoria sem argumentos.
 - `crates/nexus-cli/tests/cli.rs`: o binário `nexus mcp serve` por stdin/stdout, com stderr limpo.
 - `apps/desktop/e2e/mcp.spec.ts`: sessão MCP real contra o mesmo banco do app aberto, com a chamada aparecendo em Integrações.
 - Claude Code 2.1.296: `claude mcp list` com um `.mcp.json` de teste reconhece o servidor (fica "aguardando aprovação" até o usuário aprovar no `claude`). A conversa real com o modelo ainda não foi executada, porque envia o resultado das ferramentas à API do provedor.

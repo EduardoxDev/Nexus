@@ -482,7 +482,7 @@ fn mcp_serve_speaks_json_rpc_over_stdio() {
         .collect();
     assert_eq!(lines.len(), 4, "a notificação não tem resposta");
     assert_eq!(lines[0]["result"]["protocolVersion"], "2025-11-25");
-    assert_eq!(lines[1]["result"]["tools"].as_array().unwrap().len(), 13);
+    assert_eq!(lines[1]["result"]["tools"].as_array().unwrap().len(), 14);
     assert_eq!(
         lines[2]["result"]["structuredContent"]["hits"][0]["relPath"],
         "src/checkout/shipping.ts"
@@ -490,7 +490,7 @@ fn mcp_serve_speaks_json_rpc_over_stdio() {
     assert_eq!(lines[3]["result"]["supportedVersions"][0], "2026-07-28");
 
     let tools = json_out(nexus(&data).args(["mcp", "tools", "--json"]));
-    assert_eq!(tools.as_array().unwrap().len(), 13);
+    assert_eq!(tools.as_array().unwrap().len(), 14);
 }
 
 #[test]

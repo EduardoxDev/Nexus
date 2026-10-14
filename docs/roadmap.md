@@ -186,6 +186,18 @@ Etapa 5 — bot do Discord, etapa 2:
 - [x] Correções da etapa 1: nomes comparados como a NEXUS (só A–Z), cortes de mensagem sempre em linha inteira e sem crase aberta.
 - [ ] Rodar no servidor com os canais de anúncio e de avisos (IDs pendentes).
 
+## v0.3 — Mapa, histórico, memória compartilhada e mais linguagens
+
+Plano: [superpowers/plans/2026-10-14-v0.3.md](superpowers/plans/2026-10-14-v0.3.md).
+
+Etapa 1 — histórico do git ([ADR-0013](decisions/ADR-0013-historico-pelo-git-instalado.md)):
+
+- [x] `git log --follow` e `git blame` pelo `git` instalado, só leitura, com comandos do repositório desligados (`repository_config_cannot_run_commands`), prazo e limite de saída.
+- [x] Só arquivos indexados; fora de repositório ou não versionado, lista vazia.
+- [x] Ferramenta MCP `get_file_history` (14 ferramentas, saída validada pelo esquema).
+- [x] Seção "Mudanças recentes" nos Context Packs (Markdown, JSON e app), lida na hora.
+- [x] Histórico na prévia da busca do app.
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

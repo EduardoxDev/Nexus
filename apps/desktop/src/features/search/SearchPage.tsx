@@ -3,6 +3,7 @@ import { useState, type SubmitEvent } from "react";
 
 import { CodeBlock, FreshnessBadge } from "@/components/code";
 import { FileDependencies } from "@/features/search/FileDependencies";
+import { FileHistory } from "@/features/search/FileHistory";
 import { EmptyState, ErrorState } from "@/components/feedback";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { Badge } from "@/components/ui/badge";
@@ -358,6 +359,7 @@ function Preview({
               label={t.searchPage.previewTitle}
             />
             <FileDependencies projectId={projectId} relPath={path} onOpen={setPath} />
+            <FileHistory projectId={projectId} relPath={path} />
           </>
         )}
       </div>

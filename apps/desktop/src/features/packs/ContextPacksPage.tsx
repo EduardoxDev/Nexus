@@ -6,6 +6,7 @@ import { EmptyState, ErrorState } from "@/components/feedback";
 import { Panel } from "@/components/layout";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { IssueCard } from "@/features/freshness/FreshnessPage";
+import { CommitList } from "@/features/search/FileHistory";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -435,6 +436,16 @@ function PackContent({ pack, onDeleted }: { pack: ContextPack; onDeleted: () => 
           pack.issues.map((issue) => <IssueCard key={issue.id} issue={issue} compact />)
         )}
       </Panel>
+      {pack.recentChanges.length > 0 && (
+        <Panel title={t.packs.recentChanges} bodyClassName="flex flex-col gap-3">
+          {pack.recentChanges.map((f) => (
+            <div key={f.relPath} className="text-sm">
+              <p className="mb-1 font-mono text-xs">{f.relPath}</p>
+              <CommitList commits={f.commits} />
+            </div>
+          ))}
+        </Panel>
+      )}
       <Panel title={t.packs.limitations}>
         <ul className="list-disc pl-5 text-sm text-fg-muted">
           {plan.limitations.map((l) => (

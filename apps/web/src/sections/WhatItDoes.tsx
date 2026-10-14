@@ -22,7 +22,7 @@ const ITEMS: BentoItem[] = [
   },
   {
     title: "Feita para agentes",
-    description: "Servidor MCP local com 13 ferramentas. O Claude Code consulta a Nexus sozinho.",
+    description: "Servidor MCP local com 14 ferramentas. O Claude Code consulta a Nexus sozinho.",
     icon: <Cable className="size-5" />,
   },
   {

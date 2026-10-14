@@ -9,7 +9,9 @@ use std::fmt::Write as _;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::{ContextPack, PackExcerpt, PackMemory, PackMemoryState, PackSource, SourceRole};
+use super::{
+    ContextPack, PackExcerpt, PackFileChanges, PackMemory, PackMemoryState, PackSource, SourceRole,
+};
 use crate::error::{Error, Result};
 use crate::freshness::{FreshnessIssue, Severity};
 use crate::search::evidence::Freshness;
@@ -205,6 +207,36 @@ fn issues_section(out: &mut String, issues: &[FreshnessIssue]) {
     out.push('\n');
 }
 
+/// Últimos commits dos arquivos incluídos (só quando há histórico do git).
+fn history_section(out: &mut String, changes: &[&PackFileChanges]) {
+    if changes.is_empty() {
+        return;
+    }
+    let _ = writeln!(out, "## Mudanças recentes\n");
+    for f in changes {
+        let _ = writeln!(out, "- {}", inline_code(&f.rel_path));
+        for c in &f.commits {
+            let date = format_utc(c.date_ms);
+            let _ = writeln!(
+                out,
+                "  - `{}` {} — {}, {}",
+                c.short_hash,
+                c.subject.replace(['\n', '\r'], " "),
+                c.author.replace(['\n', '\r'], " "),
+                date.get(..10).unwrap_or(&date)
+            );
+        }
+    }
+    out.push('\n');
+}
+
+fn recent_changes<'a>(pack: &'a ContextPack, options: &ExportOptions) -> Vec<&'a PackFileChanges> {
+    pack.recent_changes
+        .iter()
+        .filter(|f| !options.excluded_paths.contains(&f.rel_path))
+        .collect()
+}
+
 struct Included<'a> {
     source: &'a PackSource,
     excerpt: &'a PackExcerpt,
@@ -325,6 +357,7 @@ pub fn to_markdown(pack: &ContextPack, options: &ExportOptions) -> Result<String
         out.push('\n');
     }
     issues_section(&mut out, &pack.issues);
+    history_section(&mut out, &recent_changes(pack, options));
     let _ = writeln!(out, "## Limitações da recuperação\n");
     for l in &p.limitations {
         let _ = writeln!(out, "- {l}");
@@ -388,6 +421,7 @@ struct JsonExport<'a> {
     stale_sources: u32,
     memories: Vec<&'a PackMemory>,
     issues: &'a [FreshnessIssue],
+    recent_changes: Vec<&'a PackFileChanges>,
 }
 
 #[derive(Serialize)]
@@ -435,6 +469,7 @@ pub fn to_json(pack: &ContextPack, options: &ExportOptions) -> Result<String> {
         stale_sources: pack.stale_sources,
         memories,
         issues: &pack.issues,
+        recent_changes: recent_changes(pack, options),
     };
     serde_json::to_string_pretty(&export)
         .map_err(|e| Error::Internal(format!("serializar pack: {e}")))

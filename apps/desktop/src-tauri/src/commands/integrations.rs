@@ -167,7 +167,7 @@ mod tests {
                 r#"claude mcp add nexus -- "C:\Program Files\NEXUS\nexus.exe" --data-dir "C:\Users\Ana Maria\AppData\Local\Nexus" mcp serve"#
             )
         );
-        assert_eq!(info.tools.len(), 13);
+        assert_eq!(info.tools.len(), 14);
         assert_eq!(info.protocol_versions[0], "2026-07-28");
         assert!(integration_info("x", None).claude_command.is_none());
     }

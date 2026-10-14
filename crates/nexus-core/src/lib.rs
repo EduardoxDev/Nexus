@@ -8,6 +8,7 @@ pub mod diagnostics;
 pub mod error;
 pub mod freshness;
 pub mod git;
+pub mod git_history;
 pub mod index;
 pub mod integration;
 pub mod logging;
@@ -424,6 +425,39 @@ impl Core {
             .read(|c| search::evidence::file_context(c, &root, project_id, rel_path, start, end))
     }
 
+    /// Caminho normalizado de um arquivo **indexado** (ignorados e sensíveis ficam de fora).
+    fn indexed_rel_path(&self, project_id: i64, rel_path: &str) -> Result<String> {
+        let rel = memory::normalize_rel_path(rel_path)?;
+        self.db
+            .read(|c| search::evidence::indexed_file(c, project_id, &rel))
+            .map(|f| f.rel_path)
+    }
+
+    /// Commits que tocaram o arquivo, pelo `git` instalado (ADR-0013). Só leitura, só de arquivo indexado.
+    pub fn file_history(
+        &self,
+        project_id: i64,
+        rel_path: &str,
+        limit: u32,
+    ) -> Result<Vec<git_history::Commit>> {
+        let project = self.project(project_id)?;
+        let rel = self.indexed_rel_path(project_id, rel_path)?;
+        git_history::file_history(std::path::Path::new(&project.root_path), &rel, limit)
+    }
+
+    /// Quem escreveu as linhas `start..=end` do arquivo (`git blame`). Só leitura.
+    pub fn file_blame(
+        &self,
+        project_id: i64,
+        rel_path: &str,
+        start: i64,
+        end: i64,
+    ) -> Result<Vec<git_history::BlameEntry>> {
+        let project = self.project(project_id)?;
+        let rel = self.indexed_rel_path(project_id, rel_path)?;
+        git_history::blame(std::path::Path::new(&project.root_path), &rel, start, end)
+    }
+
     /// Símbolos e dependências (imports e quem importa) de um arquivo indexado.
     pub fn file_analysis(
         &self,
@@ -485,9 +519,10 @@ impl Core {
                     "estimatedTokens": plan.estimated_tokens,
                     "tokenBudget": plan.token_budget,
                 });
-                let pack = context::materialize(Path::new(&project.root_path), plan)?;
+                let root = Path::new(&project.root_path);
+                let pack = context::materialize(root, plan)?;
                 let pack = self.db.read(|c| context::attach_memory(c, pack))?;
-                Ok((pack, Some(detail)))
+                Ok((context::attach_history(root, pack), Some(detail)))
             },
         )
     }
@@ -505,8 +540,10 @@ impl Core {
     pub fn context_pack(&self, id: &str) -> Result<ContextPack> {
         let plan = self.db.read(|c| context::load(c, id))?;
         let project = self.project(plan.project_id)?;
-        let pack = context::materialize(Path::new(&project.root_path), plan)?;
-        self.db.read(|c| context::attach_memory(c, pack))
+        let root = Path::new(&project.root_path);
+        let pack = context::materialize(root, plan)?;
+        let pack = self.db.read(|c| context::attach_memory(c, pack))?;
+        Ok(context::attach_history(root, pack))
     }
 
     pub fn delete_context_pack(&self, id: &str) -> Result<()> {

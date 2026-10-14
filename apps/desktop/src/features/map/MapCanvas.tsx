@@ -234,6 +234,8 @@ export function MapCanvas({
   };
 
   const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
+    // Só o botão principal move o mapa ou abre nós.
+    if (e.button !== 0) return;
     dragRef.current = { x: e.clientX, y: e.clientY, moved: false };
     // Arrastar para fora do mapa continua movendo (jsdom não tem captura: ignora).
     if (typeof e.currentTarget.setPointerCapture === "function") {
@@ -272,14 +274,16 @@ export function MapCanvas({
   };
 
   const onPointerUp = (e: PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return;
     const drag = dragRef.current;
     dragRef.current = null;
-    if (drag?.moved) return;
+    if (!drag || drag.moved) return;
     const layout = layoutRef.current;
     if (!layout) return;
     const { x, y } = toMap(e.clientX, e.clientY);
     const hit = hitTest(layout, x, y);
     const node = hit === null ? undefined : map.nodes[hit];
+    // Clique num nó abre na hora; o duplo clique (enquadrar) é no fundo do mapa.
     if (node) onOpen(node);
   };
 
@@ -308,7 +312,10 @@ export function MapCanvas({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
-        onDoubleClick={() => {
+        onDoubleClick={(e) => {
+          const layout = layoutRef.current;
+          const { x, y } = toMap(e.clientX, e.clientY);
+          if (layout && hitTest(layout, x, y) !== null) return;
           userMovedRef.current = false;
           schedule();
         }}

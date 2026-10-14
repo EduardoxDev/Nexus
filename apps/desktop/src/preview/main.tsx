@@ -58,6 +58,21 @@ const handlers: Record<string, (args: Record<string, unknown>) => unknown> = {
   preview_memory_export: () => data.exportPreview,
   export_memory: () => ({ directory: ".nexus/memory", created: 2, updated: 1, unchanged: 1 }),
   get_project_map: (args) => data.projectMap(args.request as MapRequest),
+  get_file_context: (args) =>
+    data.fileContext(
+      String(args.relPath),
+      Number(args.startLine ?? 1),
+      Number(args.endLine ?? 400),
+    ),
+  get_file_analysis: (args) => ({
+    relPath: String(args.relPath),
+    language: null,
+    analyzed: false,
+    symbols: [],
+    imports: [],
+    importedBy: [],
+  }),
+  get_file_history: () => ({ gitAvailable: true, commits: [] }),
 };
 
 mockIPC(

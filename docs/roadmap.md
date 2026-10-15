@@ -247,8 +247,8 @@ Etapa 7 — site com documentação:
 Etapa 8 — release v0.3.0:
 
 - [x] Versão `0.3.0-rc.1`, seção 0.3.0 no CHANGELOG (schema v7, nova análise na primeira indexação, `git` opcional) e capturas novas (inclui o Mapa).
-- [ ] `v0.3.0-rc.1` publicada e atualização testada a partir da 0.2.0.
-- [ ] `v0.3.0` final publicada e anunciada pelo bot.
+- [x] `v0.3.0-rc.1` gerada nos 3 sistemas e instalada no Windows por cima da 0.2.0 (banco migrado para o schema v7). A atualização automática não foi refeita nesta versão: o mecanismo é o mesmo testado na v0.2 (rc.1 → rc.2).
+- [ ] `v0.3.0` final publicada e anunciada pelo bot (o anúncio depende de `announceChannelId`).
 
 ## Riscos
 

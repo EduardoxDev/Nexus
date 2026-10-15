@@ -1,6 +1,6 @@
 {
   "name": "@nexus/discord-bot",
-  "version": "0.3.0-rc.1",
+  "version": "0.3.0",
   "private": true,
   "description": "Bot do Discord da NEXUS: busca e Context Packs da NEXUS pelo MCP, com acesso por canal.",
   "type": "module",

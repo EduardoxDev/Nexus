@@ -230,6 +230,13 @@ Etapa 5 — bot do Discord, moderação ([README do bot](../apps/discord-bot/REA
 - [x] Intents de mensagens só com o automod ligado. `GuildMembers` não foi necessária (membros vêm pela API quando preciso); fica para a etapa 6 (boas-vindas).
 - [ ] Testado no servidor real (depende de ligar a Message Content Intent no Developer Portal).
 
+Etapa 6 — bot do Discord, gestão ([README do bot](../apps/discord-bot/README.md#gestão-do-servidor-etapa-4)):
+
+- [x] Boas-vindas com o embed da marca, mencionando só quem entrou; intent Server Members só com elas configuradas.
+- [x] Cargos por botão (`/painel cargos`): só os cargos da configuração, recusando cargos de equipe, de integração e acima do bot.
+- [x] Tickets (`/painel tickets`): thread privada com a pessoa e a equipe, um aberto por pessoa, fechar tranca e arquiva; registro em `bot.db`.
+- [ ] Testado no servidor real (depende dos IDs dos canais e cargos).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

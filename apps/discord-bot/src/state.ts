@@ -18,6 +18,15 @@ export interface ModAction {
   at: number;
 }
 
+/** Ticket de suporte (uma thread privada). */
+export interface Ticket {
+  threadId: string;
+  ownerId: string;
+  openedAt: number;
+  closedAt: number | null;
+  closedBy: string | null;
+}
+
 export class BotState {
   private readonly db: DatabaseSync;
 
@@ -44,6 +53,14 @@ export class BotState {
         at      INTEGER NOT NULL
       ) STRICT;
       CREATE INDEX IF NOT EXISTS mod_actions_user ON mod_actions (user_id, at DESC);
+      CREATE TABLE IF NOT EXISTS tickets (
+        thread_id TEXT PRIMARY KEY,
+        owner_id  TEXT NOT NULL,
+        opened_at INTEGER NOT NULL,
+        closed_at INTEGER,
+        closed_by TEXT
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS tickets_open ON tickets (owner_id) WHERE closed_at IS NULL;
     `);
   }
 
@@ -123,6 +140,54 @@ export class BotState {
       )
       .get(userId, since) as { n: number };
     return Number(row.n);
+  }
+
+  recordTicket(threadId: string, ownerId: string, at: number): void {
+    this.db
+      .prepare("INSERT INTO tickets (thread_id, owner_id, opened_at) VALUES (?, ?, ?)")
+      .run(threadId, ownerId, at);
+  }
+
+  /** Thread do ticket aberto da pessoa, se houver. */
+  openTicketOf(ownerId: string): string | null {
+    const row = this.db
+      .prepare(
+        "SELECT thread_id FROM tickets WHERE owner_id = ? AND closed_at IS NULL ORDER BY opened_at DESC LIMIT 1",
+      )
+      .get(ownerId) as { thread_id: string } | undefined;
+    return row?.thread_id ?? null;
+  }
+
+  ticket(threadId: string): Ticket | null {
+    const r = this.db
+      .prepare(
+        "SELECT thread_id, owner_id, opened_at, closed_at, closed_by FROM tickets WHERE thread_id = ?",
+      )
+      .get(threadId) as
+      | {
+          thread_id: string;
+          owner_id: string;
+          opened_at: number;
+          closed_at: number | null;
+          closed_by: string | null;
+        }
+      | undefined;
+    if (!r) return null;
+    return {
+      threadId: r.thread_id,
+      ownerId: r.owner_id,
+      openedAt: r.opened_at,
+      closedAt: r.closed_at,
+      closedBy: r.closed_by,
+    };
+  }
+
+  closeTicket(threadId: string, by: string, at: number): void {
+    this.db
+      .prepare(
+        "UPDATE tickets SET closed_at = ?, closed_by = ? WHERE thread_id = ? AND closed_at IS NULL",
+      )
+      .run(at, by, threadId);
   }
 
   close(): void {

@@ -14,6 +14,8 @@ Desenho: [docs/superpowers/specs/2026-10-12-discord-bot-design.md](../../docs/su
 | `/nexus status`                              | qualquer canal                                             | índice dos projetos visíveis naquele canal                   |
 | `/nexus versao`                              | qualquer canal                                             | versão da NEXUS em uso pelo bot e a última publicada         |
 | `/mod advertir\|silenciar\|banir\|historico` | equipe de moderação                                        | ver [Moderação](#moderação-etapa-3)                          |
+| `/painel cargos\|tickets`                    | administração                                              | ver [Gestão do servidor](#gestão-do-servidor-etapa-4)        |
+| `/ticket fechar`                             | thread do ticket                                           | fecha o ticket                                               |
 
 Sem `projeto`, o bot usa o projeto da equipe em canais da equipe e o público nos demais. Cada comando tem um prazo total de 30 s.
 
@@ -45,6 +47,16 @@ Para o automod funcionar:
 1. No Developer Portal → Bot, ligue **Message Content Intent**. Sem isso o login falha quando `automod` está ligado (com `automod: false`, o bot não pede a intent e `/mod` funciona normalmente).
 2. Dê ao cargo do bot as permissões **Gerenciar mensagens**, **Moderar membros** (timeout) e, para `/mod banir`, **Banir membros**. O cargo do bot precisa ficar acima dos cargos que ele vai moderar.
 3. Rode `register` de novo para o Discord conhecer o `/mod`.
+
+## Gestão do servidor (etapa 4)
+
+Desligada até existir o bloco `management` em `bot.config.json`; cada parte é opcional.
+
+- **Boas-vindas** (`management.welcome`): quem entra recebe um embed da marca no canal `channelId`, mencionando só essa pessoa. Em `message`, `{usuario}` vira a menção e `{servidor}` o nome do servidor. Bots não recebem boas-vindas. Precisa da **Server Members Intent** no Developer Portal (só é pedida com as boas-vindas configuradas).
+- **Cargos por botão** (`management.roles`, até 25): `/painel cargos` publica no canal atual um botão por cargo; cada clique põe ou tira o cargo de quem clicou. O bot **só** mexe nesses cargos e recusa cargos de integração, `@everyone` ou com permissões de equipe (administrar, gerenciar, moderar, expulsar, banir, mencionar todos…), mesmo se estiverem na configuração. O painel não é publicado enquanto algum cargo tiver problema.
+- **Tickets** (`management.tickets`): `/painel tickets` publica o botão **Abrir ticket**. Cada clique cria uma thread privada em `channelId` com a pessoa, chamando os cargos de `staffRoleIds`; cada pessoa tem no máximo um ticket aberto. O botão **Fechar ticket** (ou `/ticket fechar`) tranca e arquiva a thread — só quem abriu, a equipe (`staffRoleIds`) ou quem pode gerenciar threads. Abertura e fechamento ficam no `bot.db` e, com `logChannelId`, nesse canal (sem o conteúdo da conversa).
+
+`/painel` só aparece para quem pode **Gerenciar servidor**. Permissões do bot: **Gerenciar cargos** (com o cargo do bot acima dos cargos dos botões), **Criar threads privadas**, **Enviar mensagens em threads** e **Gerenciar threads**. Depois de configurar, rode `register` de novo.
 
 ## Segurança
 

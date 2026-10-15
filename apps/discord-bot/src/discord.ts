@@ -8,24 +8,34 @@ import {
   PermissionFlagsBits,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
+  type Guild,
   type GuildMember,
   type Message,
+  type SendableChannels,
 } from "discord.js";
 
 import type { ChannelRef } from "./access.ts";
 import type { BotMessage } from "./format.ts";
 import type { ModInteraction } from "./commands/mod.ts";
 import type { NexusInteraction, ReplyPayload } from "./commands/nexus.ts";
+import type { PanelMessage, RoleInfo } from "./management/roles.ts";
 import type { MessageInfo } from "./moderation/automod.ts";
+
+export interface IntentOptions {
+  automod: boolean;
+  /** Boas-vindas (entrada de membros). */
+  members?: boolean;
+}
 
 /**
  * Intents pedidas ao Discord. Mensagens (e a intent privilegiada Message Content) só com o
- * automod ligado: pedir uma intent privilegiada não habilitada no Developer Portal faz o login
- * falhar.
+ * automod ligado, e Server Members só com as boas-vindas: pedir uma intent privilegiada não
+ * habilitada no Developer Portal faz o login falhar.
  */
-export function intentsFor(opts: { automod: boolean }): GatewayIntentBits[] {
+export function intentsFor(opts: IntentOptions): GatewayIntentBits[] {
   const intents = [GatewayIntentBits.Guilds];
   if (opts.automod) intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
+  if (opts.members) intents.push(GatewayIntentBits.GuildMembers);
   return intents;
 }
 
@@ -34,7 +44,7 @@ export function intentsFor(opts: { automod: boolean }): GatewayIntentBits[] {
  * chegarem como parciais com o canal pai; erros do gateway são registrados em vez de derrubar o
  * processo (sem listener, o Node trata o evento `error` como exceção).
  */
-export function createClient(opts: { automod: boolean } = { automod: false }): Client {
+export function createClient(opts: IntentOptions = { automod: false }): Client {
   const client = new Client({ intents: intentsFor(opts), partials: [Partials.Channel] });
   client.on(Events.Error, (e) => console.error(`erro do Discord: ${e.name}`));
   return client;
@@ -66,6 +76,43 @@ export async function sendTo(client: Client, channelId: string, m: BotMessage): 
     throw new Error(`o canal ${channelId} não existe ou o bot não pode escrever nele`);
   }
   await channel.send(toDiscord({ ...m, allowedMentions: { parse: [] } }));
+}
+
+/** Permissões que fazem de um cargo um cargo de equipe: o bot nunca o dá por botão. */
+const STAFF_PERMISSIONS = [
+  PermissionFlagsBits.Administrator,
+  PermissionFlagsBits.ManageGuild,
+  PermissionFlagsBits.ManageRoles,
+  PermissionFlagsBits.ManageChannels,
+  PermissionFlagsBits.ManageMessages,
+  PermissionFlagsBits.ManageThreads,
+  PermissionFlagsBits.ManageWebhooks,
+  PermissionFlagsBits.ManageNicknames,
+  PermissionFlagsBits.KickMembers,
+  PermissionFlagsBits.BanMembers,
+  PermissionFlagsBits.ModerateMembers,
+  PermissionFlagsBits.MentionEveryone,
+];
+
+/** Como o Discord vê um cargo agora (do cache do servidor). */
+export function roleInfoOf(guild: Guild, roleId: string): RoleInfo {
+  const role = guild.roles.cache.get(roleId);
+  if (!role) return { exists: false, dangerous: false, editable: false };
+  return {
+    exists: true,
+    dangerous: role.managed || role.id === guild.id || role.permissions.any(STAFF_PERMISSIONS),
+    editable: role.editable,
+  };
+}
+
+/** Publica um painel com botões. Nunca menciona ninguém. */
+export async function postPanel(channel: SendableChannels, p: PanelMessage): Promise<void> {
+  await channel.send({
+    embeds: p.embeds,
+    files: p.files.map((f) => ({ attachment: f.attachment, name: f.name })),
+    components: p.components,
+    allowedMentions: { parse: [] },
+  });
 }
 
 /** Resumo da mensagem para o automod (sem guardar o conteúdo em lugar nenhum). */

@@ -22,7 +22,7 @@ Cada versão da NEXUS, da mais nova para a mais antiga. A seção de cada versã
 - O banco local passa para a **versão 7** do schema (origem das memórias compartilhadas). Um backup é feito antes, automaticamente, na pasta `backups/` dos dados. Depois da atualização, a v0.2 não abre mais esse banco.
 - Na primeira indexação depois de atualizar, os arquivos são analisados de novo uma vez (por causa das novas linguagens).
 - O histórico do git precisa do `git` instalado no computador. Sem ele, todo o resto funciona normalmente.
-- Os pacotes continuam **não assinados**: veja como abrir em cada sistema na página [Instalar](https://eduardoxdev.github.io/Nexus/docs/instalar/).
+- Os instaladores continuam **sem assinatura de código** do Windows e da Apple (as atualizações automáticas, essas sim, são conferidas por assinatura antes de instalar): veja como abrir em cada sistema na página [Instalar](https://eduardoxdev.github.io/Nexus/docs/instalar/).
 
 ## 0.2.0
 

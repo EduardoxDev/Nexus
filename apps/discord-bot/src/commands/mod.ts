@@ -77,6 +77,11 @@ export interface ModTarget {
   /** O bot consegue silenciar/banir (cargo abaixo do dele, não é o dono). */
   moderatable: boolean;
   bannable: boolean;
+  /**
+   * Cargo mais alto da pessoa abaixo do de quem usou o comando (ou quem usou é o dono, ou a
+   * pessoa está fora do servidor). Sem isso, um moderador usaria o bot contra quem está acima dele.
+   */
+  belowActor: boolean;
 }
 
 /** O que o comando usa de uma interação (adaptado em `discord.ts`). */
@@ -89,6 +94,9 @@ export interface ModInteraction {
   target: ModTarget | null;
   string(name: string): string | null;
   integer(name: string): number | null;
+  /** Avisa o Discord que a resposta vem depois (o prazo de 3 s não cobre as chamadas à API). */
+  defer(): Promise<unknown>;
+  /** Responde, ou edita a resposta adiada. */
   reply(payload: ReplyPayload): Promise<unknown>;
 }
 
@@ -136,7 +144,14 @@ export async function handleMod(i: ModInteraction, d: ModDeps): Promise<void> {
     await i.reply(say("Bots não são moderados por este comando."));
     return;
   }
-  const reason = (i.string("motivo") ?? "").trim() || "sem motivo informado";
+  if (!t.belowActor) {
+    await i.reply(say("Você não pode moderar alguém com cargo igual ou acima do seu."));
+    return;
+  }
+  const reason =
+    (i.string("motivo") ?? "").replace(/\s+/gu, " ").trim().slice(0, MAX_REASON) ||
+    "sem motivo informado";
+  await i.defer();
   const at = d.now();
   const record = async (a: ModAction) => {
     state.recordAction(a);

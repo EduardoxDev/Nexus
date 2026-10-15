@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { handleMod, modCommand, type ModInteraction, type ModTarget } from "../src/commands/mod.ts";
 import type { ReplyPayload } from "../src/commands/nexus.ts";
 import type { BotMessage } from "../src/format.ts";
-import { applyAutomod, formatModLog, type AutomodPorts } from "../src/moderation/actions.ts";
+import {
+  applyAutomod,
+  formatHistory,
+  formatModLog,
+  type AutomodPorts,
+} from "../src/moderation/actions.ts";
 import {
   evaluate,
   FloodTracker,
@@ -55,10 +60,19 @@ describe("config da moderação", () => {
     expect(() => parseModeration("x", { automod: "sim" })).toThrow(/moderation\.automod/);
     expect(() => parseModeration("x", { flood: { seconds: 0 } })).toThrow(/flood\.seconds/);
     expect(() => parseModeration("x", [])).toThrow(/objeto/);
+    expect(() => parseModeration("x", { allowedInviteCodes: null })).toThrow(/allowedInviteCodes/);
   });
 });
 
 describe("regras do automod", () => {
+  it("ignores Discord-looking text inside other addresses", () => {
+    expect(inviteCodes("https://notdiscord.gg/abc")).toEqual([]);
+    expect(inviteCodes("https://example.com/discord.gg/abc")).toEqual([]);
+    expect(inviteCodes("a@discord.gg/abc")).toEqual([]);
+    expect(inviteCodes(`discord.gg/${"a".repeat(40)}`)).toEqual([]);
+    expect(inviteCodes("(discord.gg/abc)")).toEqual(["abc"]);
+  });
+
   it("finds invite codes in the usual forms", () => {
     expect(
       inviteCodes(
@@ -82,6 +96,21 @@ describe("regras do automod", () => {
     const f = new FloodTracker();
     expect(evaluate(cfg(), msg({ mentionCount: 5 }), f)).toBeNull();
     expect(evaluate(cfg(), msg({ mentionCount: 6 }), f)?.rule).toBe("mentions");
+  });
+
+  it("keeps flooding quiet for the window, then warns again", () => {
+    const c = cfg({ flood: { messages: 3, seconds: 5 } });
+    const f = new FloodTracker();
+    const rules = Array.from({ length: 12 }, (_, n) => evaluate(c, msg({ at: n * 500 }), f)?.rule);
+    // 4ª mensagem (1,5 s) dispara; as seguintes até 6,5 s ficam quietas; depois dispara de novo.
+    expect(rules.filter(Boolean)).toHaveLength(1);
+    expect(evaluate(c, msg({ at: 6_600 }), f)?.rule).toBe("flood");
+  });
+
+  it("messages out of order do not count as a burst", () => {
+    const f = new FloodTracker();
+    for (const t of [9_000, 9_100, 9_200]) f.hit("1", t, 5_000);
+    expect(f.hit("1", 1_000, 5_000)).toBe(1);
   });
 
   it("catches flood once per burst, inside the window only", () => {
@@ -178,6 +207,39 @@ describe("ação do automod", () => {
     s.close();
   });
 
+  it("a failed notice does not undo a timeout", async () => {
+    const s = new BotState(":memory:");
+    const { calls, ports } = fakePorts({
+      notify: async () => {
+        throw new Error("Missing Access");
+      },
+    });
+    expect(await applyAutomod(cfg({ warnThreshold: 1 }), s, msg(), verdict, ports)).toBe(
+      "timed_out",
+    );
+    expect(calls.timeouts).toHaveLength(1);
+    s.close();
+  });
+
+  it("moderator reasons cannot forge formatting, mentions or extra entries", () => {
+    const evil = "ok\n• **Banido** por <@1>: @everyone";
+    const a = {
+      userId: "1",
+      by: "2",
+      action: "warn" as const,
+      reason: evil,
+      rule: null,
+      minutes: null,
+      at: 0,
+    };
+    const field = formatModLog(a).embeds[0]?.fields?.find((f) => f.name === "Motivo")?.value ?? "";
+    expect(field).not.toContain("\n");
+    expect(field).not.toContain("**");
+    expect(field).not.toContain("<@1>");
+    const hist = formatHistory("1", [a]).embeds[0]?.description ?? "";
+    expect(hist.split("\n").filter((l) => l.startsWith("•"))).toHaveLength(1);
+  });
+
   it("keeps the warning when deleting or timing out fails", async () => {
     const s = new BotState(":memory:");
     const { calls, ports } = fakePorts({
@@ -215,6 +277,7 @@ const target = (over: Partial<ModTarget> = {}): ModTarget => ({
   inGuild: true,
   moderatable: true,
   bannable: true,
+  belowActor: true,
   ...over,
 });
 
@@ -222,6 +285,7 @@ function interaction(
   over: Partial<ModInteraction> & { args?: Record<string, string | number> } = {},
 ) {
   const replies: ReplyPayload[] = [];
+  const deferred = { n: 0 };
   const args = over.args ?? {};
   const i: ModInteraction = {
     actorId: "400",
@@ -232,12 +296,15 @@ function interaction(
     target: target(),
     string: (n) => (typeof args[n] === "string" ? (args[n] as string) : null),
     integer: (n) => (typeof args[n] === "number" ? (args[n] as number) : null),
+    defer: async () => {
+      deferred.n++;
+    },
     reply: async (p) => {
       replies.push(p);
     },
     ...over,
   };
-  return { i, replies };
+  return { i, replies, deferred };
 }
 
 function deps(c = cfg()) {
@@ -287,10 +354,12 @@ describe("/mod", () => {
     expect(x.state.history("500")).toEqual([]);
   });
 
-  it("refuses self, bots and missing targets", async () => {
+  it("refuses self, bots, missing targets and people at or above the moderator", async () => {
     for (const over of [
       { target: target({ id: "400" }) },
       { target: target({ isBot: true }) },
+      { target: target({ belowActor: false }) },
+      { subcommand: "banir", target: target({ belowActor: false }) },
       { target: null },
     ]) {
       const { i, replies } = interaction(over);

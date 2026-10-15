@@ -94,6 +94,15 @@ const state = new BotState(resolve(dirname(env.nexusDataDir), "bot.db"));
 const github = () => latestRelease(fetch, cfg.githubRepo);
 const POLL_MS = 15 * 60_000;
 const stops: (() => void)[] = [];
+/** Handlers em andamento: o desligamento espera por eles antes de fechar o banco. */
+const inflight = new Set<Promise<void>>();
+let closing = false;
+function track(work: () => Promise<void>): void {
+  if (closing) return;
+  const p = work().finally(() => inflight.delete(p));
+  inflight.add(p);
+  p.catch(() => {});
+}
 
 client.once(Events.ClientReady, (c) => {
   console.log(`NEXUS conectado como ${c.user.tag}`);
@@ -132,59 +141,63 @@ client.once(Events.ClientReady, (c) => {
   }
 });
 
-client.on(Events.MessageCreate, async (message) => {
-  if (!moderation?.automod || message.guildId !== env.guildId) return;
-  try {
-    const info = messageInfo(message);
-    const verdict = evaluate(moderation, info, flood);
-    if (!verdict) return;
-    const outcome = await applyAutomod(moderation, state, info, verdict, {
-      deleteMessage: async () => {
-        await message.delete();
-      },
-      notify: async (userId, text) => {
-        if (message.channel.isSendable()) {
-          await message.channel.send({ content: text, allowedMentions: { users: [userId] } });
-        }
-      },
-      timeout: async (userId, ms, reason) => {
-        const member = message.member ?? (await message.guild?.members.fetch(userId));
-        if (!member) throw new Error("membro não encontrado");
-        await member.timeout(ms, reason);
-      },
-      log: modLog,
-    });
-    console.log(`automod: ${verdict.rule} → ${outcome}`);
-  } catch (e) {
-    const err = e as Error;
-    console.error(`automod falhou: ${err.name}: ${err.message}`);
-  }
-});
+client.on(Events.MessageCreate, (message) =>
+  track(async () => {
+    if (!moderation?.automod || message.guildId !== env.guildId) return;
+    try {
+      const info = messageInfo(message);
+      const verdict = evaluate(moderation, info, flood);
+      if (!verdict) return;
+      const outcome = await applyAutomod(moderation, state, info, verdict, {
+        deleteMessage: async () => {
+          await message.delete();
+        },
+        notify: async (userId, text) => {
+          if (message.channel.isSendable()) {
+            await message.channel.send({ content: text, allowedMentions: { users: [userId] } });
+          }
+        },
+        timeout: async (userId, ms, reason) => {
+          const member = message.member ?? (await message.guild?.members.fetch(userId));
+          if (!member) throw new Error("membro não encontrado");
+          await member.timeout(ms, reason);
+        },
+        log: modLog,
+      });
+      console.log(`automod: ${verdict.rule} → ${outcome}`);
+    } catch (e) {
+      const err = e as Error;
+      console.error(`automod falhou: ${err.name}: ${err.message}`);
+    }
+  }),
+);
 
-client.on(Events.GuildMemberAdd, async (member) => {
-  const welcome = management?.welcome;
-  if (!welcome || member.guild.id !== env.guildId) return;
-  try {
-    const m = formatWelcome(welcome, {
-      id: member.id,
-      displayName: member.displayName,
-      isBot: member.user.bot,
-      guildName: member.guild.name,
-      memberCount: member.guild.memberCount,
-    });
-    if (!m) return;
-    const channel = await client.channels.fetch(welcome.channelId);
-    if (!channel?.isSendable()) throw new Error("canal de boas-vindas indisponível");
-    await channel.send({
-      content: m.content,
-      embeds: m.embeds,
-      files: m.files.map((f) => ({ attachment: f.attachment, name: f.name })),
-      allowedMentions: { users: [m.mentionUserId] },
-    });
-  } catch (e) {
-    console.error(`boas-vindas falhou: ${(e as Error).name}`);
-  }
-});
+client.on(Events.GuildMemberAdd, (member) =>
+  track(async () => {
+    const welcome = management?.welcome;
+    if (!welcome || member.guild.id !== env.guildId) return;
+    try {
+      const m = formatWelcome(welcome, {
+        id: member.id,
+        displayName: member.displayName,
+        isBot: member.user.bot,
+        guildName: member.guild.name,
+        memberCount: member.guild.memberCount,
+      });
+      if (!m) return;
+      const channel = await client.channels.fetch(welcome.channelId);
+      if (!channel?.isSendable()) throw new Error("canal de boas-vindas indisponível");
+      await channel.send({
+        content: m.content,
+        embeds: m.embeds,
+        files: m.files.map((f) => ({ attachment: f.attachment, name: f.name })),
+        allowedMentions: { users: [m.mentionUserId] },
+      });
+    } catch (e) {
+      console.error(`boas-vindas falhou: ${(e as Error).name}`);
+    }
+  }),
+);
 
 const ephemeral = (text: string) => ({
   content: text,
@@ -303,67 +316,75 @@ async function onButton(it: ButtonInteraction) {
   }
 }
 
-client.on(Events.InteractionCreate, async (it) => {
-  // Só o servidor configurado: fora dele (outros servidores, DMs) o bot não responde.
-  if (it.guildId !== env.guildId) return;
-  try {
-    if (it.isAutocomplete() && it.commandName === "nexus") {
-      await it.respond(autocompleteProjects(it.options.getFocused(), channelRef(it), cfg));
-    } else if (it.isChatInputCommand() && it.commandName === "nexus") {
-      await handleNexus(adapt(it), { tools: mcp, cfg, latestRelease: github });
-    } else if (it.isChatInputCommand() && it.commandName === "mod") {
-      if (!moderation) {
-        await it.reply({
-          content: "A moderação não está configurada neste bot.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-      const guild = it.guild;
-      await handleMod(adaptMod(it), {
-        cfg: moderation,
-        state,
-        timeout: async (userId, ms, reason) => {
-          const member = await guild?.members.fetch(userId);
-          if (!member) throw new Error("membro não encontrado");
-          await member.timeout(ms, reason);
-        },
-        ban: async (userId, reason, deleteSeconds) => {
-          if (!guild) throw new Error("fora de um servidor");
-          await guild.members.ban(userId, { reason, deleteMessageSeconds: deleteSeconds });
-        },
-        log: modLog,
-        now: () => Date.now(),
-      });
-    } else if (it.isChatInputCommand() && it.commandName === "painel") {
-      const guild = it.guild;
-      const channel = it.channel;
-      if (!guild || !channel?.isSendable()) return;
-      await handlePanel(
-        {
-          canManageGuild: it.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false,
-          subcommand: it.options.getSubcommand(),
-          post: (p) => postPanel(channel, p),
-          reply: async (text) => {
-            await it.reply(ephemeral(text));
+client.on(Events.InteractionCreate, (it) =>
+  track(async () => {
+    // Só o servidor configurado: fora dele (outros servidores, DMs) o bot não responde.
+    if (it.guildId !== env.guildId) return;
+    try {
+      if (it.isAutocomplete() && it.commandName === "nexus") {
+        await it.respond(autocompleteProjects(it.options.getFocused(), channelRef(it), cfg));
+      } else if (it.isChatInputCommand() && it.commandName === "nexus") {
+        await handleNexus(adapt(it), { tools: mcp, cfg, latestRelease: github });
+      } else if (it.isChatInputCommand() && it.commandName === "mod") {
+        if (!moderation) {
+          await it.reply({
+            content: "A moderação não está configurada neste bot.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const guild = it.guild;
+        await handleMod(adaptMod(it), {
+          cfg: moderation,
+          state,
+          timeout: async (userId, ms, reason) => {
+            const member = await guild?.members.fetch(userId);
+            if (!member) throw new Error("membro não encontrado");
+            await member.timeout(ms, reason);
           },
-        },
-        management,
-        (roleId) => roleInfoOf(guild, roleId),
-      );
-    } else if (it.isChatInputCommand() && it.commandName === "ticket") {
-      await onTicketClose(it);
-    } else if (it.isButton()) {
-      await onButton(it);
+          ban: async (userId, reason, deleteSeconds) => {
+            if (!guild) throw new Error("fora de um servidor");
+            await guild.members.ban(userId, { reason, deleteMessageSeconds: deleteSeconds });
+          },
+          log: modLog,
+          now: () => Date.now(),
+        });
+      } else if (it.isChatInputCommand() && it.commandName === "painel") {
+        const guild = it.guild;
+        const channel = it.channel;
+        if (!guild || !channel?.isSendable()) return;
+        await handlePanel(
+          {
+            canManageGuild: it.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false,
+            subcommand: it.options.getSubcommand(),
+            post: (p) => postPanel(channel, p),
+            reply: async (text) => {
+              await it.reply(ephemeral(text));
+            },
+          },
+          management,
+          (roleId) => roleInfoOf(guild, roleId),
+        );
+      } else if (it.isChatInputCommand() && it.commandName === "ticket") {
+        await onTicketClose(it);
+      } else if (it.isButton()) {
+        await onButton(it);
+      }
+    } catch (e) {
+      const err = e as Error;
+      console.error(`falha ao responder interação: ${err.name}: ${err.message}`);
     }
-  } catch (e) {
-    const err = e as Error;
-    console.error(`falha ao responder interação: ${err.name}: ${err.message}`);
-  }
-});
+  }),
+);
 
 async function shutdown() {
+  closing = true;
   for (const stop of stops) stop();
+  // Uma ação de moderação no meio (mensagem já apagada) ainda precisa ser registrada.
+  await Promise.race([
+    Promise.allSettled([...inflight]),
+    new Promise((r) => setTimeout(r, 10_000)),
+  ]);
   await mcp.close();
   state.close();
   await client.destroy();

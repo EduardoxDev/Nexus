@@ -8,7 +8,7 @@
   "moderation": {
     "logChannelId": "345678901234567890",
     "modRoleIds": [],
-    "automod": true,
+    "automod": false,
     "exemptChannelIds": [],
     "exemptRoleIds": [],
     "flood": { "messages": 6, "seconds": 8 },

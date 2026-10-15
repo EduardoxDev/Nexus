@@ -34,17 +34,17 @@ Desligada até existir o bloco `moderation` em `bot.config.json` (veja o exemplo
 
 - **Automod** (`automod: true`): apaga a mensagem e adverte a pessoa quando há
   - convite para outro servidor (`blockInvites`; os códigos de `allowedInviteCodes` são liberados);
-  - menções demais numa mensagem (`maxMentions` ou mais, contando pessoas, cargos e `@everyone`);
+  - menções demais numa mensagem (`maxMentions` ou mais, contando pessoas, cargos e `@everyone`/`@here`);
   - flood (mais de `flood.messages` mensagens em `flood.seconds` segundos).
 
   Com `warnThreshold` advertências em `warnWindowHours` horas, a pessoa é silenciada por `timeoutMinutes` minutos. Bots, `exemptChannelIds` (e as threads deles) e `exemptRoleIds` são ignorados. As regras são conservadoras de propósito: só casos claros.
 
-- **`/mod`**: `advertir`, `silenciar` (1 min a 28 dias), `banir` (opcionalmente apagando até 7 dias de mensagens) e `historico`. Só aparece para quem tem a permissão **Moderar membros** (banir exige também **Banir membros**); com `modRoleIds`, é preciso ter um desses cargos. Ninguém modera a si mesmo nem bots, e o bot recusa quem tem cargo acima do dele. As respostas só quem usou vê.
-- **Registro**: toda ação (automática ou manual) fica em `bot.db` e, com `logChannelId`, vai para esse canal. O conteúdo das mensagens apagadas **não** é guardado nem copiado para o registro — só a regra e o motivo.
+- **`/mod`**: `advertir`, `silenciar` (1 min a 28 dias), `banir` (opcionalmente apagando até 7 dias de mensagens) e `historico`. Só aparece para quem tem a permissão **Moderar membros** (banir exige também **Banir membros**); com `modRoleIds`, é preciso ter um desses cargos. Ninguém modera a si mesmo, bots nem quem tem cargo igual ou acima do seu (o dono do servidor pode tudo); `silenciar` e `banir` também recusam quem tem cargo acima do bot. As respostas só quem usou vê.
+- **Registro**: toda ação (automática ou manual) fica em `bot.db` e, com `logChannelId`, vai para esse canal. O automod **não** guarda nem copia o conteúdo das mensagens apagadas — só a regra e o motivo. No `/mod`, o motivo é o texto que o moderador digitou (não cole mensagens de membros nele).
 
 Para o automod funcionar:
 
-1. No Developer Portal → Bot, ligue **Message Content Intent**. Sem isso o login falha quando `automod` está ligado (com `automod: false`, o bot não pede a intent e `/mod` funciona normalmente).
+1. No Developer Portal → Bot, ligue **Message Content Intent** e só então mude `automod` para `true` (o exemplo vem com `false`). Com `automod: true` sem a intent, o login falha; com `false`, o bot não pede a intent e `/mod` funciona normalmente.
 2. Dê ao cargo do bot as permissões **Gerenciar mensagens**, **Moderar membros** (timeout) e, para `/mod banir`, **Banir membros**. O cargo do bot precisa ficar acima dos cargos que ele vai moderar.
 3. Rode `register` de novo para o Discord conhecer o `/mod`.
 

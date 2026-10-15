@@ -226,7 +226,7 @@ Etapa 5 — bot do Discord, moderação ([README do bot](../apps/discord-bot/REA
 - [x] Bloco `moderation` no `bot.config.json`, validado campo a campo; ausente = desligada.
 - [x] Automod conservador: convites de outros servidores, spam de menções e flood; apaga, adverte e silencia na reincidência; canais (com as threads) e cargos isentos.
 - [x] `/mod advertir|silenciar|banir|historico`, conferindo a permissão do Discord, os cargos configurados e a hierarquia do bot.
-- [x] Registro em `bot.db` e no canal de logs, sem copiar o conteúdo das mensagens.
+- [x] Registro em `bot.db` e, com `logChannelId`, no canal de logs; o automod não copia o conteúdo das mensagens.
 - [x] Intents de mensagens só com o automod ligado. `GuildMembers` não foi necessária (membros vêm pela API quando preciso); fica para a etapa 6 (boas-vindas).
 - [ ] Testado no servidor real (depende de ligar a Message Content Intent no Developer Portal).
 

@@ -135,6 +135,14 @@ export function adaptMod(i: ChatInputCommandInteraction): ModInteraction {
   const actor = i.member as GuildMember | null;
   const user = i.options.getUser("usuario");
   const member = i.options.getMember("usuario") as GuildMember | null;
+  const guild = i.guild;
+  const outranks = (): boolean => {
+    if (member === null) return true;
+    if (!guild || !actor?.roles?.highest || !member.roles?.highest) return false;
+    if (member.id === guild.ownerId) return false;
+    if (actor.id === guild.ownerId) return true;
+    return actor.roles.highest.comparePositionTo(member.roles.highest) > 0;
+  };
   return {
     actorId: i.user.id,
     actorRoleIds: actor?.roles?.cache ? [...actor.roles.cache.keys()] : [],
@@ -148,12 +156,16 @@ export function adaptMod(i: ChatInputCommandInteraction): ModInteraction {
           inGuild: member !== null,
           moderatable: member?.moderatable ?? false,
           bannable: member?.bannable ?? true,
+          belowActor: outranks(),
         }
       : null,
     string: (name) => i.options.getString(name),
     integer: (name) => i.options.getInteger(name),
+    defer: () => i.deferReply({ flags: MessageFlags.Ephemeral }),
     reply: (p) =>
-      i.reply({ ...toDiscord(p), ...(p.ephemeral ? { flags: MessageFlags.Ephemeral } : {}) }),
+      i.deferred || i.replied
+        ? i.editReply(toDiscord(p))
+        : i.reply({ ...toDiscord(p), ...(p.ephemeral ? { flags: MessageFlags.Ephemeral } : {}) }),
   };
 }
 

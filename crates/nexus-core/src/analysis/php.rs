@@ -277,7 +277,7 @@ fn more_declarators(line: &str, kind: SymbolKind) -> Vec<String> {
 /// string $nome)`): só os públicos.
 static PROMOTED: LazyLock<Option<Regex>> = LazyLock::new(|| {
     Regex::new(
-        r"\b(?:public(?:\s+readonly)?|readonly\s+public)\s+(?:[?\w\\|&]+\s+)?\$([A-Za-z_]\w*)",
+        r"\b(?:public(?:\s+readonly)?|readonly\s+public)\s+(?:\(?[?\w\\]+(?:\s*[|&()]\s*[?\w\\]+)*\)?\s+)?\$([A-Za-z_]\w*)",
     )
     .ok()
 });
@@ -323,7 +323,9 @@ impl Analyzer for Php {
                 && let Some(start) = usize::try_from(s.line - 1)
                     .ok()
                     .and_then(|i| line_starts.get(i).copied())
-                && let Some(open) = m.bare[start..].find('(').map(|o| start + o)
+                // O `(` dos parâmetros vem depois de `__construct` (não o de um atributo).
+                && let Some(name_at) = m.bare[start..].find("__construct").map(|o| start + o)
+                && let Some(open) = m.bare[name_at..].find('(').map(|o| name_at + o)
                 && let Some(close) = closing_paren(&m.bare, open)
                 && let Some(re) = PROMOTED.as_ref()
             {
@@ -433,8 +435,8 @@ namespace {
         public $a, $b = [1, 2], $c;
         public const X = 1, Y = 2;
 
-        public function __construct(
-            public readonly int $id,
+        #[Inject(1)] public function __construct(
+            public readonly int $id, public Foo | Bar $both,
             private string $secret,
             public ?string $note = null,
         ) {}
@@ -456,6 +458,7 @@ namespace {
                 "Y const L10 in Order pub",
                 "__construct method L12 in Order pub",
                 "id variable L13 in Order pub",
+                "both variable L13 in Order pub",
                 "note variable L15 in Order pub",
             ]
         );

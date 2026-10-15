@@ -101,7 +101,15 @@ fn fun_name(rest: &str) -> Option<&str> {
         }
         r = r[end..].trim_start();
     }
-    let head = &r[..r.find('(')?];
+    // O `(` dos parâmetros fica fora de crases (um nome escapado pode ter parênteses).
+    let mut in_ticks = false;
+    let open = r.char_indices().find_map(|(i, c)| {
+        if c == '`' {
+            in_ticks = !in_ticks;
+        }
+        (c == '(' && !in_ticks).then_some(i)
+    })?;
+    let head = &r[..open];
     // Receptor de extensão (`String.`, `List<T>.`): o nome é o que vem depois do último ponto
     // fora de `<>`.
     let mut depth = 0;
@@ -277,6 +285,7 @@ fun retry(
 }
 
 fun `when`() {}
+fun `soma (a, b)`() {}
 
 /* /* aninhado */ fun fake() {} */
 val doc = """
@@ -309,7 +318,8 @@ fun alsoFake() {}
                 "render method L6-6 in Panel",
                 "retry function L9-14",
                 "when function L16-16",
-                "doc variable L19-19",
+                "soma (a, b) function L17-17",
+                "doc variable L20-20",
             ]
         );
         assert_eq!(a.imports[0].specifier, "com.acme.ação.Botão");

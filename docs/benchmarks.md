@@ -58,7 +58,7 @@ A segunda rodada da branch ficou lenta em tudo, inclusive no que não mudou (ind
 | 1ª       | 99 / 101 / 95 ms  | 209 / 139 / 96 ms |
 | 2ª       | 99 / 106 / 117 ms | 95 / 94 / 87 ms   |
 
-Depois da primeira passada, as duas versões ficam iguais (87–117 ms). Só a **primeira passada** logo depois de compilar saiu lenta, e o teste de escala mede justamente uma passada só, logo depois de compilar. A diferença do teste de escala é desse início frio, não do código. As linguagens novas não entram no caminho do TypeScript, exceto o percorredor de chaves comum, que ganhou a contagem de parênteses do cabeçalho; ela não mudou o tempo medido.
+Na 1ª execução da branch, as **duas primeiras passadas** saíram lentas (209 e 139 ms) e só a terceira voltou ao nível do `main`. Na 2ª execução, as três passadas da branch ficaram iguais ou abaixo do `main` (87–95 ms contra 99–117 ms). Leio isso como aquecimento logo depois de compilar (o binário recém-gerado), e o teste de escala mede uma passada só, justamente logo depois de compilar. Não dá para descartar de vez uma diferença pequena: se houver, ela não aparece depois do aquecimento. As linguagens novas não entram no caminho do TypeScript, exceto o percorredor de chaves comum, que ganhou a contagem de parênteses do cabeçalho; ela não mudou o tempo medido.
 
 ## Repositório real
 

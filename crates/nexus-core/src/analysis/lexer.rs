@@ -274,7 +274,7 @@ pub fn mask(text: &str, style: Style) -> Masked {
 /// Palavras depois das quais `/` começa uma regex (e não uma divisão) no Ruby.
 const RUBY_KEYWORDS: &[&[u8]] = &[
     b"if", b"unless", b"when", b"and", b"or", b"not", b"return", b"then", b"while", b"until",
-    b"puts", b"in", b"else", b"elsif", b"case",
+    b"puts", b"in", b"else", b"elsif", b"case", b"raise", b"print", b"yield",
 ];
 
 /// Fim (exclusivo) de uma regex `/…/` ou de um literal `%q{…}` que começa em `i`, se o
@@ -307,9 +307,9 @@ fn ruby_literal(src: &[u8], i: usize) -> Option<usize> {
     }
     if c == b'/' {
         // A barra vem logo depois do começo de uma expressão (`x = /re/`, `when /re/`); em
-        // `a / b` o que vem antes é um nome, então é divisão.
+        // `a / b` o que vem antes é um nome, então é divisão. A regex pode ter várias linhas.
         let mut j = i + 1;
-        while j < src.len() && src[j] != b'\n' {
+        while j < src.len() {
             match src[j] {
                 b'\\' => j += 2,
                 b'/' => {
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn ruby_regex_and_percent_literals() {
-        let src = "def a; x =~ /#/; end\ny = %q{def fake; end}\nz = a / b # def no\ndef b; end\n";
+        let src = "def a; x =~ /#/; end\ny = %q{def fake; end}\nz = a / b # def no\ndef b; end\nraise /def fake2/\nr = /a\ndef fake3\n/x\n";
         let m = mask(src, RUBY);
         assert!(m.bare.contains("def a;"));
         assert!(
@@ -435,6 +435,8 @@ mod tests {
         assert!(m.bare.contains("a / b"), "divisão não é regex");
         assert!(!m.bare.contains("def no"));
         assert!(m.bare.contains("def b"));
+        assert!(!m.bare.contains("fake2"), "regex depois de raise");
+        assert!(!m.bare.contains("fake3"), "regex de várias linhas");
         assert_eq!(m.bare.len(), src.len());
     }
 

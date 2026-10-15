@@ -104,6 +104,12 @@ test("capturas do README", async () => {
   await page.waitForTimeout(500);
   await shot(page, "projeto");
 
+  await open(page, "Mapa");
+  await expect(page.getByRole("complementary", { name: /Mais centrais/ })).toBeVisible();
+  // O layout de forças para sozinho quando estabiliza.
+  await page.waitForTimeout(3000);
+  await shot(page, "mapa");
+
   await open(page, "Integrações");
   await shot(page, "integracoes");
 

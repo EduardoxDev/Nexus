@@ -92,6 +92,12 @@ const STAFF_PERMISSIONS = [
   PermissionFlagsBits.BanMembers,
   PermissionFlagsBits.ModerateMembers,
   PermissionFlagsBits.MentionEveryone,
+  PermissionFlagsBits.ViewAuditLog,
+  PermissionFlagsBits.ManageEvents,
+  PermissionFlagsBits.ManageGuildExpressions,
+  PermissionFlagsBits.MoveMembers,
+  PermissionFlagsBits.MuteMembers,
+  PermissionFlagsBits.DeafenMembers,
 ];
 
 /** Como o Discord vê um cargo agora (do cache do servidor). */

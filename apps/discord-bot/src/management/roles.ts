@@ -11,7 +11,7 @@ import {
 } from "discord.js";
 
 import { brandHeader, logoFile, type BotMessage } from "../format.ts";
-import type { RoleOption } from "./config.ts";
+import { buttonEmoji, type RoleOption } from "./config.ts";
 
 export const ROLE_PREFIX = "nexus:role:";
 
@@ -52,7 +52,7 @@ export function rolePanel(roles: RoleOption[]): PanelMessage {
         style: ButtonStyle.Secondary,
         custom_id: `${ROLE_PREFIX}${r.roleId}`,
         label: r.label,
-        ...(r.emoji ? { emoji: { name: r.emoji } } : {}),
+        ...(r.emoji && buttonEmoji(r.emoji) ? { emoji: buttonEmoji(r.emoji) ?? undefined } : {}),
       })),
     ),
   };
@@ -71,6 +71,8 @@ export function rolePanelProblems(roles: RoleOption[], info: (id: string) => Rol
 }
 
 export interface RoleButtonPorts {
+  userId: string;
+  /** Cargos da pessoa no momento do clique. */
   memberRoleIds: string[];
   info(roleId: string): RoleInfo;
   add(roleId: string): Promise<void>;
@@ -90,6 +92,10 @@ export async function toggleRole(
   if (!info.exists || info.dangerous || !info.editable) {
     return "Não consigo mexer nesse cargo agora. Avise a equipe.";
   }
+  // Dois cliques seguidos partiriam do mesmo retrato dos cargos: um de cada vez.
+  const key = `${p.userId}:${roleId}`;
+  if (toggling.has(key)) return "Ainda estou mudando esse cargo; tente de novo em instantes.";
+  toggling.add(key);
   try {
     if (p.memberRoleIds.includes(roleId)) {
       await p.remove(roleId);
@@ -100,5 +106,9 @@ export async function toggleRole(
   } catch (e) {
     console.error(`cargo por botão falhou: ${(e as Error).name}`);
     return "Não consegui mudar o cargo. Avise a equipe.";
+  } finally {
+    toggling.delete(key);
   }
 }
+
+const toggling = new Set<string>();

@@ -32,8 +32,22 @@ export interface PanelInteraction {
   subcommand: string;
   /** Publica no canal da interação. */
   post(panel: PanelMessage): Promise<void>;
-  /** Resposta que só quem usou vê. */
+  /** Avisa o Discord que a resposta vem depois (publicar pode passar dos 3 s). */
+  defer(): Promise<void>;
+  /** Resposta que só quem usou vê (edita a adiada, se houver). */
   reply(text: string): Promise<void>;
+}
+
+async function publish(i: PanelInteraction, panel: PanelMessage, done: string): Promise<void> {
+  await i.defer();
+  try {
+    await i.post(panel);
+  } catch (e) {
+    console.error(`publicar painel falhou: ${(e as Error).name}`);
+    await i.reply("Não consegui publicar o painel aqui. Confira as permissões do bot neste canal.");
+    return;
+  }
+  await i.reply(done);
 }
 
 export async function handlePanel(
@@ -56,8 +70,7 @@ export async function handlePanel(
       await i.reply(`Painel não publicado:\n${problems.map((p) => `• ${p}`).join("\n")}`);
       return;
     }
-    await i.post(rolePanel(roles));
-    await i.reply("Painel de cargos publicado.");
+    await publish(i, rolePanel(roles), "Painel de cargos publicado.");
     return;
   }
   if (i.subcommand === "tickets") {
@@ -65,8 +78,7 @@ export async function handlePanel(
       await i.reply("Tickets não configurados em `management.tickets`.");
       return;
     }
-    await i.post(ticketPanel());
-    await i.reply("Painel de tickets publicado.");
+    await publish(i, ticketPanel(), "Painel de tickets publicado.");
     return;
   }
   await i.reply("Comando desconhecido.");

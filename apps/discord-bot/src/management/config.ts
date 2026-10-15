@@ -39,6 +39,26 @@ export const MAX_ROLE_BUTTONS = 25;
 
 const ID = /^\d{1,25}$/;
 
+/** Emoji de botão como o Discord aceita: um emoji Unicode ou um do servidor (`<:nome:id>`). */
+export interface ButtonEmoji {
+  name: string;
+  id?: string;
+  animated?: boolean;
+}
+
+const UNICODE_EMOJI =
+  /^(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)$/u;
+const CUSTOM_EMOJI = /^<(a?):(\w{2,32}):(\d{1,25})>$/u;
+
+/** `null` se não for um emoji que o Discord aceite num botão. */
+export function buttonEmoji(s: string): ButtonEmoji | null {
+  const custom = CUSTOM_EMOJI.exec(s);
+  if (custom) {
+    return { name: custom[2] ?? "", id: custom[3] ?? "", ...(custom[1] ? { animated: true } : {}) };
+  }
+  return UNICODE_EMOJI.test(s) ? { name: s } : null;
+}
+
 function obj(path: string, field: string, v: unknown): Record<string, unknown> {
   if (typeof v !== "object" || v === null || Array.isArray(v)) {
     throw new Error(`${path}: ${field} deve ser um objeto`);
@@ -92,8 +112,8 @@ export function parseManagement(path: string, raw: unknown): ManagementConfig | 
       throw new Error(`${path}: ${f}.label deve ter de 1 a 80 caracteres`);
     }
     const emoji = o.emoji ?? null;
-    if (emoji !== null && (typeof emoji !== "string" || emoji.length > 64)) {
-      throw new Error(`${path}: ${f}.emoji deve ser um emoji`);
+    if (emoji !== null && (typeof emoji !== "string" || buttonEmoji(emoji) === null)) {
+      throw new Error(`${path}: ${f}.emoji deve ser um emoji (Unicode ou <:nome:id>)`);
     }
     return { roleId: id(path, `${f}.roleId`, o.roleId), label: label.trim(), emoji };
   });

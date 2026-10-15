@@ -229,6 +229,9 @@ async function onTicketClose(it: ButtonInteraction | ChatInputCommandInteraction
       refuse: async (text) => {
         await it.reply(ephemeral(text));
       },
+      failed: async (text) => {
+        await it.followUp(ephemeral(text));
+      },
       archive: async () => {
         if (!thread?.isThread()) return;
         await thread.setLocked(true);
@@ -245,7 +248,10 @@ async function onButton(it: ButtonInteraction) {
     const member = it.member as GuildMember | null;
     const guild = it.guild;
     if (!member?.roles?.cache || !guild) return;
+    // Mudar o cargo é uma chamada à API: responde depois, sem estourar o prazo de 3 s.
+    await it.deferReply({ flags: MessageFlags.Ephemeral });
     const text = await toggleRole(it.customId, management?.roles ?? [], {
+      userId: it.user.id,
       memberRoleIds: [...member.roles.cache.keys()],
       info: (roleId) => roleInfoOf(guild, roleId),
       add: async (roleId) => {
@@ -255,7 +261,7 @@ async function onButton(it: ButtonInteraction) {
         await member.roles.remove(roleId, "cargo por botão");
       },
     });
-    await it.reply(ephemeral(text));
+    await it.editReply({ content: text, allowedMentions: { parse: [] } });
   } else if (it.customId === TICKET_OPEN) {
     const tickets = management?.tickets;
     if (!tickets) {
@@ -281,6 +287,10 @@ async function onButton(it: ButtonInteraction) {
             reason: "ticket de suporte",
           });
           return thread.id;
+        },
+        deleteThread: async (threadId) => {
+          const thread = await client.channels.fetch(threadId);
+          if (thread?.isThread()) await thread.delete("abertura do ticket não terminou");
         },
         addMember: async (threadId, userId) => {
           const thread = await client.channels.fetch(threadId);
@@ -358,8 +368,15 @@ client.on(Events.InteractionCreate, (it) =>
             canManageGuild: it.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false,
             subcommand: it.options.getSubcommand(),
             post: (p) => postPanel(channel, p),
+            defer: async () => {
+              await it.deferReply({ flags: MessageFlags.Ephemeral });
+            },
             reply: async (text) => {
-              await it.reply(ephemeral(text));
+              if (it.deferred || it.replied) {
+                await it.editReply({ content: text, allowedMentions: { parse: [] } });
+              } else {
+                await it.reply(ephemeral(text));
+              }
             },
           },
           management,

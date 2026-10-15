@@ -59,6 +59,9 @@ describe("config da gestão", () => {
       }),
     ).toThrow(/até 25/);
     expect(() =>
+      parseManagement("x", { roles: [{ roleId: "1", label: "a", emoji: "abc" }] }),
+    ).toThrow(/roles\[0\]\.emoji/);
+    expect(() =>
       parseManagement("x", { tickets: { channelId: "1", staffRoleIds: ["x"] } }),
     ).toThrow(/staffRoleIds\[0\]/);
   });
@@ -103,6 +106,7 @@ const roles = [
 function rolePorts(over: Partial<RoleButtonPorts> = {}) {
   const changes: string[] = [];
   const ports: RoleButtonPorts = {
+    userId: "10",
     memberRoleIds: [],
     info: () => ok,
     add: async (id) => {
@@ -149,6 +153,33 @@ describe("cargos por botão", () => {
     }
   });
 
+  it("concurrent clicks change the role once", async () => {
+    let release = () => {};
+    const { changes, ports } = rolePorts({
+      add: (id) =>
+        new Promise<void>((r) => {
+          changes.push(`+${id}`);
+          release = r;
+        }),
+    });
+    const first = toggleRole(`${ROLE_PREFIX}111`, roles, ports);
+    expect(await toggleRole(`${ROLE_PREFIX}111`, roles, ports)).toMatch(/Ainda estou/);
+    release();
+    expect(await first).toMatch(/adicionado/);
+    expect(changes).toEqual(["+111"]);
+  });
+
+  it("buttons carry Unicode and server emojis as Discord expects", () => {
+    const p = rolePanel([
+      { roleId: "1", label: "a", emoji: "📣" },
+      { roleId: "2", label: "b", emoji: "<a:festa:123>" },
+    ]);
+    expect(p.components[0]?.components.map((b) => ("emoji" in b ? b.emoji : null))).toEqual([
+      { name: "📣" },
+      { name: "festa", id: "123", animated: true },
+    ]);
+  });
+
   it("reports a Discord failure without crashing", async () => {
     const { ports } = rolePorts({
       add: async () => {
@@ -168,6 +199,7 @@ function panelInteraction(over: Partial<PanelInteraction> = {}) {
     post: async (p) => {
       posted.push(p);
     },
+    defer: async () => {},
     reply: async (t) => {
       replies.push(t);
     },
@@ -214,13 +246,35 @@ describe("/painel", () => {
     await handlePanel(c.i, { ...cfg, tickets: null }, () => ok);
     expect(c.posted).toEqual([]);
   });
+
+  it("defers before posting and reports a failed post", async () => {
+    const order: string[] = [];
+    const x = panelInteraction({
+      defer: async () => {
+        order.push("defer");
+      },
+      post: async () => {
+        order.push("post");
+        throw new Error("Missing Permissions");
+      },
+    });
+    await handlePanel(x.i, cfg, () => ok);
+    expect(order).toEqual(["defer", "post"]);
+    expect(x.replies[0]).toMatch(/Não consegui publicar/);
+  });
 });
 
 const tickets: TicketsConfig = { channelId: "5", staffRoleIds: ["77"], logChannelId: null };
 
 function ticketPorts(over: Partial<TicketPorts> = {}) {
   let n = 0;
-  const calls = { created: [] as string[], added: [] as string[], intros: [] as string[], logs: 0 };
+  const calls = {
+    created: [] as string[],
+    added: [] as string[],
+    intros: [] as string[],
+    deleted: [] as string[],
+    logs: 0,
+  };
   const ports: TicketPorts = {
     createThread: async (name) => {
       calls.created.push(name);
@@ -231,6 +285,9 @@ function ticketPorts(over: Partial<TicketPorts> = {}) {
     },
     postIntro: async (_t, m) => {
       calls.intros.push(m.content);
+    },
+    deleteThread: async (t) => {
+      calls.deleted.push(t);
     },
     isOpen: async () => true,
     log: async () => {
@@ -300,8 +357,30 @@ describe("tickets", () => {
     s.close();
   });
 
-  function closePorts() {
-    const said = { announced: [] as string[], refused: [] as string[], archived: 0 };
+  it("a half-made ticket is removed and does not block a retry", async () => {
+    const s = new BotState(":memory:");
+    let fail = true;
+    const { calls, ports } = ticketPorts({
+      postIntro: async () => {
+        if (fail) throw new Error("Missing Access");
+      },
+    });
+    const user = { id: "10", username: "ana" };
+    expect(await openTicket(tickets, s, user, ports, 1)).toMatch(/Não consegui/);
+    expect(calls.deleted).toEqual(["t1"]);
+    expect(s.openTicketOf("10")).toBeNull();
+    fail = false;
+    expect(await openTicket(tickets, s, user, ports, 2)).toBe("Ticket aberto: <#t2>.");
+    s.close();
+  });
+
+  function closePorts(archive: () => Promise<void> = async () => {}) {
+    const said = {
+      announced: [] as string[],
+      refused: [] as string[],
+      failed: [] as string[],
+      archived: 0,
+    };
     const ports: ClosePorts = {
       announce: async (t) => {
         said.announced.push(t);
@@ -309,13 +388,48 @@ describe("tickets", () => {
       refuse: async (t) => {
         said.refused.push(t);
       },
+      failed: async (t) => {
+        said.failed.push(t);
+      },
       archive: async () => {
+        await archive();
         said.archived++;
       },
       log: async () => {},
     };
     return { said, ports };
   }
+
+  it("the owner and people who manage threads can close", async () => {
+    for (const actor of [
+      { id: "10", roleIds: [], canManageThreads: false },
+      { id: "40", roleIds: [], canManageThreads: true },
+    ]) {
+      const s = new BotState(":memory:");
+      s.recordTicket("t1", "10", 1);
+      const x = closePorts();
+      await closeTicket(tickets, s, "t1", actor, x.ports, 2);
+      expect(x.said.archived).toBe(1);
+      expect(s.ticket("t1")).toMatchObject({ closedAt: 2, closedBy: actor.id });
+      s.close();
+    }
+  });
+
+  it("a failed archive keeps the ticket open so closing can be retried", async () => {
+    const s = new BotState(":memory:");
+    s.recordTicket("t1", "10", 1);
+    const owner = { id: "10", roleIds: [], canManageThreads: false };
+    const bad = closePorts(async () => {
+      throw new Error("Missing Permissions");
+    });
+    await closeTicket(tickets, s, "t1", owner, bad.ports, 2);
+    expect(bad.said.failed).toHaveLength(1);
+    expect(s.ticket("t1")?.closedAt).toBeNull();
+    const good = closePorts();
+    await closeTicket(tickets, s, "t1", owner, good.ports, 3);
+    expect(s.ticket("t1")?.closedAt).toBe(3);
+    s.close();
+  });
 
   it("closes for the owner or the staff, not for others", async () => {
     const s = new BotState(":memory:");

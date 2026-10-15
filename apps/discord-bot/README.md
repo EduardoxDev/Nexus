@@ -56,7 +56,15 @@ Desligada até existir o bloco `management` em `bot.config.json`; cada parte é 
 - **Cargos por botão** (`management.roles`, até 25): `/painel cargos` publica no canal atual um botão por cargo; cada clique põe ou tira o cargo de quem clicou. O bot **só** mexe nesses cargos e recusa cargos de integração, `@everyone` ou com permissões de equipe (administrar, gerenciar, moderar, expulsar, banir, mencionar todos…), mesmo se estiverem na configuração. O painel não é publicado enquanto algum cargo tiver problema.
 - **Tickets** (`management.tickets`): `/painel tickets` publica o botão **Abrir ticket**. Cada clique cria uma thread privada em `channelId` com a pessoa, chamando os cargos de `staffRoleIds`; cada pessoa tem no máximo um ticket aberto. O botão **Fechar ticket** (ou `/ticket fechar`) tranca e arquiva a thread — só quem abriu, a equipe (`staffRoleIds`) ou quem pode gerenciar threads. Abertura e fechamento ficam no `bot.db` e, com `logChannelId`, nesse canal (sem o conteúdo da conversa).
 
-`/painel` só aparece para quem pode **Gerenciar servidor**. Permissões do bot: **Gerenciar cargos** (com o cargo do bot acima dos cargos dos botões), **Criar threads privadas**, **Enviar mensagens em threads** e **Gerenciar threads**. Depois de configurar, rode `register` de novo.
+`/painel` só aparece para quem pode **Gerenciar servidor**. Permissões do bot:
+
+- nos canais usados (boas-vindas, painéis, tickets e logs): **Ver canal**, **Enviar mensagens**, **Incorporar links** e **Anexar arquivos** (o logo vai como anexo);
+- **Gerenciar cargos**, com o cargo do bot acima dos cargos dos botões;
+- no canal de tickets: **Criar threads privadas**, **Enviar mensagens em threads** e **Gerenciar threads**.
+
+A equipe entra nos tickets por menção do cargo: os cargos de `staffRoleIds` precisam de **Ver canal** no canal de tickets (o Discord só traz para uma thread privada quem enxerga o canal dela).
+
+Depois de configurar, rode `register` de novo.
 
 ## Segurança
 

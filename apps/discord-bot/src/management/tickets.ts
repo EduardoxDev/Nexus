@@ -89,6 +89,8 @@ export interface TicketPorts {
   addMember(threadId: string, userId: string): Promise<void>;
   /** Publica a abertura, mencionando só a pessoa e os cargos da equipe. */
   postIntro(threadId: string, m: PanelMessage & { content: string }): Promise<void>;
+  /** Apaga a thread de uma abertura que não terminou. */
+  deleteThread(threadId: string): Promise<void>;
   /** A thread ainda existe e está aberta (um ticket apagado à mão não trava a pessoa). */
   isOpen(threadId: string): Promise<boolean>;
   log(m: BotMessage): Promise<void>;
@@ -113,9 +115,18 @@ export async function openTicket(
       state.closeTicket(current, "sistema", now);
     }
     const threadId = await p.createThread(ticketName(user.username));
+    try {
+      await p.addMember(threadId, user.id);
+      await p.postIntro(threadId, ticketIntro(cfg, user.id));
+    } catch (e) {
+      // Abertura pela metade: some com a thread e não registra nada (a pessoa pode tentar de novo).
+      await p
+        .deleteThread(threadId)
+        .catch((err: Error) => console.error(`apagar ticket incompleto falhou: ${err.name}`));
+      throw e;
+    }
+    // Só registra o ticket depois que ele está pronto.
     state.recordTicket(threadId, user.id, now);
-    await p.addMember(threadId, user.id);
-    await p.postIntro(threadId, ticketIntro(cfg, user.id));
     await p.log(logEntry("Ticket aberto", [`<#${threadId}>`, `Por <@${user.id}>`]));
     return `Ticket aberto: <#${threadId}>.`;
   } catch (e) {
@@ -137,9 +148,14 @@ export interface ClosePorts {
   /** Resposta visível na thread (antes de arquivar, senão não dá para responder). */
   announce(text: string): Promise<void>;
   refuse(text: string): Promise<void>;
+  /** Aviso, só para quem pediu, de que o fechamento não terminou. */
+  failed(text: string): Promise<void>;
   archive(threadId: string): Promise<void>;
   log(m: BotMessage): Promise<void>;
 }
+
+/** Dois pedidos de fechar ao mesmo tempo viram um só. */
+const closing = new Set<string>();
 
 export async function closeTicket(
   cfg: TicketsConfig,
@@ -159,18 +175,30 @@ export async function closeTicket(
     await p.refuse("Só quem abriu o ticket ou a equipe pode fechá-lo.");
     return;
   }
-  state.closeTicket(threadId, actor.id, now);
-  await p.announce(`Ticket fechado por <@${actor.id}>.`);
-  try {
-    await p.archive(threadId);
-  } catch (e) {
-    console.error(`arquivar ticket falhou: ${(e as Error).name}`);
+  if (closing.has(threadId)) {
+    await p.refuse("Este ticket já está sendo fechado.");
+    return;
   }
-  await p.log(
-    logEntry("Ticket fechado", [
-      `<#${threadId}>`,
-      `Aberto por <@${t.ownerId}>`,
-      `Fechado por <@${actor.id}>`,
-    ]),
-  );
+  closing.add(threadId);
+  try {
+    await p.announce(`Ticket fechado por <@${actor.id}>.`);
+    try {
+      await p.archive(threadId);
+    } catch (e) {
+      // Continua aberto no registro: dá para tentar fechar de novo.
+      console.error(`arquivar ticket falhou: ${(e as Error).name}`);
+      await p.failed("Não consegui arquivar a thread; o ticket continua aberto. Tente de novo.");
+      return;
+    }
+    state.closeTicket(threadId, actor.id, now);
+    await p.log(
+      logEntry("Ticket fechado", [
+        `<#${threadId}>`,
+        `Aberto por <@${t.ownerId}>`,
+        `Fechado por <@${actor.id}>`,
+      ]),
+    );
+  } finally {
+    closing.delete(threadId);
+  }
 }

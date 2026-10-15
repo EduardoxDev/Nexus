@@ -68,7 +68,7 @@ describe("site da NEXUS", () => {
   });
 
   it("prerendered HTML carries the content (search engines and no-JS visitors)", () => {
-    const html = renderStatic();
+    const { html } = renderStatic();
     expect(html).toContain("Seu código fica no seu computador");
     expect(html).toContain("Perguntas que sempre aparecem");
     expect(html).toContain("O que ela faz por você");

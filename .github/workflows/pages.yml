@@ -4,7 +4,14 @@ name: Site (GitHub Pages)
 on:
   push:
     branches: [main]
-    paths: ["apps/web/**", "pnpm-lock.yaml", ".github/workflows/pages.yml"]
+    paths:
+      [
+        "apps/web/**",
+        "CHANGELOG.md",
+        "docs/privacy.md",
+        "pnpm-lock.yaml",
+        ".github/workflows/pages.yml",
+      ]
   workflow_dispatch:
 
 permissions:

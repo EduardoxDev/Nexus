@@ -3,6 +3,7 @@ import { GithubIcon } from "@/components/icons";
 import { DownloadButton } from "@/components/Cta";
 import Magnet from "@/components/Magnet";
 import { Separator } from "@/components/ui/separator";
+import { DOCS, pageHref } from "@/routes";
 import { site } from "@/site";
 
 import { Logo } from "./Nav";
@@ -32,6 +33,20 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-5 pt-8 pb-12">
         <Bento columns={1} rowHeight={190} items={[{ content: <FinalCall /> }]} />
         <Separator className="my-10" />
+        <nav aria-label="Documentação no rodapé" className="mb-6">
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {DOCS.map((d) => (
+              <li key={d.path}>
+                <a
+                  href={pageHref(d.path)}
+                  className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  {d.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
             <Logo className="size-7" />

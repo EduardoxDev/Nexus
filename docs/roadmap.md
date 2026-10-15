@@ -230,6 +230,13 @@ Etapa 5 — bot do Discord, moderação ([README do bot](../apps/discord-bot/REA
 - [x] Intents de mensagens só com o automod ligado. `GuildMembers` não foi necessária (membros vêm pela API quando preciso); fica para a etapa 6 (boas-vindas).
 - [ ] Testado no servidor real (depende de ligar a Message Content Intent no Developer Portal).
 
+Etapa 7 — site com documentação:
+
+- [x] Páginas pré-renderizadas `/docs/instalar/`, `/docs/agentes/`, `/docs/privacidade/` e `/novidades/`, cada uma com título, descrição e `og:url` próprios.
+- [x] Privacidade e novidades vêm de `docs/privacy.md` e do `CHANGELOG.md` (uma fonte só); instalar e agentes, de `apps/web/src/content/`.
+- [x] Markdown → React próprio (sem dependência nova e sem HTML cru); links relativos do repositório viram links para o GitHub.
+- [x] Testes: um `h1` por página, menu da documentação, todos os links levam a uma página, seção ou arquivo que existe.
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

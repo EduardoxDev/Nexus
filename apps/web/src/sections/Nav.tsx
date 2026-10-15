@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { downloadHref, site } from "@/site";
 import { asset } from "@/lib/asset";
+import { pageHref } from "@/routes";
 
 const LINKS = [
   { href: "#o-que-faz", label: "O que faz" },
@@ -77,8 +78,10 @@ function useActiveSection(ids: string[]) {
 
 const IDS = LINKS.map((l) => l.href.slice(1));
 
-export function Nav() {
+/** Na home, os links vão para as seções; nas outras páginas, para as seções da home. */
+export function Nav({ home = true }: { home?: boolean }) {
   const active = useActiveSection(IDS);
+  const to = (hash: string) => (home ? hash : `${pageHref("/")}${hash}`);
   const [hover, setHover] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -99,7 +102,11 @@ export function Nav() {
             : "border-transparent bg-transparent"
         }`}
       >
-        <a href="#" className="flex items-center gap-2.5" aria-label="NEXUS, início">
+        <a
+          href={home ? "#" : pageHref("/")}
+          className="flex items-center gap-2.5"
+          aria-label="NEXUS, início"
+        >
           <Logo className="size-7" />
           <span className="text-[15px] font-semibold tracking-tight">Nexus</span>
         </a>
@@ -117,7 +124,7 @@ export function Nav() {
                   />
                 )}
                 <a
-                  href={l.href}
+                  href={to(l.href)}
                   onMouseEnter={() => setHover(id)}
                   onFocus={() => setHover(id)}
                   onBlur={() => setHover(null)}
@@ -131,6 +138,14 @@ export function Nav() {
               </li>
             );
           })}
+          <li>
+            <a
+              href={pageHref("/docs/instalar/")}
+              className="relative block px-3.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Docs
+            </a>
+          </li>
         </ul>
         <div className="flex items-center gap-1">
           <ThemeToggle />
@@ -142,7 +157,7 @@ export function Nav() {
             </Button>
           )}
           <Button size="sm" asChild className="ml-1 h-9 rounded-lg px-4">
-            <a href={downloadHref || "#comecar"}>
+            <a href={downloadHref || to("#comecar")}>
               <Download />
               Baixar
             </a>

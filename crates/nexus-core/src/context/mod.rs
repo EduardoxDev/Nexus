@@ -783,7 +783,7 @@ pub fn compile(
     }
 
     let mut limitations = vec![
-        "Recuperação por texto, caminho, declarações e grafo de imports (análise léxica de TS/JS, Python e Rust); sem análise semântica nem de tipos.".to_owned(),
+        "Recuperação por texto, caminho, declarações e grafo de imports (análise léxica de TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++); sem análise semântica nem de tipos.".to_owned(),
         "Só memórias confirmadas pelo usuário entram no pack; propostas (ex.: ADRs importados ainda não revisados) ficam de fora. Documentos de decisão listados como fontes são arquivos encontrados, não decisões confirmadas.".to_owned(),
         "Contradições são detectadas por heurística (memórias parecidas com textos diferentes, decisões cuja origem mudou ou foi substituída) e exigem revisão humana.".to_owned(),
         "Tokens estimados por caracteres ÷ 4; o número real depende do modelo.".to_owned(),

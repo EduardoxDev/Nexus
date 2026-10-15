@@ -213,6 +213,14 @@ Etapa 3 — memória compartilhada ([ADR-0014](decisions/ADR-0014-memoria-compar
 - [x] Migration v7 (origem e autor `shared_file`) preservando memórias, referências, revisões e alertas; migrador com chaves estrangeiras desligadas e conferidas.
 - [x] Testes: ida e volta entre dois bancos, arquivo adulterado, link e `..` recusados, prévia obrigatória, nada apagado.
 
+Etapa 4 — mais linguagens:
+
+- [x] Kotlin, PHP, Ruby, C e C++ com cobertura declarada e testes de unidade por linguagem.
+- [x] Resolução: pacote Kotlin (também funções de nível superior), PSR-4 do composer.json e namespace PHP, `require`/`require_relative` do Ruby, `#include` com pastas `include/`.
+- [x] Fixtures `kotlin-app`, `php-app`, `ruby-app`, `c-lib`, `cpp-app` com gabarito à mão: 100% de precisão e revocação.
+- [x] C/C++ conferido em código real (33 arquivos de um repositório de terceiros).
+- [ ] Kotlin, PHP e Ruby em código real (sem repositório disponível nesta etapa).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

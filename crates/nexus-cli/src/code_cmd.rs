@@ -31,7 +31,7 @@ pub struct DepsArgs {
 
 fn human_symbols(hits: &Vec<SymbolHit>) -> String {
     if hits.is_empty() {
-        return "Nenhuma declaração com esse nome nos arquivos analisados (TS/JS, Python, Rust).\n"
+        return "Nenhuma declaração com esse nome nos arquivos analisados (TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++).\n"
             .to_owned();
     }
     let mut s = String::new();

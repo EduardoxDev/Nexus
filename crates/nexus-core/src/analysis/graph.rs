@@ -183,6 +183,7 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
     let mut tsconfigs = Vec::new();
     let mut crates = HashMap::new();
     let mut go_modules = Vec::new();
+    let mut psr4: Vec<(String, String)> = Vec::new();
     for (path, _, _) in &files {
         let name = path.rsplit('/').next().unwrap_or(path);
         let dir = path.rsplit_once('/').map_or("", |(d, _)| d);
@@ -202,6 +203,10 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
             && let Some(m) = read().and_then(|t| super::go::module_path(&t))
         {
             go_modules.push((m, dir.to_owned()));
+        } else if name == "composer.json"
+            && let Some(text) = read()
+        {
+            psr4.extend(composer_psr4(&text, dir));
         }
     }
     // `package` (Java) e `namespace` (C#) já analisados: resolvem imports por nome.
@@ -210,14 +215,27 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
             "SELECT f.language, s.name, f.rel_path FROM files f
              JOIN symbols s ON s.project_id = f.project_id AND s.content_hash = f.content_hash
              WHERE f.project_id = ?1 AND f.status = 'indexed' AND s.kind = 'module'
-               AND f.language IN ('java', 'csharp')",
+               AND f.language IN ('java', 'csharp', 'kotlin', 'php')",
         )?;
         let rows = stmt.query_map([project_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     })?;
+    // Declarações de nível superior do Kotlin: `import a.b.funcao` aponta para o arquivo.
+    let kotlin_symbols: Vec<(String, String)> = db.read(|c| {
+        let mut stmt = c.prepare(
+            "SELECT f.rel_path, s.name FROM files f
+             JOIN symbols s ON s.project_id = f.project_id AND s.content_hash = f.content_hash
+             WHERE f.project_id = ?1 AND f.status = 'indexed' AND f.language = 'kotlin'
+               AND s.container IS NULL AND s.kind <> 'module'",
+        )?;
+        let rows = stmt.query_map([project_id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    })?;
     let resolver = Resolver::new(&all_paths, tsconfigs, crates)
         .with_go_modules(go_modules)
-        .with_namespaces(namespaces);
+        .with_namespaces(namespaces)
+        .with_kotlin_symbols(kotlin_symbols)
+        .with_psr4(psr4);
 
     let mut stats = GraphStats {
         index_generation: generation,
@@ -305,6 +323,42 @@ pub fn rebuild(db: &Db, project_id: i64, root: &Path, generation: i64) -> Result
     Ok(stats)
 }
 
+/// PSR-4 de um composer.json (`autoload` e `autoload-dev`): (prefixo, pasta relativa à raiz).
+fn composer_psr4(text: &str, dir: &str) -> Vec<(String, String)> {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(text) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for section in ["autoload", "autoload-dev"] {
+        let Some(map) = v
+            .get(section)
+            .and_then(|a| a.get("psr-4"))
+            .and_then(|m| m.as_object())
+        else {
+            continue;
+        };
+        for (prefix, target) in map {
+            let dirs: Vec<&str> = match target {
+                serde_json::Value::String(s) => vec![s.as_str()],
+                serde_json::Value::Array(a) => a.iter().filter_map(|x| x.as_str()).collect(),
+                _ => Vec::new(),
+            };
+            for d in dirs {
+                let d = d.trim_matches('/').trim_start_matches("./");
+                // `"App\\": "."` (ou `"./"`): a própria pasta do composer.json.
+                let d = if d == "." { "" } else { d };
+                let full = match (dir.is_empty(), d.is_empty()) {
+                    (true, _) => d.to_owned(),
+                    (false, true) => dir.to_owned(),
+                    (false, false) => format!("{dir}/{d}"),
+                };
+                out.push((prefix.clone(), full));
+            }
+        }
+    }
+    out
+}
+
 /// Aresta vista de um arquivo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -367,6 +421,25 @@ pub fn in_degrees(conn: &Connection, project_id: i64) -> Result<HashMap<String, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_psr4_from_composer_json() {
+        let json = r#"{"autoload": {"psr-4": {"App\\": "src/", "Lib\\": ["lib", "vendor-lib/"], "Root\\": "."}},
+                       "autoload-dev": {"psr-4": {"Tests\\": "tests/"}}}"#;
+        let mut got = composer_psr4(json, "web");
+        got.sort();
+        assert_eq!(
+            got,
+            [
+                ("App\\".to_owned(), "web/src".to_owned()),
+                ("Lib\\".to_owned(), "web/lib".to_owned()),
+                ("Lib\\".to_owned(), "web/vendor-lib".to_owned()),
+                ("Root\\".to_owned(), "web".to_owned()),
+                ("Tests\\".to_owned(), "web/tests".to_owned()),
+            ]
+        );
+        assert!(composer_psr4("não é json", "").is_empty());
+    }
 
     #[test]
     fn reads_crate_name_from_package_section() {

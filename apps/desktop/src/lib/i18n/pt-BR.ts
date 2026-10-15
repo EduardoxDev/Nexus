@@ -675,7 +675,7 @@ export const ptBR = {
     emptyTitle: "Nenhum import entre arquivos ainda",
     emptyFolder: (folder: string) => `Nenhum import entre arquivos de ${folder}`,
     emptyDescription:
-      "O mapa usa os imports resolvidos na indexação (TypeScript, JavaScript, Python, Rust, Go, Java e C#).",
+      "O mapa usa os imports resolvidos na indexação (TypeScript, JavaScript, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++).",
     legend: "Cores por linguagem",
     otherLanguages: "outras",
     noLanguage: "sem linguagem",
@@ -704,7 +704,8 @@ export const ptBR = {
     ) =>
       `Grafo de dependências: ${edges} imports — ${internal} entre arquivos do projeto, ${external} de pacotes externos, ${unresolved} não resolvidos (montado em ${ms}).`,
     noGraph: "O grafo de dependências é montado na próxima indexação.",
-    noAnalyzed: "Nenhum arquivo em linguagem com analisador (TypeScript/JavaScript, Python, Rust).",
+    noAnalyzed:
+      "Nenhum arquivo em linguagem com analisador (TypeScript/JavaScript, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++).",
     columns: [
       "Linguagem",
       "Arquivos",

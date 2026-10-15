@@ -569,3 +569,37 @@ fn a_folder_with_too_many_files_is_refused() {
         ErrorCode::InvalidInput
     );
 }
+
+/// Uma proposta lida de arquivo acompanha também uma mudança só em `supersedes`.
+#[test]
+fn a_change_only_in_supersedes_is_followed() {
+    let a = machine();
+    let old = confirmed(&a, "Sessões no servidor", "Cookie HttpOnly.", &[]);
+    let new = confirmed(
+        &a,
+        "Sessões com rotação",
+        "Cookie HttpOnly com rotação.",
+        &[],
+    );
+    export_all(&a);
+    let b = machine();
+    pull(&a, &b);
+    reindex(&b);
+    b.core
+        .transition_memory(&old.id, Transition::Confirm, None, None, Actor::User)
+        .unwrap();
+    let file = shared_files(&b)
+        .into_iter()
+        .find(|f| std::fs::read_to_string(f).unwrap().contains(&new.id))
+        .unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::write(
+        &file,
+        text.replace("refs: []", &format!("supersedes: {}\nrefs: []", old.id)),
+    )
+    .unwrap();
+    let report = b.core.import_shared_memory(b.pid).unwrap();
+    assert_eq!(report.updated, 1, "{report:?}");
+    let proposal = b.core.memory(&new.id).unwrap().memory;
+    assert_eq!(proposal.supersedes.as_deref(), Some(old.id.as_str()));
+}

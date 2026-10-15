@@ -21,7 +21,7 @@ const FAQ = [
   },
   {
     q: "Quais linguagens ela entende?",
-    a: "A busca funciona em qualquer arquivo de texto. A análise de declarações e imports cobre TypeScript, JavaScript, Python, Rust, Go, Java e C#.",
+    a: "A busca funciona em qualquer arquivo de texto. A análise de declarações e imports cobre TypeScript, JavaScript, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++.",
   },
   {
     q: "Funciona no Mac ou no Linux?",

@@ -40,6 +40,26 @@ Mesmo teste, `main` e a branch da etapa rodados em sequência para comparar nas 
 
 A diferença na inicial está dentro da variação da máquina; as incrementais ficaram iguais. A resolução nova só roda para arquivos Go/Java/C#.
 
+### v0.3 — Kotlin, PHP, Ruby, C e C++ (2026-10-14, mesma máquina)
+
+Mesmo teste, com o `main` e esta branch alternados (main, branch, main, branch), já com os ajustes da revisão:
+
+| Medida                                         | `main` (2 rodadas) | Com as linguagens novas (2 rodadas) |
+| ---------------------------------------------- | ------------------ | ----------------------------------- |
+| Indexação inicial (10 000 arquivos)            | 9,4 s / 9,8 s      | 8,5 s / 17,9 s                      |
+| Incremental sem mudanças                       | 0,40 s / 0,42 s    | 0,51 s / 1,19 s                     |
+| Incremental com 1 arquivo alterado             | 0,90 s / 0,94 s    | 0,97 s / 1,38 s                     |
+| Análise em memória (10 000 arquivos, 1 thread) | 99 ms / 102 ms     | 144 ms / 161 ms                     |
+
+A segunda rodada da branch ficou lenta em tudo, inclusive no que não mudou (indexação e incremental): a máquina estava ocupada. A análise em memória, porém, ficou mais lenta nas duas rodadas. Por isso medi de novo só a análise, isolada (3 passadas seguidas em cada execução, alternando `main` e branch):
+
+| Execução | `main`            | Branch            |
+| -------- | ----------------- | ----------------- |
+| 1ª       | 99 / 101 / 95 ms  | 209 / 139 / 96 ms |
+| 2ª       | 99 / 106 / 117 ms | 95 / 94 / 87 ms   |
+
+Depois da primeira passada, as duas versões ficam iguais (87–117 ms). Só a **primeira passada** logo depois de compilar saiu lenta, e o teste de escala mede justamente uma passada só, logo depois de compilar. A diferença do teste de escala é desse início frio, não do código. As linguagens novas não entram no caminho do TypeScript, exceto o percorredor de chaves comum, que ganhou a contagem de parênteses do cabeçalho; ela não mudou o tempo medido.
+
 ## Repositório real
 
 `nexus projects add <repo> --index` sobre o repositório do NEXUS (2026-10-11, build de depuração):

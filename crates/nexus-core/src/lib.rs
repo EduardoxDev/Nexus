@@ -360,15 +360,35 @@ impl Core {
             .write(true)
             .open(&path)
             .map_err(|e| Error::io(format!("abrir {}", path.display()), e))?;
-        match file.try_lock() {
-            Ok(()) => {}
-            Err(std::fs::TryLockError::WouldBlock) => {
-                return Err(Error::Conflict(
-                    "já existe uma indexação em andamento para este projeto".into(),
-                ));
-            }
-            Err(std::fs::TryLockError::Error(e)) => {
-                return Err(Error::io(format!("travar {}", path.display()), e));
+        // Uma trava ocupada por um instante não é outra indexação: um processo filho (o `git`,
+        // por exemplo) criado por outra thread herda a trava até trocar de programa. Tenta de
+        // novo por alguns segundos antes de recusar.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        loop {
+            match file.try_lock() {
+                Ok(()) => break,
+                Err(std::fs::TryLockError::WouldBlock) if std::time::Instant::now() < deadline => {
+                    // Uma indexação de verdade aparece como job ativo: recusa na hora, sem
+                    // esperar ela acabar para começar outra.
+                    if self
+                        .db
+                        .read(|c| index::job::active(c, project_id))?
+                        .is_some()
+                    {
+                        return Err(Error::Conflict(
+                            "já existe uma indexação em andamento para este projeto".into(),
+                        ));
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                }
+                Err(std::fs::TryLockError::WouldBlock) => {
+                    return Err(Error::Conflict(
+                        "já existe uma indexação em andamento para este projeto".into(),
+                    ));
+                }
+                Err(std::fs::TryLockError::Error(e)) => {
+                    return Err(Error::io(format!("travar {}", path.display()), e));
+                }
             }
         }
         let orphaned = self

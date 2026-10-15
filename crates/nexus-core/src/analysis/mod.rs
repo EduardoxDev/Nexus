@@ -6,15 +6,19 @@
 //! (chaves) ou de indentação (Python). Não há AST: a precisão é medida contra respostas
 //! conferidas à mão (`tests/analysis.rs`) para decidir se um parser real se justifica.
 
+mod c_cpp;
 mod csharp;
 pub mod go;
 pub mod graph;
 mod java;
+mod kotlin;
 pub mod lexer;
 pub mod map;
+mod php;
 mod python;
 pub mod query;
 pub mod resolve;
+mod ruby;
 mod rust_lang;
 mod typescript;
 
@@ -22,8 +26,8 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// Versão dos analisadores. Mudou ⇒ conteúdos são reanalisados (via `INDEXER_VERSION`).
-/// 2: Go, Java e C# (v0.2).
-pub const ANALYZER_VERSION: i64 = 2;
+/// 2: Go, Java e C# (v0.2). 3: Kotlin, PHP, Ruby, C e C++ (v0.3).
+pub const ANALYZER_VERSION: i64 = 3;
 /// Máximo de símbolos e imports guardados por arquivo (arquivos gerados enormes).
 const MAX_ITEMS: usize = 2_000;
 
@@ -284,6 +288,77 @@ pub fn coverage() -> Vec<Coverage> {
             ]),
         },
         Coverage {
+            language: "kotlin".into(),
+            symbols: s(&[
+                "package (como módulo)",
+                "class, interface, object, enum class, companion object (também aninhados)",
+                "fun (inclusive de extensão e com corpo de expressão), val/var, const val, typealias",
+            ]),
+            imports: s(&[
+                "import a.b.C (arquivo do pacote que declara C)",
+                "import a.b.* (o pacote inteiro)",
+                "import a.b.funcao (declaração de nível superior)",
+            ]),
+            not_covered: s(&[
+                "duas declarações na mesma linha",
+                "construtores primários e propriedades declaradas neles",
+                "imports entre Kotlin e Java",
+            ]),
+        },
+        Coverage {
+            language: "php".into(),
+            symbols: s(&[
+                "namespace (com ; ou com bloco) como módulo",
+                "class, interface, trait, enum",
+                "function, métodos, const e propriedades public",
+            ]),
+            imports: s(&[
+                "use A\\B\\C (PSR-4 do composer.json ou arquivo do namespace)",
+                "use em grupo (A\\{B, C}), use function e use const",
+                "require/include com caminho literal (também __DIR__ . '/x.php')",
+            ]),
+            not_covered: s(&[
+                "define() e constantes globais criadas em tempo de execução",
+                "caminhos de require montados com variáveis",
+                "heredoc/nowdoc com chaves desbalanceadas",
+            ]),
+        },
+        Coverage {
+            language: "ruby".into(),
+            symbols: s(&[
+                "class e module (nome = último trecho de A::B)",
+                "def e def self. (métodos em classes e módulos; class << self)",
+                "constantes MAIÚSCULAS",
+            ]),
+            imports: s(&[
+                "require_relative (arquivo)",
+                "require: lib/, app/, raiz e pastas lib/ do projeto; senão, gem",
+            ]),
+            not_covered: s(&[
+                "métodos criados por metaprogramação (define_method, attr_*)",
+                "autoload e o carregamento automático do Rails (Zeitwerk)",
+                "=begin/=end e heredocs com palavras-chave",
+            ]),
+        },
+        Coverage {
+            language: "c / c++".into(),
+            symbols: s(&[
+                "funções e protótipos com o tipo de retorno na mesma linha",
+                "struct, class, union, enum, namespace, typedef, using X =",
+                "métodos na classe e definidos fora dela (Classe::metodo)",
+                "#define (macros)",
+            ]),
+            imports: s(&[
+                "#include \"x.h\" (relativo, raiz e pastas include/)",
+                "#include <x> (pastas include/ do projeto; senão, externo)",
+            ]),
+            not_covered: s(&[
+                "tipo de retorno na linha de cima (estilo GNU)",
+                "public/private de membros de classe",
+                "declarações geradas por macros e namespaces anônimos",
+            ]),
+        },
+        Coverage {
             language: "rust".into(),
             symbols: s(&[
                 "fn (pub, async, const, unsafe)",
@@ -313,6 +388,10 @@ pub fn analyzer_for(language: Option<&str>) -> Option<&'static dyn Analyzer> {
         "go" => Some(&go::Go),
         "java" => Some(&java::Java),
         "csharp" => Some(&csharp::CSharp),
+        "kotlin" => Some(&kotlin::Kotlin),
+        "php" => Some(&php::Php),
+        "c" | "cpp" => Some(&c_cpp::CCpp),
+        "ruby" => Some(&ruby::Ruby),
         _ => None,
     }
 }
@@ -367,11 +446,45 @@ pub(crate) fn walk_braces(
     bare: &str,
     classify: impl Fn(&str, Scope<'_>) -> Option<Decl>,
 ) -> Vec<Symbol> {
+    walk_braces_with(bare, classify, false)
+}
+
+/// Posição de um `=` de atribuição (não `==`, `!=`, `<=`, `>=`, `=>`) **fora** dos parênteses da
+/// assinatura (`depth` = parênteses já abertos no começo da linha): `x: Int = 3` dentro dos
+/// parâmetros é valor padrão, não corpo de expressão.
+fn assignment(line: &str, mut depth: i32) -> Option<usize> {
+    let b = line.as_bytes();
+    for i in 0..b.len() {
+        match b[i] {
+            b'(' => depth += 1,
+            b')' => depth -= 1,
+            b'=' if depth <= 0
+                && b.get(i + 1).is_none_or(|n| *n != b'=' && *n != b'>')
+                && (i == 0 || !matches!(b[i - 1], b'=' | b'!' | b'<' | b'>')) =>
+            {
+                return Some(i);
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Como [`walk_braces`]; com `expr_body`, uma função com corpo de expressão
+/// (`fun x() = 1`, Kotlin) não fica esperando uma chave nas linhas seguintes.
+pub(crate) fn walk_braces_with(
+    bare: &str,
+    classify: impl Fn(&str, Scope<'_>) -> Option<Decl>,
+    expr_body: bool,
+) -> Vec<Symbol> {
     let mut symbols: Vec<Symbol> = Vec::new();
     // (bloco, índice do símbolo que o abriu)
     let mut stack: Vec<(Block, Option<usize>)> = Vec::new();
     // Declaração cuja chave ainda não apareceu (assinatura em várias linhas).
     let mut pending: Option<(Block, usize)> = None;
+    // Parênteses abertos na assinatura da declaração pendente: uma chave dentro deles (lambda
+    // como valor padrão, parâmetro desestruturado) não é o corpo.
+    let mut header_parens: i32 = 0;
 
     for (i, line) in bare.lines().enumerate() {
         let line_no = i as i64 + 1;
@@ -382,7 +495,11 @@ pub(crate) fn walk_braces(
             Some((Block::Other, _)) => None,
         };
         let decl = scope.and_then(|sc| classify(line.trim_start(), sc));
-        if let Some(d) = decl {
+        if let Some(d) = decl.as_ref().filter(|d| d.name.is_empty()) {
+            // Bloco sem símbolo próprio (`extern "C" {`, namespace anônimo): só agrupa.
+            pending = Some((d.opens.clone(), usize::MAX));
+            header_parens = 0;
+        } else if let Some(d) = decl {
             let container = match stack.last() {
                 Some((Block::Container(n), _)) => Some(n.clone()),
                 _ => None,
@@ -396,9 +513,14 @@ pub(crate) fn walk_braces(
                 container,
             });
             pending = Some((d.opens, symbols.len() - 1));
+            header_parens = 0;
         }
+        let parens_at_start = header_parens;
         for ch in line.chars() {
             match ch {
+                '(' if pending.is_some() => header_parens += 1,
+                ')' if pending.is_some() => header_parens -= 1,
+                '{' if pending.is_some() && header_parens > 0 => stack.push((Block::Other, None)),
                 '{' => match pending.take() {
                     Some((block, idx)) => stack.push((block, Some(idx))),
                     None => stack.push((Block::Other, None)),
@@ -416,6 +538,17 @@ pub(crate) fn walk_braces(
                 }
                 _ => {}
             }
+        }
+        // Corpo de expressão: o `=` vem antes de qualquer chave da linha.
+        if expr_body
+            && let Some((_, idx)) = &pending
+            && symbols
+                .get(*idx)
+                .is_some_and(|s| matches!(s.kind, SymbolKind::Function | SymbolKind::Method))
+            && let Some(eq) = assignment(line, parens_at_start)
+            && line.find('{').is_none_or(|b| b > eq)
+        {
+            pending = None;
         }
         // Valores (`const x = 1` sem `;`) não "esperam" a próxima chave, a menos que a linha
         // continue (`=`, `(`, `,`, `=>`…).
@@ -495,8 +628,8 @@ mod tests {
 
     #[test]
     fn unknown_languages_are_not_analyzed() {
-        assert!(analyze(Some("kotlin"), "fun x() {}").is_none());
+        assert!(analyze(Some("swift"), "func x() {}").is_none());
         assert!(analyze(None, "x").is_none());
-        assert_eq!(coverage().len(), 6);
+        assert_eq!(coverage().len(), 10);
     }
 }

@@ -394,6 +394,14 @@ fn read_plain_file(path: &Path) -> Result<std::result::Result<Vec<u8>, String>> 
         const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
         opts.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
     }
+    // Unix: não segue link no último trecho e não trava num FIFO ou dispositivo trocado no
+    // lugar do arquivo (o handle é conferido logo abaixo e recusado se não for arquivo comum).
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        // Os valores mudam por sistema e arquitetura: vêm da libc da plataforma.
+        opts.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
     let file = opts
         .open(path)
         .map_err(|e| Error::io(format!("abrir {}", path.display()), e))?;
@@ -793,11 +801,28 @@ fn pending_revision(
     id.map(|id| super::get(conn, &id)).transpose()
 }
 
-/// Atualiza uma proposta lida de arquivo para o conteúdo novo do arquivo.
+/// `supersedes` do arquivo, se a memória citada está confirmada neste projeto (senão, nenhum).
+fn resolve_supersedes(
+    conn: &Connection,
+    project_id: i64,
+    s: &SharedMemory,
+) -> Result<Option<String>> {
+    Ok(match &s.supersedes {
+        Some(old) => find(conn, old)?
+            .filter(|m| m.project_id == project_id && m.status == MemoryStatus::Confirmed)
+            .map(|m| m.id),
+        None => None,
+    })
+}
+
+/// Atualiza uma proposta lida de arquivo para o conteúdo novo do arquivo. `supersedes`:
+/// `Some` troca a memória que a proposta substituiria (proposta nova vinda do arquivo);
+/// `None` mantém (proposta de revisão, que sempre substitui a confirmada de mesmo id).
 fn follow_file(
     tx: &rusqlite::Transaction<'_>,
     mut p: Memory,
     s: &SharedMemory,
+    supersedes: Option<Option<String>>,
     hash: &str,
 ) -> Result<String> {
     p.kind = s.kind;
@@ -805,6 +830,9 @@ fn follow_file(
     p.body.clone_from(&s.body);
     p.refs.clone_from(&s.refs);
     p.origin_hash = Some(hash.to_owned());
+    if let Some(target) = supersedes {
+        p.supersedes = target;
+    }
     p.revision += 1;
     p.updated_at = now_ms();
     super::store(tx, &p)?;
@@ -892,14 +920,7 @@ pub fn apply(conn: &mut Connection, project_id: i64, loaded: Loaded) -> Result<S
         match existing {
             None => {
                 // Só substitui o que está confirmado aqui; senão, entra como proposta solta.
-                let supersedes = match &s.supersedes {
-                    Some(old) => find(&tx, old)?
-                        .filter(|m| {
-                            m.project_id == project_id && m.status == MemoryStatus::Confirmed
-                        })
-                        .map(|m| m.id),
-                    None => None,
-                };
+                let supersedes = resolve_supersedes(&tx, project_id, &s)?;
                 let m = super::insert(
                     &tx,
                     Draft {
@@ -940,7 +961,9 @@ pub fn apply(conn: &mut Connection, project_id: i64, loaded: Loaded) -> Result<S
                             report.unchanged += 1;
                         }
                         Some(p) => {
-                            report.memory_ids.push(follow_file(&tx, p, &s, &file.hash)?);
+                            report
+                                .memory_ids
+                                .push(follow_file(&tx, p, &s, None, &file.hash)?);
                             report.updated += 1;
                         }
                         None => {
@@ -969,11 +992,18 @@ pub fn apply(conn: &mut Connection, project_id: i64, loaded: Loaded) -> Result<S
                 }
                 MemoryStatus::Proposed
                     if m.origin == MemoryOrigin::SharedFile
-                        && m.origin_hash.as_deref() != Some(file.hash.as_str())
-                        && !same_content(&m, &s) =>
+                        && m.origin_hash.as_deref() != Some(file.hash.as_str()) =>
                 {
-                    report.memory_ids.push(follow_file(&tx, m, &s, &file.hash)?);
-                    report.updated += 1;
+                    // Também uma mudança só em `supersedes` conta.
+                    let wanted = resolve_supersedes(&tx, project_id, &s)?;
+                    if same_content(&m, &s) && m.supersedes == wanted {
+                        report.unchanged += 1;
+                    } else {
+                        report
+                            .memory_ids
+                            .push(follow_file(&tx, m, &s, Some(wanted), &file.hash)?);
+                        report.updated += 1;
+                    }
                 }
                 MemoryStatus::Proposed => report.unchanged += 1,
                 MemoryStatus::Archived | MemoryStatus::Superseded => report.ignored += 1,

@@ -8,7 +8,7 @@
   "moderation": {
     "logChannelId": "345678901234567890",
     "modRoleIds": [],
-    "automod": true,
+    "automod": false,
     "exemptChannelIds": [],
     "exemptRoleIds": [],
     "flood": { "messages": 6, "seconds": 8 },
@@ -18,5 +18,20 @@
     "warnThreshold": 3,
     "warnWindowHours": 24,
     "timeoutMinutes": 10
+  },
+  "management": {
+    "welcome": {
+      "channelId": "456789012345678901",
+      "message": "Que bom ter você aqui, {usuario}! Dá uma olhada nas regras e fique à vontade para perguntar."
+    },
+    "roles": [
+      { "roleId": "567890123456789012", "label": "Novidades", "emoji": "📣" },
+      { "roleId": "678901234567890123", "label": "Testar versões beta", "emoji": "🧪" }
+    ],
+    "tickets": {
+      "channelId": "789012345678901234",
+      "staffRoleIds": ["890123456789012345"],
+      "logChannelId": "345678901234567890"
+    }
   }
 }

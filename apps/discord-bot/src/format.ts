@@ -78,6 +78,10 @@ function header(section: string): Pick<APIEmbed, "author" | "color"> {
 
 const logo = (): BotFile => ({ name: LOGO_FILE, attachment: LOGO });
 
+/** Cabeçalho da marca e o logo, para mensagens montadas fora deste módulo. */
+export const brandHeader = header;
+export const logoFile = logo;
+
 function staleNote(freshness: string): string {
   if (freshness === "modified") return " · ⚠️ alterado desde a indexação";
   if (freshness === "missing") return " · ⚠️ arquivo removido";

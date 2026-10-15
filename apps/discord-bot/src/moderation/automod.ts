@@ -31,7 +31,7 @@ export interface Verdict {
 
 /** Convites do Discord: `discord.gg/x`, `discord.com/invite/x`, `discordapp.com/invite/x`. */
 const INVITE =
-  /(?:https?:\/\/)?(?:www\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\/([\w-]{2,32})/giu;
+  /(?<![\w./@-])(?:https?:\/\/)?(?:www\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\/([\w-]{2,32})(?![\w-])/giu;
 
 export function inviteCodes(content: string): string[] {
   return [...content.matchAll(INVITE)].map((m) => m[1] ?? "").filter(Boolean);
@@ -40,24 +40,34 @@ export function inviteCodes(content: string): string[] {
 /** Janela deslizante de mensagens por autor, em memória (o flood é de segundos). */
 export class FloodTracker {
   private readonly times = new Map<string, number[]>();
+  /** Até quando a rajada que já gerou advertência fica sem gerar outra. */
+  private readonly quietUntil = new Map<string, number>();
 
   /** Registra a mensagem e diz quantas o autor mandou dentro da janela (inclusive esta). */
   hit(authorId: string, at: number, windowMs: number): number {
-    const recent = (this.times.get(authorId) ?? []).filter((t) => at - t < windowMs);
-    recent.push(at);
-    this.times.set(authorId, recent);
+    // Mensagens fora de ordem: as de instante futuro ficam guardadas para as próximas, mas não
+    // contam para esta.
+    const kept = (this.times.get(authorId) ?? []).filter((t) => t > at || at - t < windowMs);
+    kept.push(at);
+    this.times.set(authorId, kept);
+    const recent = kept.filter((t) => t <= at);
     // Limpa autores parados para a memória não crescer sem limite.
     if (this.times.size > 5_000) {
       for (const [id, list] of this.times) {
         if (list.every((t) => at - t >= windowMs)) this.times.delete(id);
       }
+      for (const [id, until] of this.quietUntil) if (until <= at) this.quietUntil.delete(id);
     }
     return recent.length;
   }
 
-  /** Depois de agir, zera o autor (uma rajada gera uma advertência, não várias). */
-  reset(authorId: string): void {
-    this.times.delete(authorId);
+  /** Depois de agir, a mesma rajada não gera outra advertência até `until`. */
+  quiet(authorId: string, until: number): void {
+    this.quietUntil.set(authorId, until);
+  }
+
+  isQuiet(authorId: string, at: number): boolean {
+    return (this.quietUntil.get(authorId) ?? 0) > at;
   }
 }
 
@@ -86,9 +96,10 @@ export function evaluate(
   if (m.mentionCount >= cfg.maxMentions) {
     return { rule: "mentions", reason: `muitas menções numa mensagem (${m.mentionCount})` };
   }
-  const count = flood.hit(m.authorId, m.at, cfg.flood.seconds * 1000);
-  if (count > cfg.flood.messages) {
-    flood.reset(m.authorId);
+  const windowMs = cfg.flood.seconds * 1000;
+  const count = flood.hit(m.authorId, m.at, windowMs);
+  if (count > cfg.flood.messages && !flood.isQuiet(m.authorId, m.at)) {
+    flood.quiet(m.authorId, m.at + windowMs);
     return {
       rule: "flood",
       reason: `mais de ${cfg.flood.messages} mensagens em ${cfg.flood.seconds} s`,

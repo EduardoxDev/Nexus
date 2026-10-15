@@ -71,7 +71,7 @@ export function parseModeration(path: string, raw: unknown): ModerationConfig | 
   if (typeof flood !== "object" || Array.isArray(flood)) {
     throw new Error(`${path}: moderation.flood deve ser um objeto`);
   }
-  const codes = m.allowedInviteCodes ?? [];
+  const codes = m.allowedInviteCodes === undefined ? [] : m.allowedInviteCodes;
   if (
     !Array.isArray(codes) ||
     !codes.every((c) => typeof c === "string" && /^[\w-]{2,32}$/.test(c))

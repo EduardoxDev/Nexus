@@ -96,7 +96,9 @@ describe("páginas de documentação", () => {
         const href = a.getAttribute("href") ?? "";
         const where = `${path} → ${href} (${a.textContent})`;
         expect(href, where).toBeTruthy();
-        expect(href, where).not.toMatch(/^javascript:|undefined|null/u);
+        // Dois testes separados: nenhum esquema perigoso no início, nem "undefined"/"null" em lugar nenhum.
+        expect(href, where).not.toMatch(/^\s*(?:javascript|data|vbscript):/iu);
+        expect(href, where).not.toMatch(/(?:undefined|null)/u);
         if (/^(https?:|mailto:)/u.test(href)) continue;
         if (href.startsWith("#")) {
           if (href !== "#")

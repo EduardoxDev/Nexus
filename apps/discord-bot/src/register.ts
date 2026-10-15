@@ -6,7 +6,7 @@ import { REST, Routes } from "discord.js";
 
 import { modCommand } from "./commands/mod.ts";
 import { nexusCommand } from "./commands/nexus.ts";
-import { panelCommand, ticketCommand } from "./commands/panel.ts";
+import { panelCommandFor, ticketCommand } from "./commands/panel.ts";
 import { loadConfig, loadEnv } from "./config.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -20,7 +20,12 @@ const commands = [
   nexusCommand,
   ...(cfg.moderation ? [modCommand] : []),
   ...(cfg.management && (cfg.management.roles.length > 0 || cfg.management.tickets)
-    ? [panelCommand]
+    ? [
+        panelCommandFor({
+          roles: cfg.management.roles.length > 0,
+          tickets: cfg.management.tickets !== null,
+        }),
+      ]
     : []),
   ...(cfg.management?.tickets ? [ticketCommand] : []),
 ];

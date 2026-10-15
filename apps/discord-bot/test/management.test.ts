@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   handlePanel,
   panelCommand,
+  panelCommandFor,
   ticketCommand,
   type PanelInteraction,
 } from "../src/commands/panel.ts";
@@ -214,6 +215,15 @@ describe("/painel", () => {
     roles,
     tickets: { channelId: "5", staffRoleIds: [], logChannelId: null },
   };
+
+  it("lists only the configured subcommands", () => {
+    const names = (roles: boolean, tickets: boolean) =>
+      panelCommandFor({ roles, tickets })
+        .toJSON()
+        .options?.map((o) => o.name);
+    expect(names(true, false)).toEqual(["cargos"]);
+    expect(names(false, true)).toEqual(["tickets"]);
+  });
 
   it("is hidden from people who cannot manage the server", () => {
     expect(panelCommand.toJSON().default_member_permissions).toBe(String(1n << 5n));

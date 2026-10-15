@@ -45,10 +45,12 @@ export class FloodTracker {
 
   /** Registra a mensagem e diz quantas o autor mandou dentro da janela (inclusive esta). */
   hit(authorId: string, at: number, windowMs: number): number {
-    // Só o passado conta: mensagens fora de ordem (instante futuro) não inflam a janela.
-    const recent = (this.times.get(authorId) ?? []).filter((t) => t <= at && at - t < windowMs);
-    recent.push(at);
-    this.times.set(authorId, recent);
+    // Mensagens fora de ordem: as de instante futuro ficam guardadas para as próximas, mas não
+    // contam para esta.
+    const kept = (this.times.get(authorId) ?? []).filter((t) => t > at || at - t < windowMs);
+    kept.push(at);
+    this.times.set(authorId, kept);
+    const recent = kept.filter((t) => t <= at);
     // Limpa autores parados para a memória não crescer sem limite.
     if (this.times.size > 5_000) {
       for (const [id, list] of this.times) {

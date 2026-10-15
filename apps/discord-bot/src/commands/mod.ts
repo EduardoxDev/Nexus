@@ -158,73 +158,81 @@ export async function handleMod(i: ModInteraction, d: ModDeps): Promise<void> {
     await d.log(formatModLog(a));
   };
 
-  switch (i.subcommand) {
-    case "advertir": {
-      await record({
-        userId: t.id,
-        by: i.actorId,
-        action: "warn",
-        reason,
-        rule: null,
-        minutes: null,
-        at,
-      });
-      const since = at - cfg.warnWindowHours * 3_600_000;
-      const n = state.warningsSince(t.id, since);
-      await i.reply(say(`Advertência registrada (${n} nas últimas ${cfg.warnWindowHours} h).`));
-      return;
+  try {
+    switch (i.subcommand) {
+      case "advertir": {
+        await record({
+          userId: t.id,
+          by: i.actorId,
+          action: "warn",
+          reason,
+          rule: null,
+          minutes: null,
+          at,
+        });
+        const since = at - cfg.warnWindowHours * 3_600_000;
+        const n = state.warningsSince(t.id, since);
+        await i.reply(say(`Advertência registrada (${n} nas últimas ${cfg.warnWindowHours} h).`));
+        return;
+      }
+      case "silenciar": {
+        const minutes = i.integer("minutos") ?? 0;
+        if (minutes < 1 || minutes > 40_320) {
+          await i.reply(say("A duração vai de 1 minuto a 28 dias."));
+          return;
+        }
+        if (!t.inGuild || !t.moderatable) {
+          await i.reply(
+            say("Não consigo silenciar essa pessoa (cargo acima do meu ou fora do servidor)."),
+          );
+          return;
+        }
+        await d.timeout(t.id, minutes * 60_000, reason);
+        await record({
+          userId: t.id,
+          by: i.actorId,
+          action: "timeout",
+          reason,
+          rule: null,
+          minutes,
+          at,
+        });
+        await i.reply(say(`Silenciado por ${minutes} min.`));
+        return;
+      }
+      case "banir": {
+        if (!i.canBan) {
+          await i.reply(say("Você não tem a permissão de banir membros."));
+          return;
+        }
+        if (t.inGuild && !t.bannable) {
+          await i.reply(
+            say("Não consigo banir essa pessoa (cargo acima do meu ou dono do servidor)."),
+          );
+          return;
+        }
+        const days = i.integer("apagar_dias") ?? 0;
+        await d.ban(t.id, reason, days * 86_400);
+        await record({
+          userId: t.id,
+          by: i.actorId,
+          action: "ban",
+          reason,
+          rule: null,
+          minutes: null,
+          at,
+        });
+        await i.reply(say("Banido."));
+        return;
+      }
+      default:
+        await i.reply(say("Comando desconhecido."));
     }
-    case "silenciar": {
-      const minutes = i.integer("minutos") ?? 0;
-      if (minutes < 1 || minutes > 40_320) {
-        await i.reply(say("A duração vai de 1 minuto a 28 dias."));
-        return;
-      }
-      if (!t.inGuild || !t.moderatable) {
-        await i.reply(
-          say("Não consigo silenciar essa pessoa (cargo acima do meu ou fora do servidor)."),
-        );
-        return;
-      }
-      await d.timeout(t.id, minutes * 60_000, reason);
-      await record({
-        userId: t.id,
-        by: i.actorId,
-        action: "timeout",
-        reason,
-        rule: null,
-        minutes,
-        at,
-      });
-      await i.reply(say(`Silenciado por ${minutes} min.`));
-      return;
-    }
-    case "banir": {
-      if (!i.canBan) {
-        await i.reply(say("Você não tem a permissão de banir membros."));
-        return;
-      }
-      if (t.inGuild && !t.bannable) {
-        await i.reply(
-          say("Não consigo banir essa pessoa (cargo acima do meu ou dono do servidor)."),
-        );
-        return;
-      }
-      const days = i.integer("apagar_dias") ?? 0;
-      await d.ban(t.id, reason, days * 86_400);
-      await record({
-        userId: t.id,
-        by: i.actorId,
-        action: "ban",
-        reason,
-        rule: null,
-        minutes: null,
-        at,
-      });
-      await i.reply(say("Banido."));
-      return;
-    }
-    default:
-      await i.reply(say("Comando desconhecido."));
+  } catch (e) {
+    // A resposta foi adiada: sem isto, o moderador ficaria vendo "pensando…" até expirar.
+    console.error(`/mod falhou: ${(e as Error).name}`);
+    await i.reply(
+      say("Não consegui concluir a ação. Confira as permissões e a posição do cargo do bot."),
+    );
   }
 }

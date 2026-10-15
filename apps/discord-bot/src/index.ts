@@ -7,6 +7,8 @@ import { dirname, resolve } from "node:path";
 
 import {
   ChannelType,
+  DiscordAPIError,
+  RESTJSONErrorCodes,
   Events,
   MessageFlags,
   PermissionFlagsBits,
@@ -312,8 +314,12 @@ async function onButton(it: ButtonInteraction) {
           try {
             const thread = await client.channels.fetch(threadId);
             return thread?.isThread() === true && !thread.archived;
-          } catch {
-            return false;
+          } catch (e) {
+            // Só "canal não existe" é ticket apagado; outra falha não pode abrir um segundo ticket.
+            if (e instanceof DiscordAPIError && e.code === RESTJSONErrorCodes.UnknownChannel) {
+              return false;
+            }
+            throw e;
           }
         },
         log: ticketLog,

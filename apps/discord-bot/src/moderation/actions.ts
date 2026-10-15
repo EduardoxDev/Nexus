@@ -33,8 +33,17 @@ const ACTION_COLOR: Record<ModAction["action"], number> = {
 };
 
 /** Motivo digitado por moderador: uma linha, sem Markdown (não forja formatação nem registros). */
-const plain = (s: string, max: number) =>
-  escapeMarkdown(s.replace(/\s+/gu, " ").trim().slice(0, max)).replace(/[<>@]/gu, (c) => `\\${c}`);
+const plain = (s: string, max: number) => {
+  const escaped = escapeMarkdown(s.replace(/\s+/gu, " ").trim()).replace(
+    /[<>@]/gu,
+    (c) => `\\${c}`,
+  );
+  if (escaped.length <= max) return escaped;
+  // Corta depois de escapar (o escape pode dobrar o tamanho) sem deixar uma barra solta no fim.
+  return `${escaped.slice(0, max - 1).replace(/(?<!\\)((?:\\\\)*)\\$/u, "$1")}…`;
+};
+/** Limite da descrição de um embed. */
+const DESCRIPTION_MAX = 4_096;
 
 /** Registro de uma ação no canal de logs. Menções num embed não notificam ninguém. */
 export function formatModLog(a: ModAction): BotMessage {
@@ -72,10 +81,17 @@ export function formatHistory(userId: string, actions: ModAction[]): BotMessage 
     const extra = a.minutes !== null ? ` (${a.minutes} min)` : "";
     return `• **${ACTION_TITLE[a.action]}**${extra} ${when} por ${by}: ${plain(a.reason, 200)}`;
   });
+  let description = `<@${userId}>\n`;
+  for (const [n, line] of lines.entries()) {
+    const more = `\n… e mais ${lines.length - n}`;
+    if (description.length + 1 + line.length + more.length > DESCRIPTION_MAX) {
+      description += more;
+      break;
+    }
+    description += `\n${line}`;
+  }
   return {
-    embeds: [
-      { title: "Histórico de moderação", description: `<@${userId}>\n\n${lines.join("\n")}` },
-    ],
+    embeds: [{ title: "Histórico de moderação", description }],
     files: [],
   };
 }

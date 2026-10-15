@@ -13,13 +13,23 @@ import {
 } from "../management/roles.ts";
 import { ticketPanel } from "../management/tickets.ts";
 
-export const panelCommand = new SlashCommandBuilder()
-  .setName("painel")
-  .setDescription("Publica um painel com botões neste canal (administração)")
-  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-  .setContexts(InteractionContextType.Guild)
-  .addSubcommand((s) => s.setName("cargos").setDescription("Botões para pegar e tirar cargos"))
-  .addSubcommand((s) => s.setName("tickets").setDescription("Botão para abrir ticket"));
+/** `/painel` só com os subcomandos das partes configuradas. */
+export function panelCommandFor(parts: { roles: boolean; tickets: boolean }) {
+  const c = new SlashCommandBuilder()
+    .setName("painel")
+    .setDescription("Publica um painel com botões neste canal (administração)")
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setContexts(InteractionContextType.Guild);
+  if (parts.roles) {
+    c.addSubcommand((s) => s.setName("cargos").setDescription("Botões para pegar e tirar cargos"));
+  }
+  if (parts.tickets) {
+    c.addSubcommand((s) => s.setName("tickets").setDescription("Botão para abrir ticket"));
+  }
+  return c;
+}
+
+export const panelCommand = panelCommandFor({ roles: true, tickets: true });
 
 export const ticketCommand = new SlashCommandBuilder()
   .setName("ticket")

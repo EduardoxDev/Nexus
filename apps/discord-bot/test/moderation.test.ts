@@ -107,10 +107,12 @@ describe("regras do automod", () => {
     expect(evaluate(c, msg({ at: 6_600 }), f)?.rule).toBe("flood");
   });
 
-  it("messages out of order do not count as a burst", () => {
+  it("messages out of order do not count as a burst, and are not forgotten", () => {
     const f = new FloodTracker();
     for (const t of [9_000, 9_100, 9_200]) f.hit("1", t, 5_000);
     expect(f.hit("1", 1_000, 5_000)).toBe(1);
+    // As de 9 s continuam valendo para as mensagens seguintes.
+    expect(f.hit("1", 9_300, 5_000)).toBe(4);
   });
 
   it("catches flood once per burst, inside the window only", () => {
@@ -368,6 +370,41 @@ describe("/mod", () => {
       expect(replies[0]?.ephemeral).toBe(true);
       expect(x.state.history("500")).toEqual([]);
     }
+  });
+
+  it("defers before the actions that call Discord, and answers when they fail", async () => {
+    for (const [subcommand, args] of [
+      ["advertir", { motivo: "x" }],
+      ["silenciar", { minutos: 5, motivo: "x" }],
+      ["banir", { motivo: "x" }],
+    ] as const) {
+      const ok = interaction({ subcommand, args });
+      await handleMod(ok.i, deps().d);
+      expect(ok.deferred.n).toBe(1);
+    }
+    const bad = interaction({ subcommand: "silenciar", args: { minutos: 5, motivo: "x" } });
+    const x = deps();
+    x.d.timeout = async () => {
+      throw new Error("Missing Permissions");
+    };
+    await handleMod(bad.i, x.d);
+    expect(bad.replies.at(-1)?.content).toMatch(/Não consegui concluir/);
+    expect(x.state.history("500")).toEqual([]);
+  });
+
+  it("the history fits in one embed even with escaped reasons", () => {
+    const many = Array.from({ length: 30 }, (_, n) => ({
+      userId: "1",
+      by: "2",
+      action: "warn" as const,
+      reason: "*".repeat(300),
+      rule: null,
+      minutes: null,
+      at: n,
+    }));
+    const d = formatHistory("1", many).embeds[0]?.description ?? "";
+    expect(d.length).toBeLessThanOrEqual(4_096);
+    expect(d).toMatch(/e mais \d+$/u);
   });
 
   it("warns and records who did it", async () => {

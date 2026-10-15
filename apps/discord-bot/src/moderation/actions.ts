@@ -3,6 +3,8 @@
  * advertências demais na janela — silencia (timeout). Tudo é registrado no `bot.db` e, se houver,
  * no canal de logs. O Discord fica atrás de `AutomodPorts` (os testes usam portas falsas).
  */
+import { escapeMarkdown } from "discord.js";
+
 import type { BotMessage } from "../format.ts";
 import type { BotState, ModAction } from "../state.ts";
 import type { MessageInfo, Verdict } from "./automod.ts";
@@ -30,12 +32,25 @@ const ACTION_COLOR: Record<ModAction["action"], number> = {
   ban: 0xef4444,
 };
 
+/** Motivo digitado por moderador: uma linha, sem Markdown (não forja formatação nem registros). */
+const plain = (s: string, max: number) => {
+  const escaped = escapeMarkdown(s.replace(/\s+/gu, " ").trim()).replace(
+    /[<>@]/gu,
+    (c) => `\\${c}`,
+  );
+  if (escaped.length <= max) return escaped;
+  // Corta depois de escapar (o escape pode dobrar o tamanho) sem deixar uma barra solta no fim.
+  return `${escaped.slice(0, max - 1).replace(/(?<!\\)((?:\\\\)*)\\$/u, "$1")}…`;
+};
+/** Limite da descrição de um embed. */
+const DESCRIPTION_MAX = 4_096;
+
 /** Registro de uma ação no canal de logs. Menções num embed não notificam ninguém. */
 export function formatModLog(a: ModAction): BotMessage {
   const fields = [
     { name: "Pessoa", value: `<@${a.userId}>`, inline: true },
     { name: "Por", value: a.by === "automod" ? "automod" : `<@${a.by}>`, inline: true },
-    { name: "Motivo", value: a.reason.slice(0, 1_000) || "—" },
+    { name: "Motivo", value: plain(a.reason, 900) || "—" },
   ];
   if (a.rule) fields.push({ name: "Regra", value: a.rule, inline: true });
   if (a.minutes !== null) fields.push({ name: "Duração", value: `${a.minutes} min`, inline: true });
@@ -64,12 +79,19 @@ export function formatHistory(userId: string, actions: ModAction[]): BotMessage 
     const when = `<t:${Math.floor(a.at / 1000)}:R>`;
     const by = a.by === "automod" ? "automod" : `<@${a.by}>`;
     const extra = a.minutes !== null ? ` (${a.minutes} min)` : "";
-    return `• **${ACTION_TITLE[a.action]}**${extra} ${when} por ${by}: ${a.reason.slice(0, 200)}`;
+    return `• **${ACTION_TITLE[a.action]}**${extra} ${when} por ${by}: ${plain(a.reason, 200)}`;
   });
+  let description = `<@${userId}>\n`;
+  for (const [n, line] of lines.entries()) {
+    const more = `\n… e mais ${lines.length - n}`;
+    if (description.length + 1 + line.length + more.length > DESCRIPTION_MAX) {
+      description += more;
+      break;
+    }
+    description += `\n${line}`;
+  }
   return {
-    embeds: [
-      { title: "Histórico de moderação", description: `<@${userId}>\n\n${lines.join("\n")}` },
-    ],
+    embeds: [{ title: "Histórico de moderação", description }],
     files: [],
   };
 }
@@ -102,8 +124,15 @@ export async function applyAutomod(
   const warnings = state.warningsSince(m.authorId, since);
   if (warnings >= cfg.warnThreshold) {
     const reason = `${warnings} advertências em ${cfg.warnWindowHours} h (última: ${v.reason})`;
+    let timedOut = false;
     try {
       await ports.timeout(m.authorId, cfg.timeoutMinutes * 60_000, reason);
+      timedOut = true;
+    } catch (e) {
+      // Cargo acima do bot ou sem permissão: fica a advertência; a equipe vê no registro.
+      console.error(`automod: não foi possível silenciar: ${(e as Error).name}`);
+    }
+    if (timedOut) {
       const timeout: ModAction = {
         userId: m.authorId,
         by: "automod",
@@ -115,19 +144,27 @@ export async function applyAutomod(
       };
       state.recordAction(timeout);
       await ports.log(formatModLog(timeout));
-      await ports.notify(
+      await notify(
+        ports,
         m.authorId,
         `<@${m.authorId}>, você foi silenciado por ${cfg.timeoutMinutes} min (${v.reason}).`,
       );
       return "timed_out";
-    } catch (e) {
-      // Cargo acima do bot ou sem permissão: fica a advertência; a equipe vê no registro.
-      console.error(`automod: não foi possível silenciar: ${(e as Error).name}`);
     }
   }
-  await ports.notify(
+  await notify(
+    ports,
     m.authorId,
     `<@${m.authorId}>, sua mensagem foi removida: ${v.reason}. (${warnings}/${cfg.warnThreshold})`,
   );
   return "warned";
+}
+
+/** O aviso no canal é cortesia: se falhar, a ação já valeu e está registrada. */
+async function notify(ports: AutomodPorts, userId: string, text: string): Promise<void> {
+  try {
+    await ports.notify(userId, text);
+  } catch (e) {
+    console.error(`automod: não foi possível avisar no canal: ${(e as Error).name}`);
+  }
 }

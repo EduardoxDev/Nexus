@@ -6,14 +6,32 @@ import { REST, Routes } from "discord.js";
 
 import { modCommand } from "./commands/mod.ts";
 import { nexusCommand } from "./commands/nexus.ts";
-import { loadEnv } from "./config.ts";
+import { panelCommandFor, ticketCommand } from "./commands/panel.ts";
+import { loadConfig, loadEnv } from "./config.ts";
 
-const envFile = resolve(import.meta.dirname, "..", ".env");
+const root = resolve(import.meta.dirname, "..");
+const envFile = resolve(root, ".env");
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 const env = loadEnv(process.env);
+const cfg = loadConfig(resolve(root, "bot.config.json"));
+
+// Só os comandos das partes configuradas; registrar de novo remove os que foram desligados.
+const commands = [
+  nexusCommand,
+  ...(cfg.moderation ? [modCommand] : []),
+  ...(cfg.management && (cfg.management.roles.length > 0 || cfg.management.tickets)
+    ? [
+        panelCommandFor({
+          roles: cfg.management.roles.length > 0,
+          tickets: cfg.management.tickets !== null,
+        }),
+      ]
+    : []),
+  ...(cfg.management?.tickets ? [ticketCommand] : []),
+];
 
 const rest = new REST().setToken(env.token);
 await rest.put(Routes.applicationGuildCommands(env.appId, env.guildId), {
-  body: [nexusCommand.toJSON(), modCommand.toJSON()],
+  body: commands.map((c) => c.toJSON()),
 });
-console.log("Comandos registrados: /nexus, /mod");
+console.log(`Comandos registrados: ${commands.map((c) => `/${c.name}`).join(", ")}`);

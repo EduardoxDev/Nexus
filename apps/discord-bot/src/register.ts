@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 import { REST, Routes } from "discord.js";
 
+import { modCommand } from "./commands/mod.ts";
 import { nexusCommand } from "./commands/nexus.ts";
 import { loadEnv } from "./config.ts";
 
@@ -13,6 +14,6 @@ const env = loadEnv(process.env);
 
 const rest = new REST().setToken(env.token);
 await rest.put(Routes.applicationGuildCommands(env.appId, env.guildId), {
-  body: [nexusCommand.toJSON()],
+  body: [nexusCommand.toJSON(), modCommand.toJSON()],
 });
-console.log("Comandos registrados: /nexus");
+console.log("Comandos registrados: /nexus, /mod");

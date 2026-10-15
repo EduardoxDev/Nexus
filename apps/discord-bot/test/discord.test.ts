@@ -1,7 +1,7 @@
-import { Events, Partials } from "discord.js";
+import { Events, GatewayIntentBits, Partials } from "discord.js";
 import { describe, expect, it } from "vitest";
 
-import { channelRef, createClient } from "../src/discord.ts";
+import { channelRef, createClient, intentsFor } from "../src/discord.ts";
 
 type Arg = Parameters<typeof channelRef>[0];
 const interaction = (channel: unknown, channelId = "555") =>
@@ -22,6 +22,15 @@ describe("ponte com o discord.js", () => {
     const client = createClient();
     expect(client.options.partials).toContain(Partials.Channel);
     void client.destroy();
+  });
+
+  it("asks for message intents only with the automod on", () => {
+    expect(intentsFor({ automod: false })).toEqual([GatewayIntentBits.Guilds]);
+    expect(intentsFor({ automod: true })).toEqual([
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+    ]);
   });
 
   it("gateway errors are handled instead of crashing the bot", () => {

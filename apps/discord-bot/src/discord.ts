@@ -5,21 +5,37 @@ import {
   GatewayIntentBits,
   MessageFlags,
   Partials,
+  PermissionFlagsBits,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
+  type GuildMember,
+  type Message,
 } from "discord.js";
 
 import type { ChannelRef } from "./access.ts";
 import type { BotMessage } from "./format.ts";
+import type { ModInteraction } from "./commands/mod.ts";
 import type { NexusInteraction, ReplyPayload } from "./commands/nexus.ts";
+import type { MessageInfo } from "./moderation/automod.ts";
+
+/**
+ * Intents pedidas ao Discord. Mensagens (e a intent privilegiada Message Content) só com o
+ * automod ligado: pedir uma intent privilegiada não habilitada no Developer Portal faz o login
+ * falhar.
+ */
+export function intentsFor(opts: { automod: boolean }): GatewayIntentBits[] {
+  const intents = [GatewayIntentBits.Guilds];
+  if (opts.automod) intents.push(GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent);
+  return intents;
+}
 
 /**
  * Cliente do Discord do bot. `Partials.Channel` faz canais fora do cache (ex.: threads privadas)
  * chegarem como parciais com o canal pai; erros do gateway são registrados em vez de derrubar o
  * processo (sem listener, o Node trata o evento `error` como exceção).
  */
-export function createClient(): Client {
-  const client = new Client({ intents: [GatewayIntentBits.Guilds], partials: [Partials.Channel] });
+export function createClient(opts: { automod: boolean } = { automod: false }): Client {
+  const client = new Client({ intents: intentsFor(opts), partials: [Partials.Channel] });
   client.on(Events.Error, (e) => console.error(`erro do Discord: ${e.name}`));
   return client;
 }
@@ -50,6 +66,48 @@ export async function sendTo(client: Client, channelId: string, m: BotMessage): 
     throw new Error(`o canal ${channelId} não existe ou o bot não pode escrever nele`);
   }
   await channel.send(toDiscord({ ...m, allowedMentions: { parse: [] } }));
+}
+
+/** Resumo da mensagem para o automod (sem guardar o conteúdo em lugar nenhum). */
+export function messageInfo(m: Message): MessageInfo {
+  const ch = m.channel;
+  return {
+    authorId: m.author.id,
+    authorIsBot: m.author.bot || m.system || m.webhookId !== null,
+    roleIds: m.member ? [...m.member.roles.cache.keys()] : [],
+    channelId: m.channelId,
+    parentId: ch.isThread() ? ch.parentId : null,
+    content: m.content,
+    mentionCount: m.mentions.users.size + m.mentions.roles.size + (m.mentions.everyone ? 1 : 0),
+    at: m.createdTimestamp,
+  };
+}
+
+/** Interação de `/mod` no formato testável. */
+export function adaptMod(i: ChatInputCommandInteraction): ModInteraction {
+  const actor = i.member as GuildMember | null;
+  const user = i.options.getUser("usuario");
+  const member = i.options.getMember("usuario") as GuildMember | null;
+  return {
+    actorId: i.user.id,
+    actorRoleIds: actor?.roles?.cache ? [...actor.roles.cache.keys()] : [],
+    canModerate: i.memberPermissions?.has(PermissionFlagsBits.ModerateMembers) ?? false,
+    canBan: i.memberPermissions?.has(PermissionFlagsBits.BanMembers) ?? false,
+    subcommand: i.options.getSubcommand(),
+    target: user
+      ? {
+          id: user.id,
+          isBot: user.bot,
+          inGuild: member !== null,
+          moderatable: member?.moderatable ?? false,
+          bannable: member?.bannable ?? true,
+        }
+      : null,
+    string: (name) => i.options.getString(name),
+    integer: (name) => i.options.getInteger(name),
+    reply: (p) =>
+      i.reply({ ...toDiscord(p), ...(p.ephemeral ? { flags: MessageFlags.Ephemeral } : {}) }),
+  };
 }
 
 export function adapt(i: ChatInputCommandInteraction): NexusInteraction {

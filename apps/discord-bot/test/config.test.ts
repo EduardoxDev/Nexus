@@ -57,6 +57,7 @@ describe("bot.config.json", () => {
       announceChannelId: null,
       teamAlertsChannelId: null,
       githubRepo: "EduardoxDev/Nexus",
+      moderation: null,
     });
   });
 

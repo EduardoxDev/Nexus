@@ -221,6 +221,15 @@ Etapa 4 — mais linguagens:
 - [x] C/C++ conferido em código real (33 arquivos de um repositório de terceiros).
 - [ ] Kotlin, PHP e Ruby em código real (sem repositório disponível nesta etapa).
 
+Etapa 5 — bot do Discord, moderação ([README do bot](../apps/discord-bot/README.md#moderação-etapa-3)):
+
+- [x] Bloco `moderation` no `bot.config.json`, validado campo a campo; ausente = desligada.
+- [x] Automod conservador: convites de outros servidores, spam de menções e flood; apaga, adverte e silencia na reincidência; canais (com as threads) e cargos isentos.
+- [x] `/mod advertir|silenciar|banir|historico`, conferindo a permissão do Discord, os cargos configurados e a hierarquia do bot.
+- [x] Registro em `bot.db` e no canal de logs, sem copiar o conteúdo das mensagens.
+- [x] Intents de mensagens só com o automod ligado. `GuildMembers` não foi necessária (membros vêm pela API quando preciso); fica para a etapa 6 (boas-vindas).
+- [ ] Testado no servidor real (depende de ligar a Message Content Intent no Developer Portal).
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

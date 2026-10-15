@@ -4,5 +4,19 @@
   "teamChannelIds": ["123456789012345678"],
   "announceChannelId": "234567890123456789",
   "teamAlertsChannelId": "123456789012345678",
-  "githubRepo": "EduardoxDev/Nexus"
+  "githubRepo": "EduardoxDev/Nexus",
+  "moderation": {
+    "logChannelId": "345678901234567890",
+    "modRoleIds": [],
+    "automod": true,
+    "exemptChannelIds": [],
+    "exemptRoleIds": [],
+    "flood": { "messages": 6, "seconds": 8 },
+    "maxMentions": 6,
+    "blockInvites": true,
+    "allowedInviteCodes": [],
+    "warnThreshold": 3,
+    "warnWindowHours": 24,
+    "timeoutMinutes": 10
+  }
 }

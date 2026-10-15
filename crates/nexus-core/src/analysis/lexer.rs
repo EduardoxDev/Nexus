@@ -16,6 +16,8 @@ pub struct Style {
     pub triple_quotes: bool,
     /// Strings brutas `r"…"`/`r#"…"#` e distinção entre `'a'` (caractere) e `'a` (lifetime).
     pub rust: bool,
+    /// Literais do Ruby: regex `/…/` e `%q{…}`/`%w[…]`/`%r{…}` (mascarados como strings).
+    pub ruby: bool,
 }
 
 pub const C_LIKE: Style = Style {
@@ -26,6 +28,7 @@ pub const C_LIKE: Style = Style {
     quotes: &['"', '\'', '`'],
     triple_quotes: false,
     rust: false,
+    ruby: false,
 };
 
 /// PHP: `//` e `#` (menos `#[`, atributo do PHP 8), `/* */`, aspas simples, duplas e crases.
@@ -37,9 +40,11 @@ pub const PHP: Style = Style {
     quotes: &['"', '\'', '`'],
     triple_quotes: false,
     rust: false,
+    ruby: false,
 };
 
-/// Ruby: `#` (blocos `=begin`/`=end` não são tratados), aspas simples, duplas e crases.
+/// Ruby: `#` (blocos `=begin`/`=end` não são tratados), aspas simples, duplas e crases,
+/// regex `/…/` e literais `%q{…}`/`%w[…]`/`%r{…}`.
 pub const RUBY: Style = Style {
     line_comment: "#",
     alt_line_comment: None,
@@ -48,6 +53,20 @@ pub const RUBY: Style = Style {
     quotes: &['"', '\'', '`'],
     triple_quotes: false,
     rust: false,
+    ruby: true,
+};
+
+/// Kotlin: comentários de bloco aninháveis, strings brutas `"""…"""`; crase não é string
+/// (é nome escapado: `` fun `when`() ``).
+pub const KOTLIN: Style = Style {
+    line_comment: "//",
+    alt_line_comment: None,
+    block_comment: Some(("/*", "*/")),
+    nested_blocks: true,
+    quotes: &['"', '\''],
+    triple_quotes: true,
+    rust: false,
+    ruby: false,
 };
 
 pub const PYTHON: Style = Style {
@@ -58,6 +77,7 @@ pub const PYTHON: Style = Style {
     quotes: &['"', '\''],
     triple_quotes: true,
     rust: false,
+    ruby: false,
 };
 
 pub const RUST: Style = Style {
@@ -68,6 +88,7 @@ pub const RUST: Style = Style {
     quotes: &['"'],
     triple_quotes: false,
     rust: true,
+    ruby: false,
 };
 
 /// Duas versões do texto, ambas com o mesmo comprimento do original:
@@ -189,6 +210,17 @@ pub fn mask(text: &str, style: Style) -> Masked {
             i += 1;
             continue;
         }
+        // Ruby: regex e literais `%…` (podem conter `#`, aspas e `end`).
+        if style.ruby
+            && let Some(end) = ruby_literal(src, i)
+        {
+            code.extend_from_slice(&src[i..end]);
+            bare.push(src[i]);
+            blank(&mut bare, &src[i + 1..end - 1]);
+            bare.push(src[end - 1]);
+            i = end;
+            continue;
+        }
         // Strings comuns (e triplas no Python).
         let c = src[i] as char;
         if style.quotes.contains(&c) {
@@ -237,6 +269,99 @@ pub fn mask(text: &str, style: Style) -> Masked {
         bare: String::from_utf8(bare)
             .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned()),
     }
+}
+
+/// Palavras depois das quais `/` começa uma regex (e não uma divisão) no Ruby.
+const RUBY_KEYWORDS: &[&[u8]] = &[
+    b"if", b"unless", b"when", b"and", b"or", b"not", b"return", b"then", b"while", b"until",
+    b"puts", b"in", b"else", b"elsif", b"case",
+];
+
+/// Fim (exclusivo) de uma regex `/…/` ou de um literal `%q{…}` que começa em `i`, se o
+/// contexto indicar um literal (começo de expressão, não divisão nem módulo).
+fn ruby_literal(src: &[u8], i: usize) -> Option<usize> {
+    let c = src[i];
+    if c != b'/' && c != b'%' {
+        return None;
+    }
+    // Último caractere significativo antes, na mesma linha.
+    let mut k = i;
+    while k > 0 && matches!(src[k - 1], b' ' | b'\t') {
+        k -= 1;
+    }
+    let prev = (k > 0 && src[k - 1] != b'\n').then(|| src[k - 1]);
+    let expression_start = match prev {
+        None => true,
+        Some(p) if b"(,=~!|&{[;:?+-*<>".contains(&p) => true,
+        Some(p) if p.is_ascii_alphanumeric() || p == b'_' => {
+            let mut w = k;
+            while w > 0 && (src[w - 1].is_ascii_alphanumeric() || src[w - 1] == b'_') {
+                w -= 1;
+            }
+            RUBY_KEYWORDS.contains(&&src[w..k])
+        }
+        _ => false,
+    };
+    if !expression_start {
+        return None;
+    }
+    if c == b'/' {
+        // A barra vem logo depois do começo de uma expressão (`x = /re/`, `when /re/`); em
+        // `a / b` o que vem antes é um nome, então é divisão.
+        let mut j = i + 1;
+        while j < src.len() && src[j] != b'\n' {
+            match src[j] {
+                b'\\' => j += 2,
+                b'/' => {
+                    j += 1;
+                    while j < src.len() && src[j].is_ascii_alphabetic() {
+                        j += 1;
+                    }
+                    return Some(j);
+                }
+                _ => j += 1,
+            }
+        }
+        return None;
+    }
+    // `%q{…}`, `%w[…]`, `%r{…}`, `%(…)`; o delimitador vem colado (sem espaço: `a % b`).
+    let mut j = i + 1;
+    if src.get(j).is_some_and(|b| b"qQwWiIrsx".contains(b)) {
+        j += 1;
+    }
+    let open = *src.get(j)?;
+    let close = match open {
+        b'(' => b')',
+        b'[' => b']',
+        b'{' => b'}',
+        b'<' => b'>',
+        b'|' | b'!' | b'/' | b'^' => open,
+        _ => return None,
+    };
+    let mut depth = 1;
+    j += 1;
+    while j < src.len() {
+        match src[j] {
+            b'\\' => {
+                j += 2;
+                continue;
+            }
+            b if b == close => {
+                depth -= 1;
+                if depth == 0 {
+                    j += 1;
+                    while j < src.len() && src[j].is_ascii_alphabetic() {
+                        j += 1;
+                    }
+                    return Some(j);
+                }
+            }
+            b if b == open && open != close => depth += 1,
+            _ => {}
+        }
+        j += 1;
+    }
+    None
 }
 
 /// Número da linha (1-based) de um offset em bytes.
@@ -295,6 +420,33 @@ mod tests {
         assert!(!m.bare.contains("class A"));
         assert!(m.bare.contains("#[Route"));
         assert!(m.bare.contains("class B"));
+    }
+
+    #[test]
+    fn ruby_regex_and_percent_literals() {
+        let src = "def a; x =~ /#/; end\ny = %q{def fake; end}\nz = a / b # def no\ndef b; end\n";
+        let m = mask(src, RUBY);
+        assert!(m.bare.contains("def a;"));
+        assert!(
+            m.bare.contains("; end"),
+            "o `end` depois da regex continua visível"
+        );
+        assert!(!m.bare.contains("def fake"));
+        assert!(m.bare.contains("a / b"), "divisão não é regex");
+        assert!(!m.bare.contains("def no"));
+        assert!(m.bare.contains("def b"));
+        assert_eq!(m.bare.len(), src.len());
+    }
+
+    #[test]
+    fn kotlin_nested_comments_raw_strings_and_backticks() {
+        let src =
+            "/* a /* b */ fun no() {} */\nval s = \"\"\"\nfun raw() {}\n\"\"\"\nfun `when`() {}\n";
+        let m = mask(src, KOTLIN);
+        assert!(!m.bare.contains("fun no"));
+        assert!(!m.bare.contains("fun raw"));
+        assert!(m.bare.contains("fun `when`()"));
+        assert_eq!(m.bare.len(), src.len());
     }
 
     #[test]

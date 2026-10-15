@@ -221,6 +221,25 @@ fn classify(line: &str, scope: Scope<'_>) -> Option<Decl> {
         "public" | "private" | "protected" => return None,
         _ => {}
     }
+    // `const`/`constexpr` de nível superior que não é função: `constexpr int kMax = 100;`,
+    // `const char *nome = "x";`.
+    if scope == Scope::Top && (mods.contains(&"const") || mods.contains(&"constexpr")) {
+        let decl_end = rest.find(['=', ';', '{', '[']).unwrap_or(rest.len());
+        let head = &rest[..decl_end];
+        // Parênteses ou vírgula = continuação de uma assinatura em várias linhas
+        // (`const std::string& nome);`), não uma constante.
+        if !head.contains(['(', ')', ',']) && decl_end < rest.len() {
+            let name = head
+                .rsplit(|c: char| !(c.is_alphanumeric() || c == '_'))
+                .find(|w| !w.is_empty())?;
+            return ident(name).filter(|n| n.len() == name.len()).map(|n| Decl {
+                name: n.to_owned(),
+                kind: SymbolKind::Const,
+                exported: !mods.contains(&"static"),
+                opens: Block::Other,
+            });
+        }
+    }
     let caps = FUNCTION.as_ref()?.captures(rest)?;
     let ty = caps.get(1).map_or("", |m| m.as_str()).trim();
     let name = caps.get(2)?.as_str();
@@ -296,26 +315,98 @@ fn strip_preprocessor(bare: &str) -> (String, Vec<Symbol>) {
     (out, macros)
 }
 
+/// `typedef struct { … } Ponto;`: o nome (`Ponto`) aparece no fechamento. Também
+/// `typedef struct No { … } NoAlias;` quando o apelido difere da tag.
+fn typedef_aliases(bare: &str) -> Vec<Symbol> {
+    let mut out = Vec::new();
+    let mut depth = 0usize;
+    // (profundidade em que o typedef abriu, nome da tag)
+    let mut open: Vec<(usize, Option<String>)> = Vec::new();
+    for (i, line) in bare.lines().enumerate() {
+        let trimmed = line.trim_start();
+        let typedef_tag = trimmed.strip_prefix("typedef").and_then(|t| {
+            let t = t.trim_start();
+            ["struct", "union", "enum"]
+                .iter()
+                .find_map(|k| t.strip_prefix(k))
+                .filter(|after| after.contains('{'))
+                .map(|after| ident(after).map(str::to_owned))
+        });
+        for (k, c) in line.char_indices() {
+            match c {
+                '{' => {
+                    if let Some(tag) = &typedef_tag
+                        && open.last().is_none_or(|(d, _)| *d != depth)
+                        && line[..k].trim_start().starts_with("typedef")
+                    {
+                        open.push((depth, tag.clone()));
+                    }
+                    depth += 1;
+                }
+                '}' => {
+                    depth = depth.saturating_sub(1);
+                    if open.last().is_some_and(|(d, _)| *d == depth)
+                        && let Some((_, tag)) = open.pop()
+                    {
+                        let rest = &line[k + 1..];
+                        let names = rest.split(';').next().unwrap_or("");
+                        let alias = names
+                            .split(',')
+                            .map(str::trim)
+                            .find(|n| !n.starts_with('*'))
+                            .and_then(ident);
+                        if let Some(alias) = alias
+                            && tag.as_deref() != Some(alias)
+                        {
+                            out.push(Symbol {
+                                name: alias.to_owned(),
+                                kind: SymbolKind::Type,
+                                line: i as i64 + 1,
+                                end_line: i as i64 + 1,
+                                exported: true,
+                                container: None,
+                            });
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    out
+}
+
 impl Analyzer for CCpp {
     fn analyze(&self, text: &str) -> FileAnalysis {
         let m = lexer::mask(text, C_LIKE);
         let (bare, macros) = strip_preprocessor(&m.bare);
         let mut symbols = walk_braces(&bare, classify);
-        // `void Conta::depositar(…)` fora da classe: método do contêiner `Conta`.
+        // Tipos do próprio arquivo: `Conta::depositar` é método se `Conta` é uma classe/struct
+        // daqui ou tem nome de tipo (maiúscula); `net::conectar` é função do namespace `net`.
+        let types: std::collections::HashSet<String> = symbols
+            .iter()
+            .filter(|s| matches!(s.kind, SymbolKind::Class | SymbolKind::Struct))
+            .map(|s| s.name.clone())
+            .collect();
         for s in &mut symbols {
             if matches!(s.kind, SymbolKind::Function | SymbolKind::Method)
-                && let Some((container, name)) = s.name.rsplit_once("::")
+                && let Some((qualifier, name)) = s.name.rsplit_once("::")
             {
-                let container = container
+                let owner = qualifier
                     .rsplit("::")
                     .next()
-                    .unwrap_or(container)
+                    .unwrap_or(qualifier)
                     .to_owned();
+                let is_type =
+                    types.contains(&owner) || owner.starts_with(|c: char| c.is_ascii_uppercase());
                 s.name = name.to_owned();
-                s.container = Some(container);
-                s.kind = SymbolKind::Method;
+                if is_type {
+                    s.container = Some(owner);
+                    s.kind = SymbolKind::Method;
+                }
             }
         }
+        symbols.extend(typedef_aliases(&bare));
         symbols.extend(macros);
         symbols.sort_by_key(|s| s.line);
         let mut imports = Vec::new();
@@ -417,6 +508,44 @@ static void reset(Buffer *b)
     }
 
     #[test]
+    fn typedef_aliases_constants_and_namespace_functions() {
+        let src = r#"typedef struct {
+    int x, y;
+} Point;
+
+typedef struct Node {
+    struct Node *next;
+} NodeT, *NodePtr;
+
+static const int kLimit = 10;
+const char *app_name = "nexus";
+int open_file(const char *path,
+              const char *mode);
+
+namespace net {
+int connect(int port);
+}
+
+int net::connect(int port) { return port; }
+"#;
+        let a = CCpp.analyze(src);
+        assert_eq!(
+            names(&a),
+            [
+                "Point type L3 pub",
+                "Node struct L5 pub",
+                "NodeT type L7 pub",
+                "kLimit const L9",
+                "app_name const L10 pub",
+                "open_file function L11 pub",
+                "net module L14 pub",
+                "connect function L15 pub",
+                "connect function L18 pub",
+            ]
+        );
+    }
+
+    #[test]
     fn cpp_namespaces_classes_and_out_of_line_methods() {
         let src = r#"#include <vector>
 #include "account.hpp"
@@ -462,6 +591,7 @@ int bank_open(int id);
                 "apply method L11 in Account pub",
                 "Kind enum L16 pub",
                 "Ledger type L17 pub",
+                "kMaxAccounts const L18 pub",
                 "Account method L20 in Account pub",
                 "balance method L22 in Account pub",
                 "bank_open function L30 pub",

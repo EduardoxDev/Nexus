@@ -368,6 +368,17 @@ impl Core {
             match file.try_lock() {
                 Ok(()) => break,
                 Err(std::fs::TryLockError::WouldBlock) if std::time::Instant::now() < deadline => {
+                    // Uma indexação de verdade aparece como job ativo: recusa na hora, sem
+                    // esperar ela acabar para começar outra.
+                    if self
+                        .db
+                        .read(|c| index::job::active(c, project_id))?
+                        .is_some()
+                    {
+                        return Err(Error::Conflict(
+                            "já existe uma indexação em andamento para este projeto".into(),
+                        ));
+                    }
                     std::thread::sleep(std::time::Duration::from_millis(50));
                 }
                 Err(std::fs::TryLockError::WouldBlock) => {

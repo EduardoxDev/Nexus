@@ -315,11 +315,13 @@ impl<'a> Resolver<'a> {
         }
         // `a.b.C` ou `a.b.C.Interna`: o pacote mais longo que declara o nome.
         let segs: Vec<&str> = spec.split('.').collect();
+        let mut project_package = false;
         for cut in (1..segs.len()).rev() {
             let pkg = segs[..cut].join(".");
             if !self.kt_packages.contains_key(&pkg) {
                 continue;
             }
+            project_package = true;
             let name = segs[cut];
             if let Some(files) = self.kt_symbols.get(&(pkg.clone(), name.to_owned())) {
                 return files_target(from, files);
@@ -331,6 +333,9 @@ impl<'a> Resolver<'a> {
             {
                 return Target::File(file.clone());
             }
+            // Um pacote mais curto ainda pode declarar o nome (`a.b` com `C.Interna`).
+        }
+        if project_package {
             // Pacote do projeto, nome não encontrado: não inventa um destino.
             return Target::Unresolved;
         }

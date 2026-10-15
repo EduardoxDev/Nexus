@@ -12,6 +12,8 @@ authors = ["NEXUS contributors"]
 
 [workspace.dependencies]
 nexus-core = { path = "crates/nexus-core" }
+# Constantes de `open(2)` por plataforma (já vinha como dependência indireta).
+libc = "0.2"
 nexus-mcp = { path = "crates/nexus-mcp" }
 
 rusqlite = { version = "0.40", features = ["bundled", "backup"] }

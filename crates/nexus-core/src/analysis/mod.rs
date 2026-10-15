@@ -449,14 +449,25 @@ pub(crate) fn walk_braces(
     walk_braces_with(bare, classify, false)
 }
 
-/// Posição de um `=` de atribuição (não `==`, `!=`, `<=`, `>=`, `=>`).
-fn assignment(line: &str) -> Option<usize> {
+/// Posição de um `=` de atribuição (não `==`, `!=`, `<=`, `>=`, `=>`) **fora** dos parênteses da
+/// assinatura (`depth` = parênteses já abertos no começo da linha): `x: Int = 3` dentro dos
+/// parâmetros é valor padrão, não corpo de expressão.
+fn assignment(line: &str, mut depth: i32) -> Option<usize> {
     let b = line.as_bytes();
-    (0..b.len()).find(|&i| {
-        b[i] == b'='
-            && b.get(i + 1).is_none_or(|n| *n != b'=' && *n != b'>')
-            && (i == 0 || !matches!(b[i - 1], b'=' | b'!' | b'<' | b'>'))
-    })
+    for i in 0..b.len() {
+        match b[i] {
+            b'(' => depth += 1,
+            b')' => depth -= 1,
+            b'=' if depth <= 0
+                && b.get(i + 1).is_none_or(|n| *n != b'=' && *n != b'>')
+                && (i == 0 || !matches!(b[i - 1], b'=' | b'!' | b'<' | b'>')) =>
+            {
+                return Some(i);
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Como [`walk_braces`]; com `expr_body`, uma função com corpo de expressão
@@ -471,6 +482,9 @@ pub(crate) fn walk_braces_with(
     let mut stack: Vec<(Block, Option<usize>)> = Vec::new();
     // Declaração cuja chave ainda não apareceu (assinatura em várias linhas).
     let mut pending: Option<(Block, usize)> = None;
+    // Parênteses abertos na assinatura da declaração pendente: uma chave dentro deles (lambda
+    // como valor padrão, parâmetro desestruturado) não é o corpo.
+    let mut header_parens: i32 = 0;
 
     for (i, line) in bare.lines().enumerate() {
         let line_no = i as i64 + 1;
@@ -484,6 +498,7 @@ pub(crate) fn walk_braces_with(
         if let Some(d) = decl.as_ref().filter(|d| d.name.is_empty()) {
             // Bloco sem símbolo próprio (`extern "C" {`, namespace anônimo): só agrupa.
             pending = Some((d.opens.clone(), usize::MAX));
+            header_parens = 0;
         } else if let Some(d) = decl {
             let container = match stack.last() {
                 Some((Block::Container(n), _)) => Some(n.clone()),
@@ -498,9 +513,14 @@ pub(crate) fn walk_braces_with(
                 container,
             });
             pending = Some((d.opens, symbols.len() - 1));
+            header_parens = 0;
         }
+        let parens_at_start = header_parens;
         for ch in line.chars() {
             match ch {
+                '(' if pending.is_some() => header_parens += 1,
+                ')' if pending.is_some() => header_parens -= 1,
+                '{' if pending.is_some() && header_parens > 0 => stack.push((Block::Other, None)),
                 '{' => match pending.take() {
                     Some((block, idx)) => stack.push((block, Some(idx))),
                     None => stack.push((Block::Other, None)),
@@ -525,7 +545,7 @@ pub(crate) fn walk_braces_with(
             && symbols
                 .get(*idx)
                 .is_some_and(|s| matches!(s.kind, SymbolKind::Function | SymbolKind::Method))
-            && let Some(eq) = assignment(line)
+            && let Some(eq) = assignment(line, parens_at_start)
             && line.find('{').is_none_or(|b| b > eq)
         {
             pending = None;

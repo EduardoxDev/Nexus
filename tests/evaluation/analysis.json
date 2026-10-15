@@ -2165,12 +2165,12 @@
           [
             "buffer_free",
             "function",
-            22
+            27
           ],
           [
             "buffer_len",
             "function",
-            27
+            32
           ]
         ],
         "imports": [
@@ -2273,24 +2273,24 @@
           [
             "bank",
             "module",
-            5
+            6
           ],
           [
             "Account",
             "method",
-            7,
+            8,
             "Account"
           ],
           [
             "balance",
             "method",
-            9,
+            10,
             "Account"
           ],
           [
             "deposit",
             "method",
-            13,
+            14,
             "Account"
           ]
         ],
@@ -2304,6 +2304,11 @@
             3,
             "<numeric>",
             "ext:numeric"
+          ],
+          [
+            4,
+            "<utility>",
+            "ext:utility"
           ]
         ]
       },

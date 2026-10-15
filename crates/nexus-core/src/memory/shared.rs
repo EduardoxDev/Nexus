@@ -399,11 +399,8 @@ fn read_plain_file(path: &Path) -> Result<std::result::Result<Vec<u8>, String>> 
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
-        #[cfg(any(target_os = "macos", target_os = "ios", target_os = "freebsd"))]
-        const FLAGS: i32 = 0x0100 | 0x0004; // O_NOFOLLOW | O_NONBLOCK
-        #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "freebsd")))]
-        const FLAGS: i32 = 0o400_000 | 0o4_000; // O_NOFOLLOW | O_NONBLOCK (Linux)
-        opts.custom_flags(FLAGS);
+        // Os valores mudam por sistema e arquitetura: vêm da libc da plataforma.
+        opts.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
     }
     let file = opts
         .open(path)

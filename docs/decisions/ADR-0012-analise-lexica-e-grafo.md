@@ -31,7 +31,7 @@ A busca e os Context Packs dependiam de texto e heurísticas de nome; `get_symbo
 
 ## Atualização v0.3 (2026-10-14): Kotlin, PHP, Ruby, C e C++
 
-- Continua sem tree-sitter. As quatro famílias novas acertaram 100% do gabarito conferido à mão (`kotlin-app`, `php-app`, `ruby-app`, `c-lib`, `cpp-app`: 67 declarações e 27 imports resolvidos). C/C++ também foi conferido em 33 arquivos de um repositório real ([evaluation.md](../evaluation.md)).
+- Continua sem tree-sitter. As quatro famílias novas acertaram 100% do gabarito conferido à mão (`kotlin-app`, `php-app`, `ruby-app`, `c-lib`, `cpp-app`: 67 declarações e 28 imports com destino conferido). C/C++ também foi conferido em 33 arquivos de um repositório real ([evaluation.md](../evaluation.md)).
 - **Kotlin**:
   - `package` vira módulo, como em Java;
   - `import a.b.x` resolve pela declaração de nível superior `x` do pacote (classe, função ou propriedade), não só pelo nome do arquivo;

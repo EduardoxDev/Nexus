@@ -2545,6 +2545,7 @@ dependencies = [
  "dirs",
  "dunce",
  "ignore",
+ "libc",
  "rayon",
  "regex",
  "rusqlite",

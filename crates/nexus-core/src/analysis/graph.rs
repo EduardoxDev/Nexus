@@ -345,6 +345,8 @@ fn composer_psr4(text: &str, dir: &str) -> Vec<(String, String)> {
             };
             for d in dirs {
                 let d = d.trim_matches('/').trim_start_matches("./");
+                // `"App\\": "."` (ou `"./"`): a própria pasta do composer.json.
+                let d = if d == "." { "" } else { d };
                 let full = match (dir.is_empty(), d.is_empty()) {
                     (true, _) => d.to_owned(),
                     (false, true) => dir.to_owned(),
@@ -422,7 +424,7 @@ mod tests {
 
     #[test]
     fn reads_psr4_from_composer_json() {
-        let json = r#"{"autoload": {"psr-4": {"App\\": "src/", "Lib\\": ["lib", "vendor-lib/"]}},
+        let json = r#"{"autoload": {"psr-4": {"App\\": "src/", "Lib\\": ["lib", "vendor-lib/"], "Root\\": "."}},
                        "autoload-dev": {"psr-4": {"Tests\\": "tests/"}}}"#;
         let mut got = composer_psr4(json, "web");
         got.sort();
@@ -432,6 +434,7 @@ mod tests {
                 ("App\\".to_owned(), "web/src".to_owned()),
                 ("Lib\\".to_owned(), "web/lib".to_owned()),
                 ("Lib\\".to_owned(), "web/vendor-lib".to_owned()),
+                ("Root\\".to_owned(), "web".to_owned()),
                 ("Tests\\".to_owned(), "web/tests".to_owned()),
             ]
         );

@@ -80,7 +80,7 @@ As mudanças 1 e 3 são neutras nas métricas. Foram mantidas porque deixam os m
 
 ## Análise de código (Fase 6)
 
-`cargo test -p nexus-core --test analysis -- --nocapture` compara os analisadores com `tests/evaluation/analysis.json`, um gabarito escrito lendo cada arquivo das 4 fixtures, **antes** de olhar a saída dos analisadores, e restrito à cobertura declarada.
+`cargo test -p nexus-core --test analysis -- --nocapture` compara os analisadores com `tests/evaluation/analysis.json`, um gabarito escrito lendo cada arquivo das fixtures (4 na Fase 6, 12 desde a v0.3), **antes** de olhar a saída dos analisadores, e restrito à cobertura declarada.
 
 | Linguagem             | Declarações (precisão / revocação) | Imports com destino (precisão / revocação) |
 | --------------------- | ---------------------------------- | ------------------------------------------ |
@@ -118,12 +118,14 @@ As linguagens anteriores continuaram em 1,000. Limitação: as fixtures são peq
 
 Gabarito conferido à mão em cinco fixtures novas (`kotlin-app`, `php-app`, `ruby-app`, `c-lib`, `cpp-app`), no mesmo teste:
 
-| Linguagem | Símbolos: precisão | Símbolos: revocação | Imports resolvidos: precisão | Imports resolvidos: revocação |
+| Linguagem | Símbolos: precisão | Símbolos: revocação | Imports e destinos: precisão | Imports e destinos: revocação |
 | --------- | ------------------ | ------------------- | ---------------------------- | ----------------------------- |
 | Kotlin    | 1,000 (16/16)      | 1,000               | 1,000 (4/4)                  | 1,000                         |
 | PHP       | 1,000 (14/14)      | 1,000               | 1,000 (5/5)                  | 1,000                         |
 | Ruby      | 1,000 (15/15)      | 1,000               | 1,000 (6/6)                  | 1,000                         |
-| C/C++     | 1,000 (22/22)      | 1,000               | 1,000 (12/12)                | 1,000                         |
+| C/C++     | 1,000 (22/22)      | 1,000               | 1,000 (13/13)                | 1,000                         |
+
+As colunas de imports contam o import **e o destino** certo, inclusive "não resolvido" quando é o certo (como o `Logger` do PHP) e "externo".
 
 As fixtures cobrem os casos difíceis de propósito:
 

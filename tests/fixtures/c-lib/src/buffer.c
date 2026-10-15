@@ -15,6 +15,11 @@ Buffer *buffer_new(size_t cap) {
         return NULL;
     }
     b->data = malloc(grow(cap));
+    if (b->data == NULL) {
+        free(b);
+        log_error("sem memoria");
+        return NULL;
+    }
     b->len = 0;
     return b;
 }

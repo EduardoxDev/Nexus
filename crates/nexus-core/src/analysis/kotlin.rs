@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::lexer::{self, C_LIKE};
+use super::lexer::{self, KOTLIN};
 use super::{
     Analyzer, Block, Decl, FileAnalysis, Import, ImportKind, Scope, SymbolKind, ident, strip_words,
     walk_braces_with,
@@ -114,8 +114,15 @@ fn fun_name(rest: &str) -> Option<&str> {
             _ => {}
         }
     }
-    let name = ident(&head[cut..])?;
-    (name.len() == head[cut..].trim().len()).then_some(name)
+    let tail = head[cut..].trim();
+    // Nome escapado com crases (`` fun `when`() ``): o nome é o que está entre elas.
+    if let Some(inner) = tail.strip_prefix('`') {
+        return inner
+            .strip_suffix('`')
+            .filter(|n| !n.is_empty() && !n.contains('`'));
+    }
+    let name = ident(tail)?;
+    (name.len() == tail.len()).then_some(name)
 }
 
 fn classify(line: &str, scope: Scope<'_>) -> Option<Decl> {
@@ -206,12 +213,13 @@ fn classify(line: &str, scope: Scope<'_>) -> Option<Decl> {
 }
 
 static IMPORT: LazyLock<Option<Regex>> = LazyLock::new(|| {
-    Regex::new(r"(?m)^[ \t]*import\s+([A-Za-z_][\w]*(?:\.(?:[A-Za-z_][\w]*|\*))*)").ok()
+    Regex::new(r"(?m)^[ \t]*import\s+([\p{L}_][\p{L}\p{N}_]*(?:\.(?:[\p{L}_][\p{L}\p{N}_]*|\*))*)")
+        .ok()
 });
 
 impl Analyzer for Kotlin {
     fn analyze(&self, text: &str) -> FileAnalysis {
-        let m = lexer::mask(text, C_LIKE);
+        let m = lexer::mask(text, KOTLIN);
         let symbols = walk_braces_with(&m.bare, classify, true);
         let mut imports = Vec::new();
         if let Some(re) = IMPORT.as_ref() {
@@ -249,6 +257,62 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    #[test]
+    fn header_lambdas_default_params_backticks_and_raw_strings() {
+        let src = r#"package com.acme.ui
+
+import com.acme.ação.Botão
+
+class Panel(val onClick: () -> Unit = {}) {
+    fun render() {}
+}
+
+fun retry(
+    times: Int = 3,
+    delay: Long = 100,
+) {
+    println(times)
+}
+
+fun `when`() {}
+
+/* /* aninhado */ fun fake() {} */
+val doc = """
+fun alsoFake() {}
+"""
+"#;
+        let a = Kotlin.analyze(src);
+        let got: Vec<String> = a
+            .symbols
+            .iter()
+            .map(|s| {
+                format!(
+                    "{} {} L{}-{}{}",
+                    s.name,
+                    s.kind.as_str(),
+                    s.line,
+                    s.end_line,
+                    s.container
+                        .as_ref()
+                        .map(|c| format!(" in {c}"))
+                        .unwrap_or_default()
+                )
+            })
+            .collect();
+        assert_eq!(
+            got,
+            [
+                "com.acme.ui module L1-1",
+                "Panel class L5-7",
+                "render method L6-6 in Panel",
+                "retry function L9-14",
+                "when function L16-16",
+                "doc variable L19-19",
+            ]
+        );
+        assert_eq!(a.imports[0].specifier, "com.acme.ação.Botão");
     }
 
     #[test]

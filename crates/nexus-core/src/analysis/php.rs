@@ -111,6 +111,13 @@ fn classify(line: &str, scope: Scope<'_>) -> Option<Decl> {
                 opens: Block::Other,
             })
         }
+        // `namespace { … }`: bloco do namespace global; o conteúdo continua no nível superior.
+        "namespace" if scope == Scope::Top && after.trim_start().starts_with('{') => Some(Decl {
+            name: String::new(),
+            kind: SymbolKind::Module,
+            exported: true,
+            opens: Block::Namespace,
+        }),
         "namespace" if scope == Scope::Top => {
             let name = qualified(after)?;
             Some(Decl {
@@ -178,16 +185,25 @@ fn use_statements(bare: &str) -> Vec<(usize, String)> {
     out
 }
 
+/// Tira `function`/`const` do começo (com qualquer espaço ou quebra de linha depois).
+fn strip_use_kind(s: &str) -> &str {
+    let s = s.trim_start();
+    for kw in ["function", "const"] {
+        if let Some(rest) = s.strip_prefix(kw)
+            && rest.starts_with(char::is_whitespace)
+        {
+            return rest.trim_start();
+        }
+    }
+    s
+}
+
 /// Expande `A\B\{C, D as E}` e `A, B as C` em nomes completos.
 fn expand_use(body: &str) -> Vec<String> {
-    let body = body.trim();
-    let body = body
-        .strip_prefix("function ")
-        .or_else(|| body.strip_prefix("const "))
-        .unwrap_or(body)
-        .trim();
+    let body = strip_use_kind(body.trim()).trim();
+    // O nome é a primeira palavra; `as Apelido` (com qualquer espaço) fica de fora.
     let without_alias = |s: &str| -> Option<String> {
-        let name = s.split(" as ").next()?.trim();
+        let name = s.split_whitespace().next()?;
         qualified(name).filter(|n| n.len() == name.trim_start_matches('\\').len())
     };
     if let Some(open) = body.find('{') {
@@ -196,14 +212,7 @@ fn expand_use(body: &str) -> Vec<String> {
         return inner
             .split(',')
             .filter(|p| !p.trim().is_empty())
-            .filter_map(|p| {
-                let p = p.trim();
-                let p = p
-                    .strip_prefix("function ")
-                    .or_else(|| p.strip_prefix("const "))
-                    .unwrap_or(p);
-                without_alias(p).map(|n| format!("{prefix}{n}"))
-            })
+            .filter_map(|p| without_alias(strip_use_kind(p)).map(|n| format!("{prefix}{n}")))
             .collect();
     }
     body.split(',').filter_map(without_alias).collect()
@@ -216,10 +225,132 @@ static REQUIRE: LazyLock<Option<Regex>> = LazyLock::new(|| {
     .ok()
 });
 
+/// Divide nas vírgulas de nível superior (fora de `()`, `[]` e `{}`), até o `;`.
+fn split_top_commas(s: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut depth = 0;
+    let mut start = 0;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ',' if depth == 0 => {
+                parts.push(&s[start..i]);
+                start = i + 1;
+            }
+            ';' if depth == 0 => {
+                parts.push(&s[start..i]);
+                return parts;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&s[start..]);
+    parts
+}
+
+/// Declaradores além do primeiro numa mesma linha: `public $a, $b;` e `const A = 1, B = 2;`.
+fn more_declarators(line: &str, kind: SymbolKind) -> Vec<String> {
+    let line = strip_attributes(line);
+    let (rest, _) = strip_words(line, MODIFIERS);
+    let list = match kind {
+        SymbolKind::Const => rest.trim_start().strip_prefix("const").unwrap_or(""),
+        _ => rest.find('$').map_or("", |d| &rest[d..]),
+    };
+    split_top_commas(list)
+        .into_iter()
+        .skip(1)
+        .filter_map(|part| {
+            let decl = part.split('=').next()?.trim();
+            let name = match kind {
+                SymbolKind::Const => decl.split_whitespace().last()?,
+                _ => decl.strip_prefix('$')?,
+            };
+            ident(name)
+                .filter(|n| n.len() == name.len())
+                .map(str::to_owned)
+        })
+        .collect()
+}
+
+/// Parâmetros promovidos a propriedade no construtor (`public function __construct(public
+/// string $nome)`): só os públicos.
+static PROMOTED: LazyLock<Option<Regex>> = LazyLock::new(|| {
+    Regex::new(
+        r"\b(?:public(?:\s+readonly)?|readonly\s+public)\s+(?:[?\w\\|&]+\s+)?\$([A-Za-z_]\w*)",
+    )
+    .ok()
+});
+
+/// Fecha o parêntese que abre em `open` (offset em `text`).
+fn closing_paren(text: &str, open: usize) -> Option<usize> {
+    let mut depth = 0;
+    for (i, c) in text[open..].char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(open + i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 impl Analyzer for Php {
     fn analyze(&self, text: &str) -> FileAnalysis {
         let m = lexer::mask(text, PHP);
-        let symbols = walk_braces(&m.bare, classify);
+        let mut symbols = walk_braces(&m.bare, classify);
+        let lines: Vec<&str> = m.bare.lines().collect();
+        let line_starts: Vec<usize> = std::iter::once(0)
+            .chain(m.bare.match_indices('\n').map(|(i, _)| i + 1))
+            .collect();
+        let mut extra = Vec::new();
+        for s in &symbols {
+            let Some(line) = usize::try_from(s.line - 1).ok().and_then(|i| lines.get(i)) else {
+                continue;
+            };
+            if matches!(s.kind, SymbolKind::Const | SymbolKind::Variable) {
+                for name in more_declarators(line, s.kind) {
+                    extra.push(super::Symbol { name, ..s.clone() });
+                }
+            }
+            if s.name == "__construct"
+                && let Some(container) = &s.container
+                && let Some(start) = usize::try_from(s.line - 1)
+                    .ok()
+                    .and_then(|i| line_starts.get(i).copied())
+                && let Some(open) = m.bare[start..].find('(').map(|o| start + o)
+                && let Some(close) = closing_paren(&m.bare, open)
+                && let Some(re) = PROMOTED.as_ref()
+            {
+                for caps in re.captures_iter(&m.bare[open..close]) {
+                    let Some(name) = caps.get(1) else { continue };
+                    let line_no = lexer::line_of(&m.bare, open + name.start());
+                    extra.push(super::Symbol {
+                        name: name.as_str().to_owned(),
+                        kind: SymbolKind::Variable,
+                        line: line_no,
+                        end_line: line_no,
+                        exported: true,
+                        container: Some(container.clone()),
+                    });
+                }
+            }
+        }
+        // Parâmetros promovidos em linhas próprias já vieram do percorredor.
+        for e in extra {
+            if !symbols
+                .iter()
+                .any(|s| s.name == e.name && s.line == e.line && s.kind == e.kind)
+            {
+                symbols.push(e);
+            }
+        }
+        symbols.sort_by_key(|s| s.line);
         let mut imports = Vec::new();
         for (start, body) in use_statements(&m.bare) {
             let line = lexer::line_of(&m.bare, start);
@@ -236,6 +367,17 @@ impl Analyzer for Php {
                 let Some(path) = caps.get(2).or_else(|| caps.get(3)) else {
                     continue;
                 };
+                // A palavra-chave tem de estar no código, não dentro de uma string.
+                let Some(whole) = caps.get(0) else { continue };
+                let keyword_len = whole
+                    .as_str()
+                    .find(|c: char| !c.is_alphanumeric() && c != '_');
+                let in_code = keyword_len.is_some_and(|n| {
+                    m.bare.get(whole.start()..whole.start() + n) == Some(&whole.as_str()[..n])
+                });
+                if !in_code {
+                    continue;
+                }
                 let p = path.as_str();
                 // `__DIR__ . '/x.php'` é relativo ao arquivo.
                 let specifier = if caps.get(1).is_some() {
@@ -276,6 +418,60 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    #[test]
+    fn promoted_params_multiple_declarators_global_namespace_and_tricky_imports() {
+        let src = r#"<?php
+namespace {
+    use	function App\Support\money;
+    use const
+        App\Support\RATE;
+
+    class Order
+    {
+        public $a, $b = [1, 2], $c;
+        public const X = 1, Y = 2;
+
+        public function __construct(
+            public readonly int $id,
+            private string $secret,
+            public ?string $note = null,
+        ) {}
+    }
+
+    $help = "require 'nada.php';";
+    require 'boot.php';
+}
+"#;
+        let a = Php.analyze(src);
+        assert_eq!(
+            names(&a),
+            [
+                "Order class L7 pub",
+                "a variable L9 in Order pub",
+                "b variable L9 in Order pub",
+                "c variable L9 in Order pub",
+                "X const L10 in Order pub",
+                "Y const L10 in Order pub",
+                "__construct method L12 in Order pub",
+                "id variable L13 in Order pub",
+                "note variable L15 in Order pub",
+            ]
+        );
+        let specs: Vec<_> = a
+            .imports
+            .iter()
+            .map(|i| (i.line, i.specifier.as_str()))
+            .collect();
+        assert_eq!(
+            specs,
+            [
+                (3, "App\\Support\\money"),
+                (4, "App\\Support\\RATE"),
+                (20, "boot.php"),
+            ]
+        );
     }
 
     #[test]

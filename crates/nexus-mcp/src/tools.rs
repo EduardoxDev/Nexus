@@ -1339,7 +1339,7 @@ pub static TOOLS: &[Tool] = &[
     Tool {
         name: "get_symbol_context",
         title: "Find a symbol's declaration",
-        description: "Find where an identifier (function, method, class, struct, interface, const…) is declared — with kind, container and full body for TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C and C++ (lexical analysis), regex elsewhere — and which files import the definition or mention the name.",
+        description: "Find where an identifier (function, method, class, struct, interface, const…) is declared — with kind, container and a body excerpt (up to 40 lines) for TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C and C++ (lexical analysis), regex elsewhere — and which files import the definition or mention the name.",
         read_only: true,
         idempotent: true,
         input: || {

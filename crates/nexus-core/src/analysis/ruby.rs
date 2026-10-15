@@ -73,16 +73,44 @@ fn last_segment(s: &str) -> Option<&str> {
     ident(last).filter(|l| l.len() == last.len())
 }
 
+/// Operadores que podem ser nomes de método (o mais longo primeiro).
+const OPERATORS: &[&str] = &[
+    "[]=", "[]", "<=>", "===", "==", "=~", "!=", "!~", "<<", ">>", "<=", ">=", "**", "+@", "-@",
+    "+", "-", "*", "/", "%", "<", ">", "!", "~", "&", "|", "^",
+];
+
+/// Nome de um método: palavra (`pago?`, `salvar!`), setter colado ao `=` (`valor=`) ou
+/// operador (`[]`, `+`, `<=>`). O texto começa logo depois de `def`.
+fn def_name(after: &str) -> Option<&str> {
+    let a = after.trim_start();
+    let a = a.strip_prefix("self.").unwrap_or(a);
+    if let Some(op) = OPERATORS.iter().find(|op| a.starts_with(**op)) {
+        return Some(op);
+    }
+    let end = a.find(|c: char| !is_word_char(c)).unwrap_or(a.len());
+    if end == 0 {
+        return None;
+    }
+    // `def valor=(v)`: o `=` colado ao nome faz parte dele (`def x = 1` tem espaço).
+    if a[end..].starts_with('=') && !a[end..].starts_with("==") && !a[end..].starts_with("=~") {
+        return Some(&a[..=end]);
+    }
+    Some(&a[..end])
+}
+
 /// `def nome(args) = expr` não tem `end`. O texto começa logo depois de `def`. Um setter
 /// (`def total=(v)`) tem `end`.
 fn endless_def(after: &str) -> bool {
     let rest = after.trim_start();
     let rest = rest.strip_prefix("self.").unwrap_or(rest);
-    let name_end = rest.find(|c: char| !is_word_char(c)).unwrap_or(rest.len());
-    let mut tail = &rest[name_end..];
-    if tail.starts_with("=(") {
+    let Some(name) = def_name(rest) else {
+        return false;
+    };
+    // Setter (`valor=`): tem `end`.
+    if name.ends_with('=') && name.len() > 1 && !OPERATORS.contains(&name) {
         return false;
     }
+    let mut tail = &rest[name.len()..];
     let trimmed = tail.trim_start();
     if trimmed.starts_with('(') {
         let mut depth = 0;
@@ -132,13 +160,7 @@ fn walk(bare: &str) -> Vec<Symbol> {
             }
             let public = !private_prefix && stack.last().is_none_or(|f| f.public);
             if let Some(after) = rest.strip_prefix("def ") {
-                let after = after.trim_start();
-                let after = after.strip_prefix("self.").unwrap_or(after);
-                let name_end = after
-                    .find(|c: char| !(is_word_char(c) || c == '='))
-                    .unwrap_or(after.len());
-                let name = after[..name_end].trim_end_matches('=');
-                if !name.is_empty() {
+                if let Some(name) = def_name(after) {
                     symbols.push(Symbol {
                         name: name.to_owned(),
                         kind: if container.is_some() {
@@ -310,6 +332,29 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    #[test]
+    fn operator_and_setter_methods_and_literals() {
+        let src = "class Money\n  def [](i)\n    @v[i]\n  end\n\n  def +(other) = Money.new(v + other.v)\n\n  def <=>(o)\n    v <=> o.v\n  end\n\n  def value=(v)\n    @v = v\n  end\n\n  def fmt\n    x = %q{def fake; end}\n    y = /#/\n  end\n\n  def last; end\nend\n";
+        let a = Ruby.analyze(src);
+        let got: Vec<String> = a
+            .symbols
+            .iter()
+            .map(|s| format!("{} L{}-{}", s.name, s.line, s.end_line))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                "Money L1-22",
+                "[] L2-4",
+                "+ L6-6",
+                "<=> L8-10",
+                "value= L12-14",
+                "fmt L16-19",
+                "last L21-21",
+            ]
+        );
     }
 
     #[test]

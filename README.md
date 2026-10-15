@@ -4,15 +4,17 @@
 
 **A camada de contexto local para engenharia de software assistida por IA.** _Conectando ideias, criando o amanhã._
 
-O NEXUS é um aplicativo desktop (Windows primeiro) que indexa os projetos que você autorizar, busca código e documentação com **evidências verificáveis** e compila **Context Packs** para tarefas — entregues a você, à CLI `nexus` e a agentes via **MCP**. Tudo roda localmente: nenhum código, caminho, consulta ou memória sai da sua máquina.
+O NEXUS é um aplicativo desktop (Windows primeiro) que indexa os projetos que você autorizar, busca código e documentação com **evidências verificáveis** e compila **Context Packs** para tarefas — entregues a você, à CLI `nexus` e a agentes via **MCP**. Tudo roda localmente: nenhum código, caminho, consulta ou memória sai da sua máquina pela NEXUS. A única exceção é a que você escolhe: em Memória → "Exportar para o repositório", as memórias confirmadas viram arquivos no projeto e vão junto com ele para onde você o enviar.
 
-> **Estado atual: Fases 0–7 concluídas.** Indexação incremental sem segredos nem binários, busca explicável em português ou inglês, Context Packs verificados por hash, memória do projeto confirmada por você, alertas de atualidade e contradições, análise de código (TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++) com grafo de dependências, CLI e servidor MCP para agentes. **Pendentes:** assinatura de código e atualização automática — veja o [roadmap](docs/roadmap.md).
+> **Estado atual: v0.3 em teste (`0.3.0-rc.1`).** Indexação incremental sem segredos nem binários, busca explicável em português ou inglês, Context Packs verificados por hash, memória do projeto confirmada por você (e compartilhável pelo repositório), alertas de atualidade e contradições, análise de código (TS/JS, Python, Rust, Go, Java, C#, Kotlin, PHP, Ruby, C e C++) com mapa de dependências, histórico do git, CLI e servidor MCP para agentes, atualização automática com permissão. Windows, Linux e macOS. **Pendente:** assinatura de código — veja o [roadmap](docs/roadmap.md).
 
 ![Visão geral do NEXUS: indicadores, projetos, operações e sistema](docs/assets/visao-geral-escuro.png)
 
 ![Busca com motivos de relevância e prévia verificada](docs/assets/busca-com-previa.png)
 
 ![Context Pack com arquivos, testes, decisões e fontes](docs/assets/context-pack.png)
+
+![Mapa do código: quem importa quem, com os arquivos mais centrais em destaque](docs/assets/mapa.png)
 
 <table>
 <tr>

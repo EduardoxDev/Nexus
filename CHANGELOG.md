@@ -2,6 +2,28 @@
 
 Cada versão da NEXUS, da mais nova para a mais antiga. A seção de cada versão vira a descrição da release no GitHub (`scripts/release-notes.mjs`).
 
+## 0.3.0
+
+### Destaques
+
+- **Histórico do git.** Para cada arquivo, os últimos commits (seguindo renomeações) e, num trecho, quem mudou aquelas linhas. Aparece na prévia da busca, numa seção "Mudanças recentes" dos Context Packs e na ferramenta MCP nova `get_file_history`. Usa o `git` instalado, só para leitura e com os comandos do repositório desligados; sem `git`, o app avisa e segue sem histórico.
+- **Mapa do código.** Uma tela nova mostra quem importa quem, com os arquivos mais centrais em destaque, filtro por pasta e modo agrupado. Clique num arquivo para abri-lo na Busca. A tabela "Mais centrais" traz os mesmos números para quem prefere ler.
+- **Memória compartilhada pelo repositório.** Em Memória → "Exportar para o repositório", as memórias confirmadas viram arquivos em `.nexus/memory/`, com prévia antes de gravar. Quem clonar o projeto recebe essas memórias como **propostas** para revisar, nunca como decisões prontas.
+- **Kotlin, PHP, Ruby, C e C++.** Agora são 12 linguagens: funções, classes, métodos e quem importa quem, inclusive pacotes Kotlin, PSR-4 do PHP, `require` do Ruby e `#include` com pastas `include/`.
+- **Documentação no site.** Páginas de instalação, de como conectar cada agente, de privacidade e de novidades.
+
+### Também
+
+- A indexação espera alguns segundos quando o projeto está ocupado por um instante, em vez de recusar na hora.
+- Bot do Discord: moderação (automod conservador e `/mod`) e gestão do servidor (boas-vindas, cargos por botão e tickets), tudo opcional e desligado até ser configurado.
+
+### Antes de atualizar
+
+- O banco local passa para a **versão 7** do schema (origem das memórias compartilhadas). Um backup é feito antes, automaticamente, na pasta `backups/` dos dados. Depois da atualização, a v0.2 não abre mais esse banco.
+- Na primeira indexação depois de atualizar, os arquivos são analisados de novo uma vez (por causa das novas linguagens).
+- O histórico do git precisa do `git` instalado no computador. Sem ele, todo o resto funciona normalmente.
+- Os instaladores continuam **sem assinatura de código** do Windows e da Apple (as atualizações automáticas, essas sim, são conferidas por assinatura antes de instalar): veja como abrir em cada sistema na página [Instalar](https://eduardoxdev.github.io/Nexus/docs/instalar/).
+
 ## 0.2.0
 
 ### Destaques

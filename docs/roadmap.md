@@ -244,6 +244,12 @@ Etapa 7 — site com documentação:
 - [x] Markdown → React próprio (sem dependência nova e sem HTML cru); links relativos do repositório viram links para o GitHub.
 - [x] Testes: um `h1` por página, menu da documentação, todos os links levam a uma página, seção ou arquivo que existe.
 
+Etapa 8 — release v0.3.0:
+
+- [x] Versão `0.3.0-rc.1`, seção 0.3.0 no CHANGELOG (schema v7, nova análise na primeira indexação, `git` opcional) e capturas novas (inclui o Mapa).
+- [ ] `v0.3.0-rc.1` publicada e atualização testada a partir da 0.2.0.
+- [ ] `v0.3.0` final publicada e anunciada pelo bot.
+
 ## Riscos
 
 | Risco                                             | Impacto                       | Mitigação                                                               |

@@ -1,4 +1,4 @@
-import { Markdown, parseBlocks } from "@/lib/markdown";
+import { Markdown, parseBlocks, visibleText } from "@/lib/markdown";
 import { DOCS, pageHref, type DocRoute } from "@/routes";
 import { site } from "@/site";
 
@@ -51,7 +51,7 @@ export function DocPage({ doc }: { doc: DocRoute }) {
                               href={`#${s.id}`}
                               className="block px-3 py-1 text-muted-foreground hover:text-foreground"
                             >
-                              {s.text.replace(/[`*]/gu, "")}
+                              {visibleText(s.text)}
                             </a>
                           </li>
                         ),

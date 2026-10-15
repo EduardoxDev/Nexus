@@ -26,12 +26,14 @@ A CLI fica em `NEXUS.app/Contents/MacOS/nexus`.
 
 ## Linux
 
+Os pacotes Linux são para **x86_64** (64 bits Intel/AMD); ainda não há versão para ARM.
+
 - **`.deb`** (Debian, Ubuntu e derivados): `sudo apt install ./nexus_<versão>_amd64.deb`. A CLI fica em `/usr/bin/nexus`.
-- **`.AppImage`** (qualquer distribuição): dê permissão de execução com `chmod +x` e abra o arquivo. Em distribuições recentes pode ser preciso instalar o `libfuse2`.
+- **`.AppImage`** (qualquer distribuição em x86_64): dê permissão de execução com `chmod +x` e abra o arquivo. Em distribuições recentes pode ser preciso instalar o `libfuse2`.
 
 ## Atualizações
 
-Na primeira abertura, a NEXUS pergunta se pode verificar versões novas no GitHub. Sem resposta, ela não se conecta a nada. Com a sua permissão, verifica no máximo uma vez por dia, e a atualização só é instalada quando você clica, depois de conferida por assinatura.
+Na primeira abertura, a NEXUS pergunta se pode verificar versões novas no GitHub. Sem resposta, ela não se conecta a nada. Com a sua permissão, a verificação automática acontece no máximo uma vez por dia. Em **Configurações**, **Verificar agora** consulta na hora, mesmo com a verificação automática desligada. A atualização só é instalada quando você clica, depois de conferida por assinatura.
 
 Vale para o instalador do Windows, o `.AppImage` e o macOS. Quem instalou pelo `.deb` atualiza baixando o `.deb` novo. A escolha pode ser mudada a qualquer hora em **Configurações**. Mais detalhes em [Privacidade](/docs/privacidade/).
 

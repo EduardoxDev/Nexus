@@ -34,6 +34,15 @@ describe("markdown", () => {
     expect(out).not.toContain("<b>");
   });
 
+  it("continuations go to the item they are aligned with", () => {
+    const [list] = parseBlocks("- pai\n  - filho\n    do filho\n  do pai");
+    expect(list).toMatchObject({ items: [{ text: "pai do pai", children: ["filho do filho"] }] });
+  });
+
+  it("heading anchors use the visible text of links", () => {
+    expect(parseBlocks("## [API](/docs)")[0]).toMatchObject({ id: "api" });
+  });
+
   it("always moves forward, even on lines no block accepts", () => {
     expect(parseBlocks("| sem tabela\nfim").map((b) => b.t)).toEqual(["p"]);
     expect(parseBlocks("```\nsem fim").map((b) => b.t)).toEqual(["code"]);
@@ -105,7 +114,10 @@ describe("páginas de documentação", () => {
             expect(container.querySelector(`[id="${href.slice(1)}"]`), where).not.toBeNull();
           continue;
         }
-        const [page = "", hash] = href.split("#");
+        // Com SITE_BASE (ex.: /Nexus/), os links trazem a base: tira antes de comparar.
+        const base = import.meta.env.BASE_URL;
+        const local = href.startsWith(base) ? `/${href.slice(base.length)}` : href;
+        const [page = "", hash] = local.split("#");
         if (/\.[a-z0-9]+$/iu.test(page)) {
           expect(existsSync(resolve(process.cwd(), "public", page.slice(1))), where).toBe(true);
           continue;

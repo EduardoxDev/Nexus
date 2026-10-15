@@ -4,7 +4,11 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const SITE_URL = "https://eduardoxdev.github.io/Nexus";
+// Endereço público do site (para og:url). Padrão: o GitHub Pages; outro destino passa SITE_URL.
+const SITE_URL = (process.env.SITE_URL ?? "https://eduardoxdev.github.io/Nexus").replace(
+  /\/+$/u,
+  "",
+);
 
 const root = resolve(import.meta.dirname, "..");
 const { render, PATHS } = await import(

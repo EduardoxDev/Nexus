@@ -26,6 +26,11 @@ export function slug(text: string): string {
     .replace(/^-+|-+$/gu, "");
 }
 
+/** Texto como aparece na tela: links viram o rótulo, sem marcas de ênfase ou código. */
+export function visibleText(md: string): string {
+  return md.replace(/\[([^\]]+)\]\([^)\s]+\)/gu, "$1").replace(/[`*]/gu, "");
+}
+
 const LIST_ITEM = /^(\s*)([-*]|\d+\.)\s+(.*)$/u;
 const cells = (line: string) =>
   line
@@ -57,7 +62,8 @@ export function parseBlocks(md: string): Block[] {
     const h = /^(#{1,3})\s+(.*)$/u.exec(line);
     if (h) {
       const text = (h[2] ?? "").trim();
-      const base = slug(text);
+      // A âncora usa o texto visível: num link, o rótulo (não o destino).
+      const base = slug(visibleText(text));
       const n = ids.get(base) ?? 0;
       ids.set(base, n + 1);
       out.push({
@@ -89,17 +95,23 @@ export function parseBlocks(md: string): Block[] {
     if (first && (first[1] ?? "").length === 0) {
       const ordered = /\d/u.test(first[2] ?? "");
       const items: { text: string; children: string[] }[] = [];
+      // Coluna onde começa o texto da sublista atual: continuação recuada até ela é da sublista;
+      // menos recuada, é do item pai.
+      let childColumn = Infinity;
       while (i < lines.length) {
         const l = lines[i] ?? "";
         const m = LIST_ITEM.exec(l);
         if (m && (m[1] ?? "").length === 0) {
           items.push({ text: m[3] ?? "", children: [] });
+          childColumn = Infinity;
         } else if (m && items.length > 0) {
           items.at(-1)?.children.push(m[3] ?? "");
+          childColumn = m[0].length - (m[3] ?? "").length;
         } else if (l.trim() && /^\s+/u.test(l) && items.length > 0) {
           // Continuação da linha anterior (do item ou da sublista).
           const last = items.at(-1);
-          if (last && last.children.length > 0) {
+          const lead = l.length - l.trimStart().length;
+          if (last && last.children.length > 0 && lead >= childColumn) {
             last.children[last.children.length - 1] += ` ${l.trim()}`;
           } else if (last) {
             last.text += ` ${l.trim()}`;

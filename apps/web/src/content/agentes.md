@@ -4,14 +4,14 @@ A NEXUS conversa com os agentes de programação pelo protocolo MCP: o agente in
 
 O jeito mais fácil é a tela **Integrações** do app: ela mostra a configuração de cada agente **já com os caminhos da sua instalação**, pronta para copiar. A NEXUS não altera os arquivos dos agentes; você cola onde cada um pede.
 
-Nos exemplos abaixo, troque `CAMINHO_DO_NEXUS` pelo caminho da CLI (veja [Instalar](/docs/instalar/)) e `PASTA_DE_DADOS` pela pasta de dados da NEXUS (no Windows, `%LOCALAPPDATA%\Nexus`). O `--data-dir` faz o agente usar os mesmos projetos do app.
+Nos exemplos abaixo, troque `CAMINHO_DO_NEXUS` pelo caminho da CLI (veja [Instalar](/docs/instalar/)) e `PASTA_DE_DADOS` pela pasta de dados da NEXUS (no Windows, `%LOCALAPPDATA%\Nexus`). O `--data-dir` faz o agente usar os mesmos projetos do app. Nos comandos, mantenha as aspas: no Windows os caminhos costumam ter espaços.
 
 ## Claude Code
 
 Rode uma vez num terminal:
 
 ```bash
-claude mcp add nexus -- CAMINHO_DO_NEXUS --data-dir PASTA_DE_DADOS mcp serve
+claude mcp add nexus -- "CAMINHO_DO_NEXUS" --data-dir "PASTA_DE_DADOS" mcp serve
 ```
 
 O Claude Code inicia o servidor quando precisa e pede aprovação para as ferramentas no primeiro uso.
@@ -21,7 +21,7 @@ O Claude Code inicia o servidor quando precisa e pede aprovação para as ferram
 Rode uma vez num terminal; o Codex grava a configuração em `~/.codex/config.toml` (confira com `codex mcp list`):
 
 ```bash
-codex mcp add nexus -- CAMINHO_DO_NEXUS --data-dir PASTA_DE_DADOS mcp serve
+codex mcp add nexus -- "CAMINHO_DO_NEXUS" --data-dir "PASTA_DE_DADOS" mcp serve
 ```
 
 ## Cursor

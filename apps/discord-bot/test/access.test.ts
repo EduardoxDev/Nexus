@@ -10,6 +10,7 @@ const cfg: BotConfig = {
   announceChannelId: null,
   teamAlertsChannelId: null,
   githubRepo: "EduardoxDev/Nexus",
+  moderation: null,
 };
 const common: ChannelRef = { id: "999", parentId: null };
 const team: ChannelRef = { id: "100", parentId: null };

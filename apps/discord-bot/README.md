@@ -6,13 +6,14 @@ Desenho: [docs/superpowers/specs/2026-10-12-discord-bot-design.md](../../docs/su
 
 ## Comandos
 
-| Comando                           | Onde                                                       | Faz                                                          |
-| --------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
-| `/nexus pergunta <texto>`         | qualquer canal                                             | busca no projeto público (a NEXUS) e cita as fontes          |
-| `/nexus buscar <texto> [projeto]` | qualquer canal (projetos da equipe só em canais da equipe) | até 3 trechos com arquivo, linhas, motivos e atualidade      |
-| `/nexus pack <tarefa> [projeto]`  | idem                                                       | resumo e fontes na mensagem; o Context Pack inteiro em `.md` |
-| `/nexus status`                   | qualquer canal                                             | índice dos projetos visíveis naquele canal                   |
-| `/nexus versao`                   | qualquer canal                                             | versão da NEXUS em uso pelo bot e a última publicada         |
+| Comando                                      | Onde                                                       | Faz                                                          |
+| -------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
+| `/nexus pergunta <texto>`                    | qualquer canal                                             | busca no projeto público (a NEXUS) e cita as fontes          |
+| `/nexus buscar <texto> [projeto]`            | qualquer canal (projetos da equipe só em canais da equipe) | até 3 trechos com arquivo, linhas, motivos e atualidade      |
+| `/nexus pack <tarefa> [projeto]`             | idem                                                       | resumo e fontes na mensagem; o Context Pack inteiro em `.md` |
+| `/nexus status`                              | qualquer canal                                             | índice dos projetos visíveis naquele canal                   |
+| `/nexus versao`                              | qualquer canal                                             | versão da NEXUS em uso pelo bot e a última publicada         |
+| `/mod advertir\|silenciar\|banir\|historico` | equipe de moderação                                        | ver [Moderação](#moderação-etapa-3)                          |
 
 Sem `projeto`, o bot usa o projeto da equipe em canais da equipe e o público nos demais. Cada comando tem um prazo total de 30 s.
 
@@ -25,11 +26,31 @@ A cada 15 minutos, se configurado:
 
 O que já foi avisado fica em `bot.db`, ao lado da pasta de dados do bot (não dentro dela). A única chamada de rede além do Discord é a API pública do GitHub.
 
+## Moderação (etapa 3)
+
+Desligada até existir o bloco `moderation` em `bot.config.json` (veja o exemplo).
+
+- **Automod** (`automod: true`): apaga a mensagem e adverte a pessoa quando há
+  - convite para outro servidor (`blockInvites`; os códigos de `allowedInviteCodes` são liberados);
+  - menções demais numa mensagem (`maxMentions` ou mais, contando pessoas, cargos e `@everyone`);
+  - flood (mais de `flood.messages` mensagens em `flood.seconds` segundos).
+
+  Com `warnThreshold` advertências em `warnWindowHours` horas, a pessoa é silenciada por `timeoutMinutes` minutos. Bots, `exemptChannelIds` (e as threads deles) e `exemptRoleIds` são ignorados. As regras são conservadoras de propósito: só casos claros.
+
+- **`/mod`**: `advertir`, `silenciar` (1 min a 28 dias), `banir` (opcionalmente apagando até 7 dias de mensagens) e `historico`. Só aparece para quem tem a permissão **Moderar membros** (banir exige também **Banir membros**); com `modRoleIds`, é preciso ter um desses cargos. Ninguém modera a si mesmo nem bots, e o bot recusa quem tem cargo acima do dele. As respostas só quem usou vê.
+- **Registro**: toda ação (automática ou manual) fica em `bot.db` e, com `logChannelId`, vai para esse canal. O conteúdo das mensagens apagadas **não** é guardado nem copiado para o registro — só a regra e o motivo.
+
+Para o automod funcionar:
+
+1. No Developer Portal → Bot, ligue **Message Content Intent**. Sem isso o login falha quando `automod` está ligado (com `automod: false`, o bot não pede a intent e `/mod` funciona normalmente).
+2. Dê ao cargo do bot as permissões **Gerenciar mensagens**, **Moderar membros** (timeout) e, para `/mod banir`, **Banir membros**. O cargo do bot precisa ficar acima dos cargos que ele vai moderar.
+3. Rode `register` de novo para o Discord conhecer o `/mod`.
+
 ## Segurança
 
 - **Projetos da equipe** (`teamProjects`) só são consultados, sugeridos ou listados em canais de `teamChannelIds` e nas threads desses canais. Fora deles o pedido é recusado com uma mensagem que só você vê, sem revelar nomes. Categorias **não** liberam acesso: cadastre o ID de cada canal.
 - Nenhuma resposta menciona alguém (`@everyone` dentro de um trecho de código não notifica).
-- O bot só responde no servidor de `DISCORD_GUILD_ID`.
+- O bot só responde no servidor de `DISCORD_GUILD_ID` (o automod também só olha esse servidor).
 - O token fica só no `.env` (fora do git) e nunca aparece em logs ou mensagens de erro. **Nunca cole o token em chats ou issues**; se isso acontecer, gere outro no Developer Portal.
 - Trechos citados são dados do repositório, não instruções.
 

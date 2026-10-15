@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 
 import { sameProject } from "./access.ts";
+import { parseModeration, type ModerationConfig } from "./moderation/config.ts";
 
 export type Visibility = "public" | "team";
 
@@ -17,6 +18,8 @@ export interface BotConfig {
   teamAlertsChannelId: string | null;
   /** Repositório das releases, `dono/nome`. */
   githubRepo: string;
+  /** Moderação (automod e `/mod`). `null` = desligada. */
+  moderation: ModerationConfig | null;
 }
 
 const DEFAULT_REPO = "EduardoxDev/Nexus";
@@ -96,5 +99,6 @@ export function loadConfig(path: string): BotConfig {
     announceChannelId: channelId(path, "announceChannelId", raw.announceChannelId),
     teamAlertsChannelId,
     githubRepo: repo,
+    moderation: parseModeration(path, raw.moderation),
   };
 }

@@ -4,6 +4,20 @@
  */
 import { DatabaseSync } from "node:sqlite";
 
+/** Ação de moderação registrada (do automod ou da equipe). */
+export interface ModAction {
+  userId: string;
+  /** Quem agiu: ID do moderador, ou `automod`. */
+  by: string;
+  action: "warn" | "timeout" | "ban";
+  reason: string;
+  /** Regra do automod que disparou, se foi ele. */
+  rule: string | null;
+  /** Duração do silêncio, em minutos. */
+  minutes: number | null;
+  at: number;
+}
+
 export class BotState {
   private readonly db: DatabaseSync;
 
@@ -19,6 +33,17 @@ export class BotState {
         at    INTEGER NOT NULL,
         PRIMARY KEY (scope, id)
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS mod_actions (
+        id      INTEGER PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        by      TEXT NOT NULL,
+        action  TEXT NOT NULL CHECK (action IN ('warn', 'timeout', 'ban')),
+        reason  TEXT NOT NULL,
+        rule    TEXT,
+        minutes INTEGER,
+        at      INTEGER NOT NULL
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS mod_actions_user ON mod_actions (user_id, at DESC);
     `);
   }
 
@@ -53,6 +78,51 @@ export class BotState {
     }[];
     const del = this.db.prepare("DELETE FROM seen WHERE scope = ? AND id = ?");
     for (const { id } of rows) if (!keep.includes(id)) del.run(scope, id);
+  }
+
+  /** Registra uma ação de moderação (quem, o quê, quando, motivo). */
+  recordAction(a: ModAction): void {
+    this.db
+      .prepare(
+        "INSERT INTO mod_actions (user_id, by, action, reason, rule, minutes, at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(a.userId, a.by, a.action, a.reason, a.rule, a.minutes, a.at);
+  }
+
+  /** Ações sobre a pessoa, da mais recente para a mais antiga. */
+  history(userId: string, limit = 10): ModAction[] {
+    const rows = this.db
+      .prepare(
+        "SELECT user_id, by, action, reason, rule, minutes, at FROM mod_actions WHERE user_id = ? ORDER BY at DESC, id DESC LIMIT ?",
+      )
+      .all(userId, limit) as {
+      user_id: string;
+      by: string;
+      action: ModAction["action"];
+      reason: string;
+      rule: string | null;
+      minutes: number | null;
+      at: number;
+    }[];
+    return rows.map((r) => ({
+      userId: r.user_id,
+      by: r.by,
+      action: r.action,
+      reason: r.reason,
+      rule: r.rule,
+      minutes: r.minutes,
+      at: r.at,
+    }));
+  }
+
+  /** Advertências recebidas desde `since` (ms). */
+  warningsSince(userId: string, since: number): number {
+    const row = this.db
+      .prepare(
+        "SELECT COUNT(*) AS n FROM mod_actions WHERE user_id = ? AND action = 'warn' AND at >= ?",
+      )
+      .get(userId, since) as { n: number };
+    return Number(row.n);
   }
 
   close(): void {
